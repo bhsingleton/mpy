@@ -1,0 +1,11 @@
+{
+	"l": "r",
+	"r": "l",
+	"c": "c",
+	"lf": "rt",
+	"rt": "lf",
+	"ctr": "ctr",
+	"left": "right",
+	"right": "left",
+	"center": "center"
+}
