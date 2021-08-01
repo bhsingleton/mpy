@@ -1,2 +1,2 @@
 # mpynode
-A python package used to wrap/interface with MObjects inside Maya.
+A python package used to wrap/interface with MObjects inside Maya using the "maya.api.OpenMaya" bindings.
