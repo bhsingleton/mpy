@@ -63,7 +63,7 @@ def findPlug(dependNode, name):
 
     if numGroups == 0:
 
-        raise TypeError(f'findPlug() expects a valid string ({name} given)!')
+        raise TypeError('findPlug() expects a valid string (%s given)!' % name)
 
     # Collect all attributes in path
     #
@@ -72,7 +72,7 @@ def findPlug(dependNode, name):
 
     if attribute.isNull():
 
-        raise TypeError(f'findPlug() expects a valid attribute ({attributeName} given)!')
+        raise TypeError('findPlug() expects a valid attribute (%s given)!' % attributeName)
 
     attributes = list(reversed(list(iterParentAttributes(attribute))))
     attributes.append(attribute)
