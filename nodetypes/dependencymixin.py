@@ -126,11 +126,11 @@ class DependencyMixin(mpynode.MPyNode):
 
         if self.isFromPlugin:
 
-            return QtGui.QIcon(f':/{self.typeName}.png')
+            return QtGui.QIcon(':/{typeName}.png'.format(typeName=self.typeName))
 
         else:
 
-            return QtGui.QIcon(f':/{self.typeName}.svg')
+            return QtGui.QIcon(':/{typeName}.svg'.format(typeName=self.typeName))
 
     def select(self, replace=False):
         """
@@ -423,7 +423,7 @@ class DependencyMixin(mpynode.MPyNode):
 
         else:
 
-            raise TypeError(f'getAttr() expects a plug ({type(plug).__name__} given)!')
+            raise TypeError('getAttr() expects a plug (%s given)!' % type(plug).__name__)
 
     def getAttrType(self, attribute):
         """
@@ -471,7 +471,7 @@ class DependencyMixin(mpynode.MPyNode):
 
         else:
 
-            raise TypeError(f'setAttr() expects a plug ({type(plug).__name__} given)!')
+            raise TypeError('setAttr() expects a plug (%s given)!' % type(plug).__name__)
 
     def getAliases(self):
         """

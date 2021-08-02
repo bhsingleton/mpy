@@ -411,7 +411,7 @@ class MPyFactory(abstractfactory.AbstractFactory):
         #
         if isinstance(name, str) and len(name) == 0:
 
-            name = f'{typeName}1'
+            name = '{typeName}1'.format(typeName=typeName)
 
         # Check if a non-string parent was supplied
         #
@@ -465,7 +465,8 @@ class MPyFactory(abstractfactory.AbstractFactory):
 
         else:
 
-            return mpynode.MPyNode(f'{namespace}RN')  # TODO: This needs improving!
+            nodeName = '{namespace}RN'.format(namespace=namespace)
+            return mpynode.MPyNode(nodeName)  # TODO: This needs improving!
 
     @classmethod
     def selection(cls, apiType=om.MFn.kDependencyNode):
@@ -512,5 +513,6 @@ class MPyFactory(abstractfactory.AbstractFactory):
 
         :rtype: str
         """
-        
-        return os.path.join(os.path.dirname(__file__), 'templates', f'{name}.json')
+
+        filename = '{name}.json'.format(name=name)
+        return os.path.join(os.path.dirname(__file__), 'templates', filename)

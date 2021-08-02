@@ -86,13 +86,13 @@ def importFile(filePath):
     #
     if not isinstance(filePath, str):
 
-        raise TypeError(f'importFile() expects a str (%s given)!' % type(filePath).__name__)
+        raise TypeError('importFile() expects a str (%s given)!' % type(filePath).__name__)
 
     # Check if file exists
     #
     if not os.path.exists(filePath):
 
-        raise TypeError('importFile() expects a valid file! %s')
+        raise TypeError('importFile() expects a valid file!')
 
     # Import module
     #

@@ -1,6 +1,7 @@
 import weakref
 
 from abc import ABCMeta, abstractmethod
+from future.utils import with_metaclass
 
 import logging
 logging.basicConfig()
@@ -8,12 +9,11 @@ log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
 
 
-class Singleton(object):
+class Singleton(with_metaclass(ABCMeta, object)):
     """
     Abstract class used to define a singleton pattern for python classes.
     """
 
-    __metaclass__ = ABCMeta
     __slots__ = ('__weakref__',)
     __instances__ = {}
 

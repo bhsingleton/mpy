@@ -19,8 +19,10 @@ import json
 import jsonschema
 
 from abc import ABCMeta, abstractmethod
-from six import string_types
+from future.utils import with_metaclass
 from collections import deque, OrderedDict
+
+from .pyutils import string_types
 
 import logging
 logging.basicConfig()
@@ -28,7 +30,7 @@ log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
 
 
-class AttributeParser(object, metaclass=ABCMeta):
+class AttributeParser(with_metaclass(ABCMeta, object)):
     """
     Abstract base class used to interface with a json object.
     This class is responsible for extrapolating data used to construct attributes.
@@ -1434,26 +1436,42 @@ def getAttributeTypeName(attribute):
 
         if dataType[0].isdigit():
 
-            return f'{dataType[1].lower()}{dataType[2:]}{dataType[0]}'
+            return '{letter}{name}{digit}'.format(
+                letter=dataType[1].lower(),
+                name=dataType[2:],
+                digit=dataType[0]
+            )
 
         else:
 
-            return f'{dataType[0].lower()}{dataType[1:]}'
+            return '{letter}{name}'.format(
+                letter=dataType[0].lower(),
+                name=dataType[1:]
+            )
 
     elif attribute.hasFn(om.MFn.kTypedAttribute):
 
         fnTypedAttribute = om.MFnTypedAttribute(attribute)
         dataType = __attrtypes__[fnTypedAttribute.attrType()][1:]  # Strip the 'k' prefix
 
-        return f'{dataType[0].lower()}{dataType[1:]}'
+        return '{letter}{name}'.format(
+            letter=dataType[0].lower(),
+            name=dataType[1:]
+        )
 
     elif attribute.hasFn(om.MFn.kUnitAttribute):
 
         fnUnitAttribute = om.MFnUnitAttribute(attribute)
         dataType = __unittypes__[fnUnitAttribute.unitType()][1:]  # Strip the 'k' prefix
 
-        return f'{dataType[0].lower()}{dataType[1:]}'
+        return '{letter}{name}'.format(
+            letter=dataType[0].lower(),
+            name=dataType[1:]
+        )
 
     else:
 
-        return f'{attribute.apiTypeStr[1].lower()}{attribute.apiTypeStr[2:-9]}'  # Strip the 'Attribute' suffix
+        return '{letter}{name}'.format(
+            letter=attribute.apiTypeStr[1].lower(),
+            name=attribute.apiTypeStr[2:-9]  # Strip the 'Attribute' suffix
+        )

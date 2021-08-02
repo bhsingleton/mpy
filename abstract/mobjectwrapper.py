@@ -4,10 +4,11 @@ import inspect
 import weakref
 
 from abc import ABCMeta
-from six import string_types
+from future.utils import with_metaclass
 
-from ..utilities import dagutils
 from ..decorators import classproperty
+from ..utilities import dagutils
+from ..utilities.pyutils import string_types
 
 import logging
 logging.basicConfig()
@@ -15,7 +16,7 @@ log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
 
 
-class MObjectWrapper(object, metaclass=ABCMeta):
+class MObjectWrapper(with_metaclass(ABCMeta, object)):
     """
     Abstract base class used as a low-level wrapper for Maya scene nodes.
     A lot of the architecture in this class is designed around dynamically looking up compatible function sets.
@@ -131,7 +132,7 @@ class MObjectWrapper(object, metaclass=ABCMeta):
 
         if not hasattr(obj, name):
 
-            raise AttributeError(f'Unable to locate attribute: {name}!')
+            raise AttributeError('Unable to locate attribute: %s!' % name)
 
         # Check if attribute is callable
         #
@@ -144,7 +145,7 @@ class MObjectWrapper(object, metaclass=ABCMeta):
             #
             def wrapper(*args, **kwargs):
 
-                log.debug(f'{name} was called with {args} arguments and {kwargs} keywords.')
+                log.debug('%s was called with %s args and %s kwargs.' % (name, args, kwargs))
                 return attribute(*args, **kwargs)
 
             return wrapper

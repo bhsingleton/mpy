@@ -15,7 +15,6 @@ class AbstractFactory(singleton.Singleton):
     Overload of Singleton used to outline factory behaviour.
     """
 
-    __metaclass__ = ABCMeta
     __slots__ = ('__classes__',)
 
     def __init__(self, *args, **kwargs):
@@ -90,7 +89,9 @@ class AbstractFactory(singleton.Singleton):
 
         for package in self.packages():
 
-            yield from pyutils.iterPackage(package)
+            for module in pyutils.iterPackage(package):
+
+                yield module
 
     def iterItems(self):
         """
@@ -103,7 +104,9 @@ class AbstractFactory(singleton.Singleton):
 
         for module in self.iterModules():
 
-            yield from pyutils.iterModule(module, classFilter=classFilter)
+            for cls in pyutils.iterModule(module, classFilter=classFilter):
+
+                yield cls
 
     def iterClasses(self):
         """

@@ -216,7 +216,7 @@ def applyTransformMatrix(*args, **kwargs):
     translate = transformationMatrix.translation(om.MSpace.kTransform)
     setTranslation(dagPath, translate, **kwargs)
 
-    log.debug(f'{partialPathName}.translate = [{translate.x}, {translate.y}, {translate.z}]')
+    log.debug('%s.translate = [%s, %s, %s]' % (partialPathName, translate.x, translate.y, translate.z))
 
     # Check if dag path belongs to a joint
     # If it does then we need to compensate for any joint orientations
@@ -231,14 +231,14 @@ def applyTransformMatrix(*args, **kwargs):
     rotate = transformationMatrix.rotation(asQuaternion=False)
     setEulerRotation(dagPath, rotate, **kwargs)
 
-    log.debug(f'{partialPathName}.rotate = [{rotate.x}, {rotate.y}, {rotate.z}]')
+    log.debug('%s.rotate = [%s, %s, %s]' % (partialPathName, rotate.x, rotate.y, rotate.z))
 
     # Check if scale should be skipped
     #
     scale = transformationMatrix.scale(om.MSpace.kTransform)
     setScale(dagPath, scale, **kwargs)
 
-    log.debug(f'{partialPathName}.scale = [{scale[0]}, {scale[1]}, {scale[2]}]')
+    log.debug('%s.scale = [%s, %s, %s]' % (partialPathName, scale[0], scale[1], scale[2]))
 
     # Check if child transforms should be reset
     #
@@ -332,13 +332,14 @@ def freezeScale(dagPath, scale):
             controlPoints = fnMesh.getPoints()
 
             for i in range(fnMesh.numVertices):
+
                 controlPoints[i] *= scaleMatrix
 
             fnMesh.setPoints(controlPoints)
 
         else:
 
-            log.warning(f'Unable to bake scale into: {child.apiTypStr} api type!')
+            log.warning('Unable to bake scale into: %s api type!' % child.apiTypStr)
             continue
 
     # Reset scale on transform
