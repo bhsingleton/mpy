@@ -4,11 +4,10 @@ import inspect
 import weakref
 
 from abc import ABCMeta
-from future.utils import with_metaclass
+from six import with_metaclass, string_types
 
 from ..decorators import classproperty
 from ..utilities import dagutils
-from ..utilities.pyutils import string_types
 
 import logging
 logging.basicConfig()

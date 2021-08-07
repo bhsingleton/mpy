@@ -1,7 +1,7 @@
 import os
 import json
 
-from .pyutils import string_types
+from six import string_types
 
 import logging
 logging.basicConfig()

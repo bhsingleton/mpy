@@ -19,10 +19,8 @@ import json
 import jsonschema
 
 from abc import ABCMeta, abstractmethod
-from future.utils import with_metaclass
 from collections import deque, OrderedDict
-
-from .pyutils import string_types
+from six import with_metaclass, string_types
 
 import logging
 logging.basicConfig()

@@ -3,10 +3,10 @@ import maya.api.OpenMaya as om
 import os
 
 from PySide2 import QtGui
+from six import string_types
 
 from . import dependencymixin
 from .. import mpyattribute
-from ..utilities.pyutils import string_types
 
 import logging
 logging.basicConfig()

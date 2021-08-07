@@ -11,12 +11,13 @@ import os
 
 from copy import deepcopy
 from numpy import isclose
-from collections.abc import MutableSequence, KeysView, ValuesView
+from six import string_types
+from six.moves import collections_abc
 
 from . import deformermixin
 from .. import mpyattribute
 from ..decorators import undo
-from ..utilities.pyutils import string_types
+from ..utilities import namingutils
 
 import logging
 logging.basicConfig()
@@ -24,7 +25,7 @@ log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
 
 
-class InfluenceObjects(MutableSequence):
+class InfluenceObjects(collections_abc.MutableSequence):
     """
     Overload of MutableSequence used to store influence objects from a skin cluster.
     """
@@ -1546,7 +1547,7 @@ class SkinMixin(deformermixin.DeformerMixin):
         log.debug('Attempting to set influence ID: %s, for %s.vtx%s' % (target, self.shape().partialPathName(), vertexIndices))
         log.debug('Using %s for source influences.' % source)
 
-        for vertexIndex, vertexWeights in self.iterVertices(vertexIndices):
+        for (vertexIndex, vertexWeights) in self.iterVertices(vertexIndices):
 
             # Adjust amount based on soft selection falloff
             #
@@ -2375,7 +2376,7 @@ class SkinMixin(deformermixin.DeformerMixin):
             #
             return {key: 0.0 for key in keys}
 
-        elif isinstance(value, (KeysView, ValuesView)):
+        elif isinstance(value, (collections_abc.KeysView, collections_abc.ValuesView)):
 
             return cls.mergeDictionaries(list(value))
 
@@ -2400,7 +2401,7 @@ class SkinMixin(deformermixin.DeformerMixin):
 
         # Get vertex weights from indices
         #
-        parents = [self(x) for x in parents]
+        parents = [self.pyFactory(x) for x in parents]
 
         parentMap = {self._influences[x]: self._influences[x.descendants(maxDepth=parents)] for x in parents}
         updates = dict.fromkeys(vertexIndices)

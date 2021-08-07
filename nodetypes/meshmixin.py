@@ -5,12 +5,12 @@ import sys
 import math
 
 from collections import deque
-from collections.abc import MutableSequence
 from scipy.spatial import cKDTree
+from six import string_types
+from six.moves import collections_abc
 
 from . import shapemixin
 from ..utilities import dagutils
-from ..utilities.pyutils import string_types
 
 import logging
 logging.basicConfig()
@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
 
 
-class MeshComponent(MutableSequence):
+class MeshComponent(collections_abc.MutableSequence):
     """
     Overload of MutableSequence used to manipulate single indexed components.
     For performance reasons this class will initialize with a fixed dictionary size.
@@ -257,7 +257,7 @@ class MeshComponent(MutableSequence):
 
         # Check value type
         #
-        if isinstance(elements, (MutableSequence, om.MIntArray)):
+        if isinstance(elements, (collections_abc.MutableSequence, om.MIntArray)):
 
             # Iterate through integer items
             #
@@ -294,7 +294,7 @@ class MeshComponent(MutableSequence):
 
         # Check value type
         #
-        if isinstance(elements, (MutableSequence, om.MIntArray)):
+        if isinstance(elements, (collections_abc.MutableSequence, om.MIntArray)):
 
             # Iterate through integer items
             #
@@ -331,7 +331,7 @@ class MeshComponent(MutableSequence):
 
         # Check value type
         #
-        if isinstance(elements, (MutableSequence, om.MIntArray)):
+        if isinstance(elements, (collections_abc.MutableSequence, om.MIntArray)):
 
             return self.append(elements)
 
@@ -545,7 +545,7 @@ class MeshComponent(MutableSequence):
 
             self.append(value)
 
-        elif isinstance(value, MutableSequence):
+        elif isinstance(value, collections_abc.MutableSequence):
 
             return self.setElements(om.MIntArray(value))
 

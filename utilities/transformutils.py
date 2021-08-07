@@ -6,9 +6,10 @@ import maya.cmds as mc
 import maya.api.OpenMaya as om
 import math
 
+from six import string_types
+
 from . import dagutils, plugutils
 from ..decorators import undo
-from ..utilities.pyutils import string_types
 
 import logging
 logging.basicConfig()

@@ -2,34 +2,12 @@ import os
 import sys
 import inspect
 
-try:
-
-    reload  # Python 2: "reload" is built-in
-
-except NameError:
-
-    from importlib import reload
+from six.moves import reload_module
 
 import logging
 logging.basicConfig()
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
-
-
-def getStringTypes():
-    """
-    Returns a list of string types based on the version of python.
-
-    :rtype: tuple
-    """
-
-    if sys.version_info[0] == 2:
-
-        return basestring, str, unicode
-
-    else:
-
-        return str
 
 
 def resolveFilePath(filePath):
@@ -152,7 +130,7 @@ def iterPackage(package, forceReload=False):
             if forceReload:
 
                 log.info('Reloading module...')
-                reload(module)
+                reload_module(module)
 
             yield module
 
@@ -232,6 +210,3 @@ def findClass(className, modulePath):
             module = __import__(modulePath, locals=locals(), globals=globals(), fromlist=[root], level=0)
 
         return module.__dict__.get(className, None)
-
-
-string_types = getStringTypes()

@@ -1,7 +1,7 @@
 import weakref
 
 from abc import ABCMeta, abstractmethod
-from future.utils import with_metaclass
+from six import with_metaclass
 
 import logging
 logging.basicConfig()

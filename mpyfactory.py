@@ -4,9 +4,11 @@ import maya.api.OpenMaya as om
 import sys
 import os
 
+from six import string_types
+
 from . import mpynode, nodetypes
 from .abstract import abstractfactory
-from .utilities import dagutils, pyutils
+from .utilities import dagutils
 
 import logging
 logging.basicConfig()
@@ -231,7 +233,7 @@ class MPyFactory(abstractfactory.AbstractFactory):
 
         # Check value type
         #
-        if isinstance(uuid, str):
+        if isinstance(uuid, string_types):
 
             uuid = om.MUuid(uuid)
 
@@ -409,7 +411,7 @@ class MPyFactory(abstractfactory.AbstractFactory):
 
         # Check if name is valid
         #
-        if isinstance(name, str) and len(name) == 0:
+        if isinstance(name, string_types) and len(name) == 0:
 
             name = '{typeName}1'.format(typeName=typeName)
 

@@ -4,10 +4,10 @@ import re
 import os
 
 from PySide2 import QtGui
+from six import string_types
 
 from .. import mpyattribute, mpynode
 from ..utilities import attributeutils, plugutils, dagutils
-from ..utilities.pyutils import string_types
 
 import logging
 logging.basicConfig()
@@ -841,7 +841,7 @@ class DependencyMixin(mpynode.MPyNode):
 
     def dependsOn(self, apiType=om.MFn.kDependencyNode):
         """
-        Returns nodes that this instance is dependent on.
+        Returns a list of nodes that this object is dependent on.
 
         :rtype: list[DependencyMixin]
         """
@@ -850,7 +850,7 @@ class DependencyMixin(mpynode.MPyNode):
 
     def dependents(self, apiType=om.MFn.kDependencyNode):
         """
-        Returns nodes that are dependent on this instance.
+        Returns a list of nodes that are dependent on this object.
 
         :return: list[DependencyMixin]
         """
