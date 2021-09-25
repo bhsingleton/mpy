@@ -541,6 +541,6 @@
             ]
         ], 
         "lineWidth": 4.0, 
-        "apiType": 267
+        "typeName": "nurbsCurve"
     }
 ]

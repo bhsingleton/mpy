@@ -1,8 +1,8 @@
-import maya.cmds as mc
-import maya.api.OpenMaya as om
+from maya import cmds as mc
+from maya.api import OpenMaya as om
+from dcc.maya.libs import transformutils
 
 from . import transformmixin
-from ..utilities import transformutils
 
 import logging
 logging.basicConfig()
@@ -12,7 +12,7 @@ log.setLevel(logging.INFO)
 
 class ConstraintMixin(transformmixin.TransformMixin):
     """
-    Overload of DagMixin class used to interface with constraint nodes.
+    Overload of TransformMixin class used to interface with constraint nodes.
     """
 
     __apitype__ = (om.MFn.kConstraint, om.MFn.kPluginConstraintNode)
@@ -61,8 +61,7 @@ class ConstraintMixin(transformmixin.TransformMixin):
 
     def __init__(self, *args, **kwargs):
         """
-        Dunderscore method called after a new instance has been created.
-        :rtype: None
+        Private method called after a new instance has been created.
         """
 
         # Call parent method
@@ -95,7 +94,7 @@ class ConstraintMixin(transformmixin.TransformMixin):
         """
         Updates the constraint object for this instance.
 
-        :type constraintObject: mpynode.MPyNode
+        :type constraintObject: mpy.mpynode.MPyNode
         :keyword maintainOffset: bool
         :keyword skipTranslateX: bool
         :keyword skipTranslateY: bool
@@ -121,7 +120,7 @@ class ConstraintMixin(transformmixin.TransformMixin):
 
         # Update constraint name
         #
-        constraintName = f'{constraintObject.displayName()}_{self.typeName}1'
+        constraintName = '{nodeName}_{typeName}1'.format(nodeName=constraintObject.displayName(), typeName=self.typeName)
         self.setName(constraintName)
 
         # Update rest matrix
@@ -136,20 +135,20 @@ class ConstraintMixin(transformmixin.TransformMixin):
             # Check if attribute should be skipped
             #
             attributeName = destinationName[0].upper() + destinationName[1:]
-            key = f'skip{attributeName}'
+            key = 'skip{attributeName}'.format(attributeName=attributeName)
 
             skipAttribute = kwargs.get(key, False)
 
             if skipAttribute:
 
-                log.info(f'Skipping constraint attribute: {destinationName}')
+                log.info('Skipping constraint attribute: %s' % destinationName)
                 continue
 
             # Check if attributes exist
             #
             if not self.hasAttr(sourceName) or not constraintObject.hasAttr(destinationName):
 
-                log.info(f'Unable to locate constraint attributes: {sourceName} and {destinationName}')
+                log.info('Unable to locate constraint attributes: %s and %s' % (sourceName, destinationName))
                 continue
 
             # Get associated plugs
@@ -296,20 +295,20 @@ class ConstraintMixin(transformmixin.TransformMixin):
             #
             if not target.hasAttr(sourceName) or not self.hasAttr(destinationName):
 
-                log.info(f'Unable to locate constraint attributes: {sourceName} and {destinationName}')
+                log.info('Unable to locate constraint attributes: %s and %s' % (sourceName, destinationName))
                 continue
 
             # Connect plugs
             #
             source = target.findPlug(sourceName)
-            destination = self.findPlug(f'target[{index}].{destinationName}')
+            destination = self.findPlug('target[%s].%s' % (index, destinationName))
 
             self.connectPlugs(source, destination)
 
         # Connect parent matrix attribute
         #
-        source = target.findPlug(f'parentMatrix[{target.instanceNumber()}]')
-        destination = self.findPlug(f'target[{index}].targetParentMatrix')
+        source = target.findPlug('parentMatrix[%s]' % target.instanceNumber())
+        destination = self.findPlug('target[%s].targetParentMatrix' % index)
 
         self.connectPlugs(source, destination)
 
@@ -318,13 +317,13 @@ class ConstraintMixin(transformmixin.TransformMixin):
         nodeName = target.displayName()
 
         attribute = self.addAttr(
-            longName=f'{nodeName}W{index}',
+            longName='{nodeName}W{index}'.format(nodeName=nodeName, index=index),
             attributeType='float',
             min=0.0, max=1.0
         )
 
         source = om.MPlug(self.object(), attribute)
-        destination = self.findPlug(f'target[{index}].targetWeight')
+        destination = self.findPlug('target[%s].targetWeight' % index)
 
         self.connectPlugs(source, destination)
 
@@ -350,6 +349,7 @@ class ConstraintMixin(transformmixin.TransformMixin):
             self.addTarget(target, maintainOffset=maintainOffset)
 
     def removeTarget(self, index):
+
         pass
 
     def restTranslate(self, context=om.MDGContext.kNormal):
@@ -615,8 +615,8 @@ class ConstraintTarget(object):
         fullPathName = self.constraint.fullPathName()
         fnAttribute = om.MFnAttribute(otherPlug.attribute())
 
-        mc.renameAttr(f'{fullPathName}.{fnAttribute.shortName}', name)
-        mc.renameAttr(f'{fullPathName}.{fnAttribute.name}', name)
+        mc.renameAttr('%s.%s' % (fullPathName, fnAttribute.shortName), name)
+        mc.renameAttr('%s.%s' % (fullPathName, fnAttribute.name), name)
 
     def weight(self):
         """

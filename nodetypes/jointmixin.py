@@ -1,7 +1,7 @@
-import maya.api.OpenMaya as om
+from maya.api import OpenMaya as om
+from dcc.maya.libs import transformutils
 
 from . import transformmixin
-from ..utilities import transformutils
 
 import logging
 logging.basicConfig()

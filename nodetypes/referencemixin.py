@@ -1,10 +1,9 @@
-import maya.cmds as mc
-import maya.api.OpenMaya as om
-
+from maya import cmds as mc
+from maya.api import OpenMaya as om
 from six import string_types
+from dcc.maya.libs import dagutils
 
 from . import dependencymixin
-from ..utilities import dagutils
 
 import logging
 logging.basicConfig()

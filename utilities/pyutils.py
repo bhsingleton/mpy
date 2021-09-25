@@ -102,7 +102,7 @@ def iterPackage(package, forceReload=False):
 
     # Iterate through module files inside package
     #
-    directory = os.path.dirname(package.__path__[0])
+    directory = os.path.abspath(package.__path__[0])
 
     for filename in os.listdir(directory):
 

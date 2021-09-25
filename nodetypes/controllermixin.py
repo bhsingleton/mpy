@@ -1,11 +1,10 @@
-import maya.cmds as mc
-import maya.api.OpenMaya as om
-
+from maya import cmds as mc
+from maya.api import OpenMaya as om
 from enum import Enum
+from dcc.naming import namingutils
 
 from . import dependencymixin
 from .. import mpyattribute
-from ..utilities import namingutils
 
 import logging
 logging.basicConfig()

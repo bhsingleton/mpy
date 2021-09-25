@@ -1,13 +1,13 @@
-import maya.cmds as mc
-import maya.api.OpenMaya as om
 import re
 import os
 
+from maya import cmds as mc
+from maya.api import OpenMaya as om
 from PySide2 import QtGui
 from six import string_types
+from dcc.maya.libs import attributeutils, plugutils, dagutils
 
 from .. import mpyattribute, mpynode
-from ..utilities import attributeutils, plugutils, dagutils
 
 import logging
 logging.basicConfig()

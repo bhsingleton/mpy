@@ -142,7 +142,7 @@
             ]
         ], 
         "lineWidth": 2.0, 
-        "apiType": 267
+        "typeName": "nurbsCurve"
     }, 
     {
         "vDegree": 3, 
@@ -165,7 +165,7 @@
                     -4.085620730620576e-14, 
                     -4.085620730620576e-14
                 ], 
-                "apiType": "NurbsCurve", 
+                "apiType": "nurbsCurveData", 
                 "controlPoints": [
                     [
                         0.49999999999999994, 
@@ -358,7 +358,7 @@
             0.6624377518061826, 
             0.6624377518061826
         ], 
-        "apiType": 294, 
+        "typeName": "nurbsSurface", 
         "uKnots": [
             0.3375622481938173, 
             0.3375622481938173, 

@@ -1,7 +1,7 @@
-import maya.api.OpenMaya as om
+from maya.api import OpenMaya as om
+from dcc.maya.libs import dagutils
 
 from . import dependencymixin
-from ..utilities import dagutils
 
 import logging
 logging.basicConfig()

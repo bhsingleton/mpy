@@ -1,41 +1,17 @@
-import maya.cmds as mc
-import maya.api.OpenMaya as om
-
-import sys
 import os
 
+from maya import cmds as mc
+from maya.api import OpenMaya as om
 from six import string_types
+from dcc.maya.libs import dagutils
 
-from . import mpynode, nodetypes
+from . import mpynode, nodetypes, plugintypes
 from .abstract import abstractfactory
-from .utilities import dagutils
 
 import logging
 logging.basicConfig()
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
-
-
-def getPyFactory():
-    """
-    Returns the PyFactory instance.
-    Reduces the amount of extra code I have to write...
-
-    :rtype: MPyFactory
-    """
-
-    return MPyFactory.getInstance()
-
-
-def getPyFactoryReference():
-    """
-    Returns the PyFactory instance as a weak reference.
-    Again, reduces the amount of extra code I have to write...
-
-    :rtype: weakref.ref
-    """
-
-    return getPyFactory().weakReference()
 
 
 class MPyFactory(abstractfactory.AbstractFactory):
@@ -56,7 +32,7 @@ class MPyFactory(abstractfactory.AbstractFactory):
 
         # Declare class variables
         #
-        self.__plugins__ = {x.__plugin__: x for x in self.__classes__.values() if hasattr(x, '__plugin__')}
+        self.__plugins__ = dict(self.iterPackages(plugintypes, classAttr='__plugin__'))
 
     def __call__(self, dependNode):
         """
@@ -351,52 +327,6 @@ class MPyFactory(abstractfactory.AbstractFactory):
 
         return list(self.iterNodesByTypeName(typeName))
 
-    def iterExtensionsByType(self, T):
-        """
-        Returns a generator that yields extensions based on the supplied type.
-
-        :type T: type
-        :rtype: iter
-        """
-
-        for pyNode in self.iterNodesByTypeName('pyNode'):
-
-            if isinstance(pyNode, T):
-
-                yield pyNode
-
-            else:
-
-                continue
-
-    def iterExtensionByTypeName(self, typeName):
-        """
-        Returns a generator that yields extensions based on the supplied type name.
-
-        :type typeName: str
-        :rtype: iter
-        """
-
-        for pyNode in self.iterNodesByTypeName('pyNode'):
-
-            if pyNode.getAttr('__name__') == typeName:
-
-                yield pyNode
-
-            else:
-
-                continue
-
-    def getExtensionByTypeName(self, typeName):
-        """
-        Returns a list of extensions based on the given type name.
-
-        :type typeName: str
-        :rtype: list[mpynode.MPyNode]
-        """
-
-        return list(self.iterExtensionByTypeName(typeName))
-
     def createNode(self, typeName, name='', parent=None, skipSelect=True):
         """
         Creates a new scene node and immediately wraps it in a MPyNode interface.
@@ -496,18 +426,6 @@ class MPyFactory(abstractfactory.AbstractFactory):
 
             yield mpynode.MPyNode(dependNode)
 
-    @staticmethod
-    def getDeformersFromActiveSelection(apiType=om.MFn.kGeometryFilt):
-        """
-        Returns deformer interfaces from the active selection.
-        A valid selection can consist of transforms, shapes or components.
-
-        :type apiType: int
-        :rtype: [mpynode.MPyNode]
-        """
-
-        return [mpynode.MPyNode(x) for x in dagutils.iterDeformersFromSelection(apiType=apiType)]
-
     def getAttributeTemplate(self, name):
         """
         Returns an attribute template from the supplied name.
@@ -518,3 +436,36 @@ class MPyFactory(abstractfactory.AbstractFactory):
 
         filename = '{name}.json'.format(name=name)
         return os.path.join(os.path.dirname(__file__), 'templates', filename)
+
+    def getShapeTemplate(self, name):
+        """
+        Returns a shape template from the supplied name.
+        No error checking is performed to test if this file actually exists!
+
+        :rtype: str
+        """
+
+        filename = '{name}.json'.format(name=name)
+        return os.path.join(os.path.dirname(__file__), 'shapes', filename)
+
+
+def getPyFactory():
+    """
+    Returns the PyFactory instance.
+    Reduces the amount of extra code I have to write...
+
+    :rtype: MPyFactory
+    """
+
+    return MPyFactory.getInstance()
+
+
+def getPyFactoryReference():
+    """
+    Returns the PyFactory instance as a weak reference.
+    Again, reduces the amount of extra code I have to write...
+
+    :rtype: weakref.ref
+    """
+
+    return getPyFactory().weakReference()

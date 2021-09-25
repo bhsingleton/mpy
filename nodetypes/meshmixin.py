@@ -1,16 +1,15 @@
-import maya.cmds as mc
-import maya.api.OpenMaya as om
-
 import sys
 import math
 
+from maya import cmds as mc
+from maya.api import OpenMaya as om
 from collections import deque
 from scipy.spatial import cKDTree
 from six import string_types
 from six.moves import collections_abc
+from dcc.maya.libs import dagutils
 
 from . import shapemixin
-from ..utilities import dagutils
 
 import logging
 logging.basicConfig()

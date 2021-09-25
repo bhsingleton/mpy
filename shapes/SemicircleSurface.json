@@ -142,7 +142,7 @@
             ]
         ], 
         "lineWidth": 2.0, 
-        "apiType": 267
+        "typeName": "nurbsCurve"
     }, 
     {
         "vDegree": 3, 
@@ -399,7 +399,7 @@
             1.0, 
             1.0
         ], 
-        "apiType": 294, 
+        "typeName": "nurbsSurface", 
         "uKnots": [
             6.0, 
             6.0, 

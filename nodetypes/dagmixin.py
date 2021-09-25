@@ -1,10 +1,10 @@
-import maya.api.OpenMaya as om
-
+from maya import cmds as mc
+from maya.api import OpenMaya as om
 from collections import deque
+from dcc.maya.libs import dagutils
 
 from . import containerbasemixin
 from .. import mpyattribute
-from ..utilities import dagutils
 
 import logging
 logging.basicConfig()
@@ -53,7 +53,7 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
 
         else:
 
-            super(DagMixin).__getitem__(key)
+            return super(DagMixin).__getitem__(key)
 
     def __reduce__(self):
         """

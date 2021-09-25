@@ -1,7 +1,8 @@
-import maya.cmds as mc
-import maya.api.OpenMaya as om
+from maya import cmds as mc
+from maya.api import OpenMaya as om
+from dcc.maya.libs import plugutils
 
-from .utilities import plugutils
+from . import mpynode
 
 import logging
 logging.basicConfig()
@@ -176,7 +177,15 @@ class MPyAttribute(object):
         :rtype: om.MPlug
         """
 
-        return om.MPlug(instance.object(), instance.attribute(self.name))
+        # Check instance type
+        #
+        if isinstance(instance, mpynode.MPyNode):
+
+            return om.MPlug(instance.object(), instance.attribute(self.name))
+
+        else:
+
+            raise TypeError('plug() expects an MPyNode (%s given)' % type(instance).__name__)
 
     def validateAndGetValue(self, func):
         """
@@ -246,7 +255,7 @@ class MPyAttribute(object):
         """
         Forces the changed event to be evoked even if the value hasn't been set.
 
-        :type instance: mpynode.MPyNode
+        :type instance: mpy.mpynode.MPyNode
         :rtype: None
         """
 

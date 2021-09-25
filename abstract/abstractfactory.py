@@ -1,7 +1,9 @@
-from abc import ABCMeta, abstractmethod
+import inspect
+
+from abc import abstractmethod
+from dcc.decorators.classproperty import classproperty
 
 from . import singleton
-from ..decorators import classproperty
 from ..utilities import pyutils
 
 import logging
@@ -28,7 +30,35 @@ class AbstractFactory(singleton.Singleton):
 
         # Declare class variables
         #
-        self.__classes__ = {x: y for (x, y) in self.iterClasses()}
+        self.__classes__ = dict(self.iterPackages(*self.packages()))
+
+    def __iter__(self):
+        """
+        Private method that returns a generator that yields all available classes.
+
+        :rtype: iter
+        """
+
+        return self.iterPackages(*self.packages())
+
+    def __getitem__(self, key):
+        """
+        Private method that returns an indexed item.
+
+        :type key: Union[int, str]
+        :rtype: type
+        """
+
+        return self.getClass(key)
+
+    def __len__(self):
+        """
+        Private method that evaluates the number of classes belonging to this factory.
+
+        :rtype: int
+        """
+
+        pass
 
     @classproperty
     def nullWeakReference(cls):
@@ -43,7 +73,7 @@ class AbstractFactory(singleton.Singleton):
     @abstractmethod
     def packages(self):
         """
-        Returns a list of packages to be searched for factory classes.
+        Returns a list of packages to be inspected for classes.
 
         :rtype: list[module]
         """
@@ -75,71 +105,10 @@ class AbstractFactory(singleton.Singleton):
         Returns a dictionary of classes that can be instantiated.
         The structure of this dictionary is dictated by the classAttr method!
 
-        :rtype: dict[str:class]
+        :rtype: dict[str:type]
         """
 
         return self.__classes__
-
-    def iterModules(self):
-        """
-        Returns a generator that can iterate over all of the package modules.
-
-        :rtype: iter
-        """
-
-        for package in self.packages():
-
-            for module in pyutils.iterPackage(package):
-
-                yield module
-
-    def iterItems(self):
-        """
-        Returns a generator that can iterate over all of the module contents.
-
-        :rtype: iter
-        """
-
-        classFilter = self.classFilter()
-
-        for module in self.iterModules():
-
-            for cls in pyutils.iterModule(module, classFilter=classFilter):
-
-                yield cls
-
-    def iterClasses(self):
-        """
-        Generator method used to iterate through all of the module items.
-
-        :rtype: iter
-        """
-
-        # Iterate through module items
-        #
-        classAttr = self.classAttr()
-
-        for (name, cls) in self.iterItems():
-
-            # Check if class has required key identifier
-            #
-            if not hasattr(cls, classAttr):
-
-                continue
-
-            # Yield key-value pair
-            #
-            key = getattr(cls, classAttr)
-
-            if isinstance(key, (tuple, list)):
-
-                for item in key:
-
-                    yield item, cls
-
-            else:
-
-                yield key, cls
 
     def getClass(self, key):
         """
@@ -150,3 +119,76 @@ class AbstractFactory(singleton.Singleton):
         """
 
         return self.__classes__.get(key, None)
+
+    def iterModules(self, *args, **kwargs):
+        """
+        Returns a generator that yields all of the classes from the supplied modules.
+        Optional keywords can be used to override the factory defaults.
+
+        :keyword classAttr: str
+        :keyword classFilter: type
+        :rtype: iter
+        """
+
+        # Iterate through arguments
+        #
+        classAttr = kwargs.get('classAttr', self.classAttr())
+        classFilter = kwargs.get('classFilter', self.classFilter())
+
+        for arg in args:
+
+            # Check if this is a module
+            #
+            if not inspect.ismodule(arg):
+
+                continue
+
+            # Iterate through module items
+            #
+            for (name, cls) in pyutils.iterModule(arg, classFilter=classFilter):
+
+                # Check if class has required key identifier
+                #
+                if not hasattr(cls, classAttr):
+
+                    continue
+
+                # Yield key-value pair
+                #
+                key = getattr(cls, classAttr)
+
+                if isinstance(key, (tuple, list)):
+
+                    for item in key:
+
+                        yield item, cls
+
+                else:
+
+                    yield key, cls
+
+    def iterPackages(self, *args, **kwargs):
+        """
+        Returns a generator that yields all of the classes from the supplied packages.
+        Optional keywords can be used to override the factory defaults.
+
+        :rtype: iter
+        """
+
+        # Iterate through arguments
+        #
+        for arg in args:
+
+            # Check if this is a package
+            #
+            if not inspect.ismodule(arg):
+
+                continue
+
+            # Iterate through modules
+            #
+            modules = list(pyutils.iterPackage(arg))
+
+            for (key, cls) in self.iterModules(*modules, **kwargs):
+
+                yield key, cls

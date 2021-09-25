@@ -1,9 +1,11 @@
-import maya.cmds as mc
-import maya.api.OpenMaya as om
+import os
+
+from maya import cmds as mc
+from maya.api import OpenMaya as om
+from dcc.maya.libs import shapeutils, transformutils
 
 from . import dagmixin
 from .. import mpyattribute
-from ..utilities import shapeutils, transformutils
 
 import logging
 logging.basicConfig()
@@ -306,7 +308,7 @@ class TransformMixin(dagmixin.DagMixin):
 
         transformutils.unfreezeTransform(self.dagPath())
 
-    def addCustomShape(self, shape, **kwargs):
+    def addShape(self, shape, **kwargs):
         """
         Adds the specified shape to this transform node.
         See the shapes directory for a list of accepts shapes.
@@ -315,7 +317,8 @@ class TransformMixin(dagmixin.DagMixin):
         :rtype: list[om.MObject]
         """
 
-        return shapeutils.addShapeToTransform(shape, parent=self.object(), **kwargs)
+        filePath = self.pyFactory.getShapeTemplate(shape)
+        return shapeutils.applyShapeTemplate(filePath, parent=self.object(), **kwargs)
 
     def addLocator(self, *args, **kwargs):
         """
@@ -479,10 +482,10 @@ class TransformMixin(dagmixin.DagMixin):
         #
         name = self.fullPathName()
 
-        mc.addAttr(f'{name}.globalScale', attributeType='float', defaultValue=1.0)
-        mc.connectAttr(f'{name}.globalScale', f'{name}.scaleX')
-        mc.connectAttr(f'{name}.globalScale', f'{name}.scaleY')
-        mc.connectAttr(f'{name}.globalScale', f'{name}.scaleZ')
+        mc.addAttr('%s.globalScale' % name, attributeType='float', defaultValue=1.0)
+        mc.connectAttr('%s.globalScale' % name, '%s.scaleX' % name)
+        mc.connectAttr('%s.globalScale' % name, '%s.scaleY' % name)
+        mc.connectAttr('%s.globalScale' % name, '%s.scaleZ' % name)
 
         # Hide scale attributes
         #
@@ -564,7 +567,7 @@ class TransformMixin(dagmixin.DagMixin):
 
         # Create new controller tag
         #
-        controllerTag = self.pyFactory.createNode('controller', name=f'{self.displayName()}_tag')
+        controllerTag = self.pyFactory.createNode('controller', name='{nodeName}_tag'.format(nodeName=self.displayName()))
 
         controllerTag.controllerObject = self.object()
         controllerTag.side = kwargs.get('side', 2)

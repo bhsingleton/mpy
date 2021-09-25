@@ -541,7 +541,7 @@
             ]
         ], 
         "lineWidth": 2.0, 
-        "apiType": 267
+        "typeName": "nurbsCurve"
     }, 
     {
         "vDegree": 3, 
@@ -571,7 +571,7 @@
                     -0.0, 
                     -0.0
                 ], 
-                "apiType": 267, 
+                "typeName": "nurbsCurveData", 
                 "controlPoints": [
                     [
                         0.5, 
@@ -806,7 +806,7 @@
             0.6503948211770304, 
             0.6503948211770304
         ], 
-        "apiType": 294, 
+        "typeName": "nurbsSurface", 
         "uKnots": [
             0.3496051788229697, 
             0.3496051788229697, 
@@ -846,7 +846,7 @@
                     -0.0, 
                     -0.0
                 ], 
-                "apiType": 267, 
+                "typeName": "nurbsCurveData", 
                 "controlPoints": [
                     [
                         0.5, 
@@ -1081,7 +1081,7 @@
             0.6503948211770304, 
             0.6503948211770304
         ], 
-        "apiType": 294, 
+        "typeName": "nurbsSurface", 
         "uKnots": [
             0.3496051788229697, 
             0.3496051788229697, 
@@ -1121,7 +1121,7 @@
                     -0.0, 
                     -0.0
                 ], 
-                "apiType": 267, 
+                "typeName": "nurbsCurveData", 
                 "controlPoints": [
                     [
                         0.5, 
@@ -1356,7 +1356,7 @@
             0.6503948211770304, 
             0.6503948211770304
         ], 
-        "apiType": 294, 
+        "typeName": "nurbsSurface", 
         "uKnots": [
             0.3496051788229697, 
             0.3496051788229697, 

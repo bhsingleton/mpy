@@ -98,7 +98,7 @@
             ]
         ], 
         "lineWidth": -1.0, 
-        "apiType": 267
+        "typeName": "nurbsCurve"
     }, 
     {
         "Smoothing": [

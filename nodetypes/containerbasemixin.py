@@ -1,7 +1,6 @@
-import maya.cmds as mc
-import maya.api.OpenMaya as om
 import os
 
+from maya.api import OpenMaya as om
 from PySide2 import QtGui
 from six import string_types
 

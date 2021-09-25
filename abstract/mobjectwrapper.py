@@ -1,13 +1,11 @@
-import maya.cmds as mc
-import maya.api.OpenMaya as om
 import inspect
 import weakref
 
+from maya.api import OpenMaya as om
 from abc import ABCMeta
 from six import with_metaclass, string_types
-
-from ..decorators import classproperty
-from ..utilities import dagutils
+from dcc.decorators.classproperty import classproperty
+from dcc.maya.libs import dagutils
 
 import logging
 logging.basicConfig()
@@ -17,9 +15,9 @@ log.setLevel(logging.INFO)
 
 class MObjectWrapper(with_metaclass(ABCMeta, object)):
     """
-    Abstract base class used as a low-level wrapper for Maya scene nodes.
+    Abstract base class used as a low-level wrapper for Maya scene objects.
     A lot of the architecture in this class is designed around dynamically looking up compatible function sets.
-    If this class detects an unknown method it will attempt to resolve it through the function set.
+    If this class detects an unknown attribute it will attempt to resolve it through the function set.
     """
 
     __slots__ = ('__weakref__', '__handle__', '__functionset__')
@@ -127,7 +125,7 @@ class MObjectWrapper(with_metaclass(ABCMeta, object)):
 
         # Check if function set contains attribute
         #
-        obj = self.__getattribute__('__functionset__')
+        obj = getattr(self, '__functionset__')
 
         if not hasattr(obj, name):
 

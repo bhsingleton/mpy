@@ -1,11 +1,13 @@
-import maya.cmds as mc
-import maya.api.OpenMaya as om
+import os
 
-from abc import ABCMeta, abstractmethod
+from maya.api import OpenMaya as om
+from abc import ABCMeta
+from six import with_metaclass
+from dcc.maya.libs import dagutils
+from dcc.decorators.classproperty import classproperty
 
-from .decorators import classproperty
 from .abstract import mobjectwrapper
-from .utilities import dagutils
+from .utilities import pyutils
 
 import logging
 logging.basicConfig()
@@ -13,9 +15,11 @@ log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
 
 
-class MPyNode(mobjectwrapper.MObjectWrapper, metaclass=ABCMeta):
+class MPyNode(with_metaclass(ABCMeta, mobjectwrapper.MObjectWrapper)):
     """
-    Overload of MObjectWrapper used to return Maya node interfaces.
+    Overload of MObjectWrapper used as the base class for all Maya node interfaces.
+    This class supports a range of constructor arguments that are outlined under the __accepts__ property.
+    All derived classes should overload the __apitype__ property so they can registered by the MPyFactory.
     """
 
     __accepts__ = (str, om.MObjectHandle, om.MObject, om.MDagPath)
@@ -78,14 +82,16 @@ class MPyNode(mobjectwrapper.MObjectWrapper, metaclass=ABCMeta):
         Returns the node factory class.
         It's a bit hacky but this way we can bypass cyclical import errors.
 
-        :rtype: mpynode.mpyfactory.MPyFactory
+        :rtype: mpy.mpyfactory.MPyFactory
         """
 
         # Check if factory exists
         #
         if cls.__pyfactory__ is None:
 
-            from . import mpyfactory
+            filePath = os.path.join(os.path.dirname(__file__), 'mpyfactory.py')
+            mpyfactory = pyutils.importFile(filePath)
+
             cls.__pyfactory__ = mpyfactory.getPyFactoryReference()
 
         return cls.__pyfactory__()
