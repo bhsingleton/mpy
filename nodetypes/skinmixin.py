@@ -7,6 +7,7 @@ Anything prior to UE4 will also be capped at 4 influences.
 """
 from maya import cmds as mc
 from maya.api import OpenMaya as om
+from six import string_types, integer_types
 from dcc.maya.libs import skinutils
 
 from . import deformermixin
@@ -50,13 +51,13 @@ class SkinMixin(deformermixin.DeformerMixin):
         """
         Private method that returns the weights for the specified vertex.
 
-        :type index: Union[int, list, tuple, set, slice]
+        :type index: Union[str, int, list, tuple, set, slice]
         :rtype: dict
         """
 
         # Check index type
         #
-        if isinstance(index, int):
+        if isinstance(index, integer_types):
 
             return dict(skinutils.iterWeights(self.object(), index))
 
@@ -68,20 +69,40 @@ class SkinMixin(deformermixin.DeformerMixin):
 
             return dict(skinutils.iterWeightList(self.object(), vertexIndices=list(range(self.__len__()))[index]))
 
+        elif isinstance(index, string_types):
+
+            return super(SkinMixin, self).__getitem__(index)
+
         else:
 
-            raise TypeError('__getitem__() expects an int (%s given)!' % type(index).__name__)
+            raise TypeError('__getitem__() expects a str or int (%s given)!' % type(index).__name__)
 
     def __setitem__(self, index, value):
         """
         Private method that updates the weights for the specified vertex.
 
-        :type index: int
+        :type index: Union[str, int, slice]
         :type value: dict[int:float]
         :rtype: None
         """
 
-        skinutils.setWeights(self.object(), index, value)
+        # Check index type
+        #
+        if isinstance(index, integer_types):
+
+            skinutils.setWeights(self.object(), index, value)
+
+        elif isinstance(index, slice):
+
+            skinutils.setWeightList(self.object(), value)
+
+        elif isinstance(index, string_types):
+
+            super(SkinMixin, self).__setitem__(index, value)
+
+        else:
+
+            raise TypeError('__setitem__() expects a str or int (%s given)!' % type(index).__name__)
 
     def __iter__(self):
         """
