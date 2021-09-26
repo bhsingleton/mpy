@@ -19,7 +19,7 @@ class MPyNode(with_metaclass(ABCMeta, mobjectwrapper.MObjectWrapper)):
     """
     Overload of MObjectWrapper used as the base class for all Maya node interfaces.
     This class supports a range of constructor arguments that are outlined under the __accepts__ property.
-    All derived classes should overload the __apitype__ property so they can registered by the MPyFactory.
+    All derived classes should overload the __apitype__ property so they can be registered by MPyFactory.
     """
 
     __accepts__ = (str, om.MObjectHandle, om.MObject, om.MDagPath)
