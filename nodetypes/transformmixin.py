@@ -179,7 +179,7 @@ class TransformMixin(dagmixin.DagMixin):
 
         # Decompose transform matrix
         #
-        translation, rotation, scale = transformutils.decomposeMatrix(matrix)
+        translation, rotation, scale = transformutils.decomposeTransformMatrix(matrix)
 
         # Set transform components
         #

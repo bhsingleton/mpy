@@ -473,7 +473,7 @@ class ConstraintMixin(transformmixin.TransformMixin):
 
         # Decompose rest matrix
         #
-        translate, rotate, scale = transformutils.decomposeMatrix(restMatrix, rotateOrder=self.rotateOrder())
+        translate, rotate, scale = transformutils.decomposeTransformMatrix(restMatrix, rotateOrder=self.rotateOrder())
 
         # Check if constraint has rest translate
         #
