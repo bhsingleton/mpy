@@ -354,8 +354,8 @@ class DependencyMixin(mpynode.MPyNode):
         Adds a user attribute to this node.
         No need for the data type flag since attributeutils compensates for that.
 
-        :keyword longName: str
-        :keyword attributeType: str
+        :key longName: str
+        :key attributeType: str
         :rtype: om.MObject
         """
 

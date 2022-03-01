@@ -125,8 +125,8 @@ class AbstractFactory(singleton.Singleton):
         Returns a generator that yields all of the classes from the supplied modules.
         Optional keywords can be used to override the factory defaults.
 
-        :keyword classAttr: str
-        :keyword classFilter: type
+        :key classAttr: str
+        :key classFilter: type
         :rtype: iter
         """
 

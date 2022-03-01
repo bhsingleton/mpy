@@ -324,8 +324,8 @@ class TransformMixin(dagmixin.DagMixin):
         """
         Adds a locator shape to this transform.
 
-        :keyword localPosition: list[float, float, float]
-        :keyword localScale: list[float, float, float]
+        :key localPosition: list[float, float, float]
+        :key localScale: list[float, float, float]
         :rtype: mpynode.nodetypes.shapemixin.ShapeMixin
         """
 
@@ -358,11 +358,11 @@ class TransformMixin(dagmixin.DagMixin):
         """
         Adds a point helper shape to this transform.
 
-        :keyword size: float
-        :keyword side: int
-        :keyword localPosition: list[float, float, float]
-        :keyword localRotate: list[float, float, float]
-        :keyword localScale: list[float, float, float]
+        :key size: float
+        :key side: int
+        :key localPosition: list[float, float, float]
+        :key localRotate: list[float, float, float]
+        :key localScale: list[float, float, float]
         :rtype: mpynode.nodetypes.shapemixin.ShapeMixin
         """
 
@@ -452,9 +452,9 @@ class TransformMixin(dagmixin.DagMixin):
         """
         Colorizes all of the shape nodes below this transform.
 
-        :keyword side: int
-        :keyword: colorIndex: int
-        :keyword: colorRGB: list[float, float, float]
+        :key side: int
+        :key: colorIndex: int
+        :key: colorRGB: list[float, float, float]
         :rtype: None
         """
 
@@ -627,7 +627,7 @@ class TransformMixin(dagmixin.DagMixin):
 
         :type typeName: str
         :type targets: list[TransformMixin]
-        :keyword maintainOffset: bool
+        :key maintainOffset: bool
         :rtype: mpynode.nodetypes.constraintmixin.ConstraintMixin
         """
 

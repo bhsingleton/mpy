@@ -95,16 +95,16 @@ class ConstraintMixin(transformmixin.TransformMixin):
         Updates the constraint object for this instance.
 
         :type constraintObject: mpy.mpynode.MPyNode
-        :keyword maintainOffset: bool
-        :keyword skipTranslateX: bool
-        :keyword skipTranslateY: bool
-        :keyword skipTranslateZ: bool
-        :keyword skipRotateX: bool
-        :keyword skipRotateY: bool
-        :keyword skipRotateZ: bool
-        :keyword skipScaleX: bool
-        :keyword skipScaleY: bool
-        :keyword skipScaleZ: bool
+        :key maintainOffset: bool
+        :key skipTranslateX: bool
+        :key skipTranslateY: bool
+        :key skipTranslateZ: bool
+        :key skipRotateX: bool
+        :key skipRotateY: bool
+        :key skipRotateZ: bool
+        :key skipScaleX: bool
+        :key skipScaleY: bool
+        :key skipScaleZ: bool
         :rtype: None
         """
 
