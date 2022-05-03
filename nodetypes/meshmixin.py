@@ -8,7 +8,6 @@ from scipy.spatial import cKDTree
 from six import string_types
 from six.moves import collections_abc
 from dcc.maya.libs import dagutils
-
 from . import shapemixin
 
 import logging
@@ -1134,7 +1133,7 @@ class MeshComponent(collections_abc.MutableSequence):
 
         # Inspect active selection
         #
-        selection = dagutils.getComponentSelection()
+        selection = list(dagutils.iterActiveComponentSelection())
         selectionCount = len(selection)
 
         if selectionCount != 1:
