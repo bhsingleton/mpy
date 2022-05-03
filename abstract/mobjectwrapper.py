@@ -4,8 +4,8 @@ import weakref
 from maya.api import OpenMaya as om
 from abc import ABCMeta
 from six import with_metaclass, string_types
-from dcc.decorators.classproperty import classproperty
 from dcc.maya.libs import dagutils
+from dcc.decorators.classproperty import classproperty
 
 import logging
 logging.basicConfig()
@@ -20,6 +20,7 @@ class MObjectWrapper(with_metaclass(ABCMeta, object)):
     If this class detects an unknown attribute it will attempt to resolve it through the function set.
     """
 
+    # region Dunderscores
     __slots__ = ('__weakref__', '__handle__', '__functionset__')
     __functionsets__ = {}
 
@@ -113,44 +114,61 @@ class MObjectWrapper(with_metaclass(ABCMeta, object)):
 
             return True
 
-    def __getattr__(self, name):
+    def __getattribute__(self, name):
         """
-        Private method used to intercept attribute calls that to do not exist.
+        Private method that performs attribute accesses for instances of this class.
         If the attribute is related to an API function sets then that attribute is returned instead.
-        If not then a attribute error will be raised!
 
         :type name: str
-        :return: See function set for details...
+        :return: Any
         """
 
-        # Check if function set contains attribute
-        #
-        obj = getattr(self, '__functionset__')
+        try:
 
-        if not hasattr(obj, name):
+            return super(MObjectWrapper, self).__getattribute__(name)
 
-            raise AttributeError('Unable to locate attribute: %s!' % name)
+        except AttributeError:
 
-        # Check if attribute is callable
-        #
-        functionSet = obj(self.object())
-        attribute = getattr(functionSet, name)
+            cls = super(MObjectWrapper, self).__getattribute__('__functionset__')
+            func = super(MObjectWrapper, self).__getattribute__('object')
+            functionSet = cls(func())
 
-        if callable(attribute):
+            return getattr(functionSet, name)
+    # endregion
 
-            # Define function wrapper
-            #
-            def wrapper(*args, **kwargs):
+    # region Properties
+    @classproperty
+    def className(cls):
+        """
+        Retrieves the name of this class.
 
-                log.debug('%s was called with %s args and %s kwargs.' % (name, args, kwargs))
-                return attribute(*args, **kwargs)
+        :rtype: str
+        """
 
-            return wrapper
+        return cls.__name__
 
-        else:
+    @classproperty
+    def moduleName(cls):
+        """
+        Retrieves the name of the module this class is derived from.
 
-            return attribute
+        :rtype: str
+        """
 
+        return cls.__module__
+
+    @property
+    def apiTypeStr(self):
+        """
+        Getter method that returns the api type as a human readable string.
+
+        :rtype: str
+        """
+
+        return self.object().apiTypeStr
+    # endregion
+
+    # region Methods
     def isInitialized(self):
         """
         Evaluates if this instance has already been initialized.
@@ -215,16 +233,6 @@ class MObjectWrapper(with_metaclass(ABCMeta, object)):
 
         return self.object().apiType()
 
-    @property
-    def apiTypeStr(self):
-        """
-        Getter method that returns the api type as a human readable string.
-
-        :rtype: str
-        """
-
-        return self.object().apiTypeStr
-
     def functionSet(self):
         """
         Returns a function set compatible with this object.
@@ -242,26 +250,6 @@ class MObjectWrapper(with_metaclass(ABCMeta, object)):
         """
 
         return weakref.ref(self)
-
-    @classproperty
-    def className(cls):
-        """
-        Retrieves the name of this class.
-
-        :rtype: str
-        """
-
-        return cls.__name__
-
-    @classproperty
-    def moduleName(cls):
-        """
-        Retrieves the name of the module this class is derived from.
-
-        :rtype: str
-        """
-
-        return cls.__module__
 
     @classmethod
     def isAbstractClass(cls):
@@ -310,3 +298,4 @@ class MObjectWrapper(with_metaclass(ABCMeta, object)):
         cls.__functionsets__[apiType] = functionSets[-1]
 
         return cls.__functionsets__[apiType]
+    # endregion
