@@ -1,13 +1,9 @@
-import os
-
 from maya.api import OpenMaya as om
 from abc import ABCMeta
 from six import with_metaclass
 from dcc.maya.libs import dagutils
 from dcc.decorators.classproperty import classproperty
-
 from .abstract import mobjectwrapper
-from .utilities import pyutils
 
 import logging
 logging.basicConfig()
@@ -18,10 +14,11 @@ log.setLevel(logging.INFO)
 class MPyNode(with_metaclass(ABCMeta, mobjectwrapper.MObjectWrapper)):
     """
     Overload of MObjectWrapper used as the base class for all Maya node interfaces.
-    This class supports a range of constructor arguments that are outlined under the __accepts__ property.
-    All derived classes should overload the __apitype__ property so they can be registered by MPyFactory.
+    This class supports a range of constructor arguments that are outlined under the __accepts__ attribute.
+    All derived classes should overload the __apitype__ attribute, that way they can be registered by MPyFactory.
     """
 
+    # region Dunderscores
     __accepts__ = (str, om.MObjectHandle, om.MObject, om.MDagPath)
     __apitype__ = om.MFn.kBase
     __pyfactory__ = None
@@ -63,19 +60,9 @@ class MPyNode(with_metaclass(ABCMeta, mobjectwrapper.MObjectWrapper)):
         else:
 
             raise TypeError('MPyNode() expects %s (%s given)!' % (cls.__accepts__, type(obj).__name__))
+    # endregion
 
-    def __init__(self, obj, **kwargs):
-        """
-        Private method called after a new instance has been created.
-
-        :type obj: Union[str, om.MObject, om.MDagPath, om.MObjectHandle]
-        :rtype: None
-        """
-
-        # Call parent method
-        #
-        super(MPyNode, self).__init__(obj, **kwargs)
-
+    # region Properties
     @classproperty
     def pyFactory(cls):
         """
@@ -89,13 +76,13 @@ class MPyNode(with_metaclass(ABCMeta, mobjectwrapper.MObjectWrapper)):
         #
         if cls.__pyfactory__ is None:
 
-            filePath = os.path.join(os.path.dirname(__file__), 'mpyfactory.py')
-            mpyfactory = pyutils.importFile(filePath)
-
+            from . import mpyfactory
             cls.__pyfactory__ = mpyfactory.getPyFactoryReference()
 
         return cls.__pyfactory__()
+    # endregion
 
+    # region Methods
     @classmethod
     def isCompatible(cls, dependNode):
         """
@@ -184,3 +171,4 @@ class MPyNode(with_metaclass(ABCMeta, mobjectwrapper.MObjectWrapper)):
         """
 
         dagutils.deleteNode(self.object())
+    # endregion
