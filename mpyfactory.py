@@ -4,7 +4,6 @@ from maya import cmds as mc
 from maya.api import OpenMaya as om
 from six import string_types
 from dcc.maya.libs import dagutils
-
 from . import mpynode, nodetypes, plugintypes
 from .abstract import abstractfactory
 
