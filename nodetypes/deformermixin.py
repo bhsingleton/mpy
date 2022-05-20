@@ -1,6 +1,4 @@
-from maya import cmds as mc
 from maya.api import OpenMaya as om
-
 from . import dependencymixin
 
 import logging
@@ -14,16 +12,8 @@ class DeformerMixin(dependencymixin.DependencyMixin):
     Overload of DependencyMixin used to interface with deformer nodes inside the scene file.
     """
 
+    # region Dunderscores
     __apitype__ = om.MFn.kGeometryFilt
-
-    def __init__(self, *args, **kwargs):
-        """
-        Private method called after a new instance has been created.
-        """
-
-        # Call parent method
-        #
-        super(DeformerMixin, self).__init__(*args, **kwargs)
 
     def __len__(self):
         """
@@ -33,7 +23,9 @@ class DeformerMixin(dependencymixin.DependencyMixin):
         """
 
         return self.intermediateObject().numControlPoints()
+    # endregion
 
+    # region Methods
     def transform(self):
         """
         Returns the transform node associated with the deformed shape node.
@@ -113,7 +105,7 @@ class DeformerMixin(dependencymixin.DependencyMixin):
 
     def dagSetMembers(self):
         """
-        Method used to collect all of the dag set members associated with this deformer.
+        Returns all the dag set members associated with this deformer.
         Each item returned will contain a dictionary with the following values:
             'objectGrpCompList': List of vertex indices that will be deformed.
             'objectGroupId': The unique group id assigned to this deformer.
@@ -172,3 +164,4 @@ class DeformerMixin(dependencymixin.DependencyMixin):
             members[physicalIndex] = objectGroup
 
         return members
+    # endregion

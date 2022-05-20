@@ -1,9 +1,6 @@
-import os
-
 from maya import cmds as mc
 from maya.api import OpenMaya as om
 from dcc.maya.libs import shapeutils, transformutils
-
 from . import dagmixin
 from .. import mpyattribute
 
@@ -18,8 +15,7 @@ class TransformMixin(dagmixin.DagMixin):
     Overload of DagMixin class used to interface with transform nodes.
     """
 
-    __apitype__ = (om.MFn.kTransform, om.MFn.kPluginTransformNode)
-
+    # region Attributes
     inheritsTransform = mpyattribute.MPyAttribute('inheritsTransform')
     displayHandle = mpyattribute.MPyAttribute('displayHandle')
     displayScalePivot = mpyattribute.MPyAttribute('displayScalePivot')
@@ -31,16 +27,13 @@ class TransformMixin(dagmixin.DagMixin):
     maxRotLimitEnable = mpyattribute.MPyAttribute('maxRotLimitEnable')
     minScaleLimitEnable = mpyattribute.MPyAttribute('minScaleLimitEnable')
     maxScaleLimitEnable = mpyattribute.MPyAttribute('maxScaleLimitEnable')
+    # endregion
 
-    def __init__(self, *args, **kwargs):
-        """
-        Private method called after a new instance has been created.
-        """
+    # region Dunderscores
+    __apitype__ = (om.MFn.kTransform, om.MFn.kPluginTransformNode)
+    # endregion
 
-        # Call parent method
-        #
-        super(TransformMixin, self).__init__(*args, **kwargs)
-
+    # region Methods
     def functionSet(self):
         """
         Returns a function set compatible with this object.
@@ -436,7 +429,7 @@ class TransformMixin(dagmixin.DagMixin):
 
     def removeShapes(self):
         """
-        Removes all of the shapes below this transform.
+        Removes all the shapes underneath this transform.
         This method is undoable!
 
         :rtype: None
@@ -638,3 +631,4 @@ class TransformMixin(dagmixin.DagMixin):
         constraint.addTargets(targets)
 
         return constraint
+    # endregion

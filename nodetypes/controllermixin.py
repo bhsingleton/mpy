@@ -1,8 +1,6 @@
-from maya import cmds as mc
 from maya.api import OpenMaya as om
 from enum import Enum
 from dcc.naming import namingutils
-
 from . import dependencymixin
 from .. import mpyattribute
 
@@ -20,8 +18,11 @@ class ControllerMixin(dependencymixin.DependencyMixin):
     Overload of DependencyMixin class used to interface with controller tags.
     """
 
+    # region Dunderscores
     __apitype__ = om.MFn.kControllerTag
+    # endregion
 
+    # region Attributes
     controllerObject = mpyattribute.MPyAttribute('controllerObject')
     cycleWalkSibling = mpyattribute.MPyAttribute('cycleWalkSibling')
     parent = mpyattribute.MPyAttribute('parent')
@@ -34,16 +35,9 @@ class ControllerMixin(dependencymixin.DependencyMixin):
     mirrorTranslate = mpyattribute.MPyAttribute('mirrorTranslate')
     mirrorRotate = mpyattribute.MPyAttribute('mirrorRotate')
     visibilityMode = mpyattribute.MPyAttribute('visibilityMode')
+    #
 
-    def __init__(self, *args, **kwargs):
-        """
-        Private method called after a new instance has been created.
-        """
-
-        # Call parent method
-        #
-        super(ControllerMixin, self).__init__(*args, **kwargs)
-
+    # region Methods
     def sibling(self):
         """
         Returns the sibling for this controller.
@@ -102,3 +96,4 @@ class ControllerMixin(dependencymixin.DependencyMixin):
         """
 
         self.setAttr('sibling', sibling.uuid().asString())
+    # endregion

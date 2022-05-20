@@ -1,7 +1,7 @@
 from maya import cmds as mc
 from maya.api import OpenMaya as om
-
 from . import dagmixin
+from .. import mpyattribute
 
 import logging
 logging.basicConfig()
@@ -14,17 +14,15 @@ class ShapeMixin(dagmixin.DagMixin):
     Overload of DagMixin used to interface with shape nodes inside the scene file.
     """
 
+    # region Dunderscores
     __apitype__ = om.MFn.kShape
+    # endregion
 
-    def __init__(self, *args, **kwargs):
-        """
-        Private method called after a new instance has been created.
-        """
+    # region Attributes
+    lineWidth = mpyattribute.MPyAttribute('lineWidth')
+    # endregion
 
-        # Call parent method
-        #
-        super(ShapeMixin, self).__init__(*args, **kwargs)
-
+    # region Methods
     def addDeformer(self, typeName):
         """
         Returns a new deformer derived from the supplied type name.
@@ -36,8 +34,8 @@ class ShapeMixin(dagmixin.DagMixin):
 
         try:
 
-            partialPathName = mc.deformer(type=typeName, geometry=self.fullPathName())
-            return self.pyFactory.getNodeByName(partialPathName)
+            results = mc.deformer(self.fullPathName(), type=typeName)
+            return self.pyFactory.getNodeByName(results[-1])
 
         except RuntimeError as exception:
 
@@ -185,3 +183,4 @@ class ShapeMixin(dagmixin.DagMixin):
             element.child(0).setFloat(point[0])
             element.child(1).setFloat(point[1])
             element.child(2).setFloat(point[2])
+    # endregion

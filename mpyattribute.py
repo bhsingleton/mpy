@@ -1,6 +1,5 @@
-from maya import cmds as mc
 from maya.api import OpenMaya as om
-from dcc.maya.libs import plugutils
+from dcc.maya.libs import plugmutators
 
 from . import mpynode
 
@@ -108,7 +107,7 @@ class MPyAttribute(object):
 
         # Retrieve plug value
         #
-        value = plugutils.getValue(self.plug(instance), context=self.__context__)
+        value = plugmutators.getValue(self.plug(instance), context=self.__context__)
 
         if callable(self.fget):
 
@@ -139,7 +138,7 @@ class MPyAttribute(object):
 
             value = self.fset(instance, value)
 
-        plugutils.setValue(self.plug(instance), value)
+        plugmutators.setValue(self.plug(instance), value)
 
         # Notify change
         #
@@ -167,7 +166,7 @@ class MPyAttribute(object):
 
             self.fdel(instance)
 
-        plugutils.resetValue(self.plug(instance))
+        plugmutators.resetValue(self.plug(instance))
 
     def plug(self, instance):
         """

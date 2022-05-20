@@ -18,8 +18,21 @@ class ContainerBaseMixin(dependencymixin.DependencyMixin):
     Overload of DependencyMixin class used to interface with container nodes.
     """
 
+    # region Dunderscores
     __apitype__ = om.MFn.kContainerBase
 
+    def __contains__(self, item):
+        """
+        Private method that evaluates if an item belongs to this container.
+
+        :type item: mpynode.nodetypes.dependencymixin.DependencyMixin
+        :rtype: bool
+        """
+
+        return self.hasMember(item) or self.hasPublishedNode(item)
+    # endregion
+
+    # region Attributes
     hyperLayout = mpyattribute.MPyAttribute('hyperLayout')
     isCollapsed = mpyattribute.MPyAttribute('isCollapsed')
     blackBox = mpyattribute.MPyAttribute('blackBox')
@@ -34,26 +47,9 @@ class ContainerBaseMixin(dependencymixin.DependencyMixin):
     owner = mpyattribute.MPyAttribute('creator')
     creationDate = mpyattribute.MPyAttribute('creationDate')
     containerType = mpyattribute.MPyAttribute('containerType')
+    # endregion
 
-    def __init__(self, *args, **kwargs):
-        """
-        Private method called after a new instance has been created.
-        """
-
-        # Call parent method
-        #
-        super(ContainerBaseMixin, self).__init__(*args, **kwargs)
-
-    def __contains__(self, item):
-        """
-        Private method that evaluates if an item belongs to this container.
-
-        :type item: mpynode.nodetypes.dependencymixin.DependencyMixin
-        :rtype: bool
-        """
-
-        return self.hasMember(item) or self.hasPublishedNode(item)
-
+    # region Methods
     def icon(self):
         """
         Returns the container icon.
@@ -579,6 +575,7 @@ class ContainerBaseMixin(dependencymixin.DependencyMixin):
         """
 
         return self.getNextAvailableConnection('publishedNodeInfo', child=self.attribute('publishedNode'))
+    # endregion
 
 
 class PublishedNodeInfo(object):
@@ -586,6 +583,7 @@ class PublishedNodeInfo(object):
     Base class used to interface with published nodes.
     """
 
+    # region Dunderscores
     __slots__ = ('_container', '_index')
 
     def __init__(self, container, **kwargs):
@@ -604,7 +602,9 @@ class PublishedNodeInfo(object):
         #
         self._container = container.weakReference()
         self._index = kwargs.get('index', 0)
+    # endregion
 
+    # region Properties
     @property
     def container(self):
         """
@@ -624,7 +624,9 @@ class PublishedNodeInfo(object):
         """
 
         return self._index
+    # endregion
 
+    # region Methods
     def publishedNodeInfoPlug(self):
         """
         Returns the compound plug element for this published node info.
@@ -790,3 +792,4 @@ class PublishedNodeInfo(object):
         """
 
         self.publishedNodeInfoChildPlug('isHierarchicalNode').setBool(isHierarchicalNode)
+    # endregion

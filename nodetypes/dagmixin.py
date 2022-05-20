@@ -1,8 +1,8 @@
 from maya import cmds as mc
 from maya.api import OpenMaya as om
 from collections import deque
+from six import integer_types
 from dcc.maya.libs import dagutils
-
 from . import containerbasemixin
 from .. import mpyattribute
 
@@ -17,25 +17,8 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
     Overload of NodeMixin used to interface with DAG nodes inside the scene file.
     """
 
+    # region Dunderscores
     __apitype__ = om.MFn.kDagNode
-
-    visibility = mpyattribute.MPyAttribute('visibility')
-    template = mpyattribute.MPyAttribute('template')
-    ghosting = mpyattribute.MPyAttribute('ghosting')
-    objectColorRGB = mpyattribute.MPyAttribute('objectColorRGB')
-    wireColorRGB = mpyattribute.MPyAttribute('wireColorRGB')
-    useObjectColor = mpyattribute.MPyAttribute('useObjectColor')
-    objectColor = mpyattribute.MPyAttribute('objectColor')
-    hiddenInOutliner = mpyattribute.MPyAttribute('hiddenInOutliner')
-
-    def __init__(self, *args, **kwargs):
-        """
-        Private method called after a new instance has been created.
-        """
-
-        # Call parent method
-        #
-        super(DagMixin, self).__init__(*args, **kwargs)
 
     def __getitem__(self, key):
         """
@@ -47,7 +30,7 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
 
         # Check key type
         #
-        if isinstance(key, int):
+        if isinstance(key, integer_types):
 
             return self.child(key)
 
@@ -64,7 +47,20 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
         """
 
         return self.nodeClass(), (self.fullPathName(),)
+    # endregion
 
+    # region Attributes
+    visibility = mpyattribute.MPyAttribute('visibility')
+    template = mpyattribute.MPyAttribute('template')
+    ghosting = mpyattribute.MPyAttribute('ghosting')
+    useObjectColor = mpyattribute.MPyAttribute('useObjectColor')
+    objectColor = mpyattribute.MPyAttribute('objectColor')
+    objectColorRGB = mpyattribute.MPyAttribute('objectColorRGB')
+    wireColorRGB = mpyattribute.MPyAttribute('wireColorRGB')
+    hiddenInOutliner = mpyattribute.MPyAttribute('hiddenInOutliner')
+    # endregion
+
+    # region Methods
     def functionSet(self):
         """
         Returns a function set compatible with this object.
@@ -212,64 +208,29 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
 
     def component(self):
         """
-        Returns the active component selection related to this instance.
-        Be aware that running 'getRichSelection' will raise runtime errors when the selection list is empty!
+        Returns the active component selection from this node.
 
         :rtype: om.MObject
         """
 
-        # Check api type
-        #
-        component = om.MObject.kNullObj
+        components = [component for (dagPath, component) in dagutils.iterActiveComponentSelection() if self == dagPath]
+        numComponents = len(components)
 
-        if not self.hasFn(om.MFn.kShape):
+        if numComponents == 0:
 
-            log.warning('Cannot get component from "%s" api type!' % self.apiTypeStr)
-            return component
+            return om.MObject.kNullObj
 
-        # Get active selection
-        # Unfortunately the rich selection method will raise a runtime error if the selection is empty
-        # So we have to wrap this in a try/catch in order to preserve weighted component data
-        #
-        selection = None
+        elif numComponents == 1:
 
-        try:
+            return components[0]
 
-            selection = om.MGlobal.getRichSelection().getSelection()
+        else:
 
-        except RuntimeError as exception:
-
-            log.debug(exception)
-            selection = om.MGlobal.getActiveSelectionList()
-
-        # Initialize selection iterator
-        #
-        iterSelection = om.MItSelectionList(selection, om.MFn.kComponent)
-
-        while not iterSelection.isDone():
-
-            # Get the current selected item and component
-            #
-            dagPath, component = iterSelection.getComponent()
-
-            if dagPath.node() == self.object() and not component.isNull():
-
-                log.debug('Detected %s component on %s.' % (component.apiTypeStr, dagPath.partialPathName()))
-                break
-
-            else:
-
-                log.info('Skipping invalid component selection on %s.' % dagPath.partialPathName())
-
-            # Go to next item
-            #
-            iterSelection.next()
-
-        return component
+            raise TypeError('component() expects a unique component selection (%s found)!' % numComponents)
 
     def parent(self):
         """
-        Returns the parent of this instance.
+        Returns the parent of this node.
 
         :rtype: DagMixin
         """
@@ -298,7 +259,7 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
 
     def setParent(self, parent):
         """
-        Updates the parent of this instance.
+        Updates the parent for this node.
 
         :type parent: DagMixin
         :rtype: None
@@ -324,7 +285,7 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
 
     def iterParents(self, apiType=om.MFn.kDagNode):
         """
-        Returns a generator that can iterate over all of the parents relative to this node.
+        Returns a generator that yields the parents from this node.
 
         :rtype: iter
         """
@@ -345,6 +306,15 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
             else:
 
                 break
+
+    def parents(self):
+        """
+        Returns a list of parents from this node.
+
+        :rtype: List[DagMixin]
+        """
+
+        return list(self.iterParents())
 
     def topLevelParent(self):
         """
@@ -367,10 +337,10 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
 
     def child(self, index):
         """
-        Returns an indexed child object.
+        Returns an indexed child node.
 
         :type index: int
-        :rtype: mpynode.MPyNode
+        :rtype: DagMixin
         """
 
         return self.pyFactory(self.functionSet().child(index))
@@ -386,7 +356,7 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
 
     def iterChildren(self, apiType=om.MFn.kDagNode):
         """
-        Returns a generator that yields all the children below this object.
+        Returns a generator that yields children from this node.
         An optional api type can be supplied to narrow down the children.
 
         :type apiType: int
@@ -399,7 +369,7 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
 
     def iterShapes(self):
         """
-        Returns a generator that yields all of the shapes below this object.
+        Returns a generator that yields shapes from this nodes.
 
         :rtype: iter
         """
@@ -408,8 +378,8 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
 
     def iterDescendants(self, apiType=om.MFn.kDagNode):
         """
-        Returns a generator that yields all of the descendants below this object.
-        An optional api type can be supplied to narrow down the children.
+        Returns a generator that yields the descendants from this node.
+        An optional api type can be supplied to narrow down the descendants.
 
         :type apiType: int
         :rtype: iter
@@ -432,7 +402,7 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
 
     def children(self, apiType=om.MFn.kDagNode):
         """
-        Returns all of the children belonging to this object.
+        Returns a list of the children from this node.
 
         :type apiType: int
         :rtype: list[DagMixin]
@@ -442,10 +412,10 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
 
     def shape(self, index=0):
         """
-        Returns an indexed shape object.
+        Returns an indexed shape from this node.
 
         :type index: int
-        :rtype: mpynode.nodetypes.shapemixin.ShapeMixin
+        :rtype: DagMixin
         """
 
         # Inspect number of shapes
@@ -460,16 +430,16 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
 
     def shapes(self):
         """
-        Returns all of the shapes below this object.
+        Returns a list of the shapes from this node.
 
-        :rtype: list[mpynode.nodetypes.shapemixin.ShapeMixin]
+        :rtype: List[DagMixin]
         """
 
         return [x for x in self.iterShapes() if not x.isIntermediateObject]
 
     def numberOfShapesDirectlyBelow(self):
         """
-        Method used to check the number of shapes below this object.
+        Evaluates the number of shapes from this node.
 
         :rtype: int
         """
@@ -478,7 +448,7 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
 
     def hasShape(self):
         """
-        Method used to determine if this transform has any shape nodes.
+        Evaluates if this node has any shapes.
 
         :rtype: bool
         """
@@ -487,7 +457,7 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
 
     def intermediateObjects(self):
         """
-        Method used to collect all intermediate objects parented to this object.
+        Returns a list of intermediate objects from this node.
 
         :rtype: list[DagMixin]
         """
@@ -496,9 +466,10 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
 
     def descendants(self):
         """
-        Returns a list of descendants relative to this node.
+        Returns a list of descendants from this node.
 
         :rtype: list[DagMixin]
         """
 
         return list(self.iterDescendants())
+    # endregion

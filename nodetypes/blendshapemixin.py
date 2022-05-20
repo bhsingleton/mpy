@@ -1,6 +1,4 @@
-from maya import cmds as mc
 from maya.api import OpenMaya as om
-
 from . import deformermixin
 
 import logging
@@ -14,17 +12,11 @@ class BlendShapeMixin(deformermixin.DeformerMixin):
     Overload of DeformerMixin class used to interface with blendshape nodes.
     """
 
+    # region Dunderscores
     __apitype__ = (om.MFn.kBlendShape, om.MFn.kPluginBlendShape)
+    # endregion
 
-    def __init__(self, *args, **kwargs):
-        """
-        Private method called after a new instance has been created.
-        """
-
-        # Call parent method
-        #
-        super(BlendShapeMixin, self).__init__(*args, **kwargs)
-
+    # region Methods
     def iterTargets(self):
         """
         Returns a generator that yields all of the existing blend shape targets.
@@ -55,6 +47,7 @@ class BlendShapeMixin(deformermixin.DeformerMixin):
         """
 
         return self.findPlug('inputTarget[0].inputTargetGroup').evaluateNumElements()
+    # endregion
 
 
 class GeometryTarget(object):
@@ -62,6 +55,7 @@ class GeometryTarget(object):
     Base class used to interface with blend shape targets.
     """
 
+    # region Dunderscores
     __slots__ = ('_blendShape', '_input', '_index')
 
     def __init__(self, blendShape, **kwargs):
@@ -82,7 +76,9 @@ class GeometryTarget(object):
 
         self._input = kwargs.get('input', 0)
         self._index = kwargs.get('index', 0)
+    # endregion
 
+    # region Properties
     @property
     def blendShape(self):
         """
@@ -112,7 +108,9 @@ class GeometryTarget(object):
         """
 
         return self._index
+    # endregion
 
+    # region Methods
     def alias(self):
         """
         Returns the alias name for this geometry target.
@@ -219,3 +217,4 @@ class GeometryTarget(object):
                 weightIndex=weightIndex
             )
         ).asMObject()
+    # endregion

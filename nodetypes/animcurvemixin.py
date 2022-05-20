@@ -1,6 +1,4 @@
-from maya import cmds as mc
 from maya.api import OpenMaya as om
-
 from . import dependencymixin
 
 import logging
@@ -15,12 +13,3 @@ class AnimCurveMixin(dependencymixin.DependencyMixin):
     """
 
     __apitype__ = om.MFn.kAnimCurve
-
-    def __init__(self, *args, **kwargs):
-        """
-        Private method called after a new instance has been created.
-        """
-
-        # Call parent method
-        #
-        super(AnimCurveMixin, self).__init__(*args, **kwargs)

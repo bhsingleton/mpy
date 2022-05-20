@@ -1,12 +1,10 @@
-import re
 import os
 
 from maya import cmds as mc
 from maya.api import OpenMaya as om
 from PySide2 import QtGui
 from six import string_types
-from dcc.maya.libs import attributeutils, plugutils, dagutils
-
+from dcc.maya.libs import attributeutils, plugutils, plugmutators, dagutils
 from .. import mpyattribute, mpynode
 
 import logging
@@ -20,22 +18,8 @@ class DependencyMixin(mpynode.MPyNode):
     Overload of PyNode used to interface with dependency graph nodes.
     """
 
+    # region Dunderscores
     __apitype__ = om.MFn.kDependencyNode
-    __plugparser__ = re.compile(r'([a-zA-Z]+)\[?([0-9]*)\]?')
-
-    caching = mpyattribute.MPyAttribute('caching')
-    frozen = mpyattribute.MPyAttribute('frozen')
-    isHistoricallyInteresting = mpyattribute.MPyAttribute('isHistoricallyInteresting')
-    nodeState = mpyattribute.MPyAttribute('nodeState')
-
-    def __init__(self, *args, **kwargs):
-        """
-        Private method called after a new instance has been created.
-        """
-
-        # Call parent method
-        #
-        super(DependencyMixin, self).__init__(*args, **kwargs)
 
     def __getitem__(self, key):
         """
@@ -56,7 +40,7 @@ class DependencyMixin(mpynode.MPyNode):
         :rtype: None
         """
 
-        plugutils.setValue(self.findPlug(key), value)
+        plugmutators.setValue(self.findPlug(key), value)
 
     def __reduce__(self):
         """
@@ -67,7 +51,16 @@ class DependencyMixin(mpynode.MPyNode):
         """
 
         return self.__class__, (self.name(),)
+    # endregion
 
+    # region Attributes
+    caching = mpyattribute.MPyAttribute('caching')
+    frozen = mpyattribute.MPyAttribute('frozen')
+    isHistoricallyInteresting = mpyattribute.MPyAttribute('isHistoricallyInteresting')
+    nodeState = mpyattribute.MPyAttribute('nodeState')
+    # endregion
+
+    # region Methods
     def name(self):
         """
         Returns the name of this node.
@@ -411,7 +404,7 @@ class DependencyMixin(mpynode.MPyNode):
         #
         if isinstance(plug, om.MPlug):
 
-            return plugutils.getValue(plug)
+            return plugmutators.getValue(plug)
 
         elif isinstance(plug, string_types):
 
@@ -459,7 +452,7 @@ class DependencyMixin(mpynode.MPyNode):
         #
         if isinstance(plug, om.MPlug):
 
-            return plugutils.setValue(plug, value, force=force)
+            return plugmutators.setValue(plug, value, force=force)
 
         elif isinstance(plug, string_types):
 
@@ -475,13 +468,13 @@ class DependencyMixin(mpynode.MPyNode):
 
     def getAliases(self):
         """
-        Returns a dictionary of all of the attribute aliases belonging to this node.
+        Returns a dictionary of all the attribute aliases belonging to this node.
         The keys represent the alias name and the values represent the original name.
 
-        :rtype: dict[str, str]
+        :rtype: Dict[str, str]
         """
 
-        return plugutils.getAliases(self.object())
+        return plugmutators.getAliases(self.object())
 
     def setAlias(self, alias, plug, replace=False):
         """
@@ -508,7 +501,7 @@ class DependencyMixin(mpynode.MPyNode):
         Updates the values for the supplied array plug while assigning aliases to each element.
 
         :type plug: Union[str, om.MPlug]
-        :type aliases: dict[str, object]
+        :type aliases: Dict[str, object]
         :rtype: None
         """
 
@@ -518,7 +511,7 @@ class DependencyMixin(mpynode.MPyNode):
 
             plug = self.findPlug(plug)
 
-        return plugutils.setAliases(plug, aliases)
+        return plugmutators.setAliases(plug, aliases)
 
     def removePlugAlias(self, plug):
         """
@@ -781,7 +774,7 @@ class DependencyMixin(mpynode.MPyNode):
         """
         Method used to break connections to the supplied plug.
         Optional keyword arguments can be supplied to control the side the disconnect takes place.
-        By default these arguments are set to true for maximum breakage!
+        By default, these arguments are set to true for maximum breakage!
 
         :type plug: Union[str, om.MPlug]
         :type source: bool
@@ -856,3 +849,4 @@ class DependencyMixin(mpynode.MPyNode):
         """
 
         return [self.pyFactory(x) for x in dagutils.iterDependencies(self.object(), apiType, direction=om.MItDependencyGraph.kDownstream)]
+    # endregion

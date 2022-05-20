@@ -9,7 +9,6 @@ from maya import cmds as mc
 from maya.api import OpenMaya as om
 from six import string_types, integer_types
 from dcc.maya.libs import skinutils
-
 from . import deformermixin
 from .. import mpyattribute
 
@@ -24,28 +23,8 @@ class SkinMixin(deformermixin.DeformerMixin):
     Overload of DeformerMixin used to interface with skin cluster nodes.
     """
 
+    # region Dunderscores
     __apitype__ = (om.MFn.kSkinClusterFilter, om.MFn.kPluginSkinCluster)
-
-    skinningMethod = mpyattribute.MPyAttribute('skinningMethod')
-    normalizeWeights = mpyattribute.MPyAttribute('normalizeWeights')
-    maxInfluences = mpyattribute.MPyAttribute('maxInfluences')
-    maintainMaxInfluences = mpyattribute.MPyAttribute('maintainMaxInfluences')
-    lockWeights = mpyattribute.MPyAttribute('lockWeights')
-    dropoffRate = mpyattribute.MPyAttribute('dropoffRate')
-    dropoff = mpyattribute.MPyAttribute('dropoff')
-    smoothness = mpyattribute.MPyAttribute('smoothness')
-    deformUserNormals = mpyattribute.MPyAttribute('deformUserNormals')
-    bindPose = mpyattribute.MPyAttribute('bindPose')
-    bindVolume = mpyattribute.MPyAttribute('bindVolume')
-
-    def __init__(self, *args, **kwargs):
-        """
-        Private method called after a new instance has been created.
-        """
-
-        # Call parent method
-        #
-        super(SkinMixin, self).__init__(*args, **kwargs)
 
     def __getitem__(self, index):
         """
@@ -121,22 +100,89 @@ class SkinMixin(deformermixin.DeformerMixin):
         """
 
         return skinutils.numControlPoints(self.object())
+    # endregion
 
+    # region Attributes
+    skinningMethod = mpyattribute.MPyAttribute('skinningMethod')
+    normalizeWeights = mpyattribute.MPyAttribute('normalizeWeights')
+    maxInfluences = mpyattribute.MPyAttribute('maxInfluences')
+    maintainMaxInfluences = mpyattribute.MPyAttribute('maintainMaxInfluences')
+    lockWeights = mpyattribute.MPyAttribute('lockWeights')
+    dropoffRate = mpyattribute.MPyAttribute('dropoffRate')
+    dropoff = mpyattribute.MPyAttribute('dropoff')
+    smoothness = mpyattribute.MPyAttribute('smoothness')
+    deformUserNormals = mpyattribute.MPyAttribute('deformUserNormals')
+    bindPose = mpyattribute.MPyAttribute('bindPose')
+    bindVolume = mpyattribute.MPyAttribute('bindVolume')
+    # endregion
+
+    # region Methods
     def iterInfluences(self):
         """
-        Returns a generator that yields all of the influence objects from this skin cluster.
+        Returns a generator that yields the influence objects from this skin cluster.
 
         :rtype: iter
         """
 
         return skinutils.iterInfluences(self.object())
 
+    def influences(self):
+        """
+        Returns a dictionary of index-influence pairs from this skin cluster.
+
+        :rtype: Dict[int, object]
+        """
+
+        return list(self.iterInfluences())
+
+    def addInfluence(self, influence, index=None):
+        """
+        Adds the supplied influence to this skin cluster.
+
+        :type influence: om.MObject
+        :type index: int
+        :rtype: int
+        """
+
+        return skinutils.addInfluence(self.object(), influence, index=index)
+
+    def removeInfluence(self, influenceId):
+        """
+        Removes the specified influence ID from this skin cluster.
+
+        :type influenceId: int
+        :rtype: None
+        """
+
+        skinutils.removeInfluence(self.object(), influenceId)
+
     def iterWeightList(self, *args):
         """
-        Returns a generator that yields all of the vertex weights from this skin cluster.
+        Returns a generator that yields the vertex-weight pairs from this skin cluster.
         An optional list of vertex indices can be supplied to limit the generator.
 
         :rtype: iter
         """
 
         return skinutils.iterWeightList(self.object(), vertexIndices=args)
+
+    def weightList(self, *args):
+        """
+        Returns the vertex-weight pairs from this skin clusters.
+        An optional list of vertex indices can be supplied to limit the generator.
+
+        :rtype: Dict[int, Dict[int, float]]
+        """
+
+        return self.iterWeightList(*args)
+
+    def setWeightList(self, vertexWeights):
+        """
+        Updates the vertex-weight pairs for this skin clusters.
+
+        :type vertexWeights: Dict[int, Dict[int, float]]
+        :rtype: None
+        """
+
+        skinutils.setWeightList(self.object(), vertexWeights)
+    # endregion

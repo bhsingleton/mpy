@@ -1,6 +1,5 @@
 from maya.api import OpenMaya as om
 from dcc.maya.libs import dagutils
-
 from . import dependencymixin
 
 import logging
@@ -11,19 +10,11 @@ log.setLevel(logging.INFO)
 
 class HyperLayoutMixin(dependencymixin.DependencyMixin):
     """
-    Overload of DagMixin class used to interface with container nodes.
+    Overload of DependencyMixin that interfaces with containers.
     """
 
+    # region Dunderscores
     __apitype__ = om.MFn.kHyperLayout
-
-    def __init__(self, *args, **kwargs):
-        """
-        Private method called after a new instance has been created.
-        """
-
-        # Call parent method
-        #
-        super(HyperLayoutMixin, self).__init__(*args, **kwargs)
 
     def __contains__(self, item):
         """
@@ -34,7 +25,9 @@ class HyperLayoutMixin(dependencymixin.DependencyMixin):
         """
 
         return self.hasMember(item)
+    # endregion
 
+    # region Methods
     def hasMember(self, dependNode):
         """
         Checks if the supplied dependency node belongs to this hyper layout.
@@ -251,6 +244,7 @@ class HyperLayoutMixin(dependencymixin.DependencyMixin):
         # Remove indices from plug
         #
         self.removePlugIndices(plug, elements)
+    # endregion
 
 
 class HyperPosition(object):
@@ -258,6 +252,7 @@ class HyperPosition(object):
     Base class used to interface with container members.
     """
 
+    # region Dunderscores
     __slots__ = ('_hyperLayout', '_index')
 
     def __init__(self, hyperLayout, **kwargs):
@@ -276,7 +271,9 @@ class HyperPosition(object):
         #
         self._hyperLayout = hyperLayout.weakReference()
         self._index = kwargs.get('index', 0)
+    # endregion
 
+    # region Properties
     @property
     def hyperLayout(self):
         """
@@ -296,7 +293,9 @@ class HyperPosition(object):
         """
 
         return self._index
+    # endregion
 
+    # region Methods
     def plug(self):
         """
         Returns the compound plug element for this publised node info.
@@ -378,3 +377,4 @@ class HyperPosition(object):
         """
 
         self.hyperLayout.setAttr('hyperPosition[%s].dependNode' % self.index, dependNode)
+    # endregion

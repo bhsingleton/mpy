@@ -2,7 +2,6 @@ from maya import cmds as mc
 from maya.api import OpenMaya as om
 from six import string_types
 from dcc.maya.libs import dagutils
-
 from . import dependencymixin
 
 import logging
@@ -16,16 +15,8 @@ class ReferenceMixin(dependencymixin.DependencyMixin):
     Overload of DependencyMixin used to interface with reference nodes.
     """
 
+    # region Dunderscores
     __apitype__ = om.MFn.kReference
-
-    def __init__(self, *args, **kwargs):
-        """
-        Private method called after a new instance has been created.
-        """
-
-        # Call parent method
-        #
-        super(ReferenceMixin, self).__init__(*args, **kwargs)
 
     def __contains__(self, item):
         """
@@ -36,7 +27,9 @@ class ReferenceMixin(dependencymixin.DependencyMixin):
         """
 
         return self.containsNodeExactly(dagutils.getMObject(item))
+    # endregion
 
+    # region Methods
     def functionSet(self):
         """
         Returns a function set compatible with this object.
@@ -182,3 +175,4 @@ class ReferenceMixin(dependencymixin.DependencyMixin):
         """
         
         pass
+    # endregion

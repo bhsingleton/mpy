@@ -1,8 +1,10 @@
 from maya import cmds as mc
 from maya.api import OpenMaya as om
-from dcc.maya.libs import transformutils
-
+from abc import abstractmethod
+from dcc.python import stringutils
+from dcc.maya.libs import transformutils, plugutils
 from . import transformmixin
+from .. import mpyattribute
 
 import logging
 logging.basicConfig()
@@ -12,62 +14,22 @@ log.setLevel(logging.INFO)
 
 class ConstraintMixin(transformmixin.TransformMixin):
     """
-    Overload of TransformMixin class used to interface with constraint nodes.
+    Overload of TransformMixin class used to interface with constraints.
     """
 
+    # region Dunderscores
     __apitype__ = (om.MFn.kConstraint, om.MFn.kPluginConstraintNode)
+    __targets__ = {}  # destination-source pairs
+    __inputs__ = {}  # destination-source pairs
+    __outputs__ = {}  # source-destination pairs
+    # endregion
 
-    __targets__ = {
-        'translateX': 'targetTranslateX',
-        'translateY': 'targetTranslateY',
-        'translateZ': 'targetTranslateZ',
-        'rotatePivotX': 'targetRotatePivotX',
-        'rotatePivotY': 'targetRotatePivotY',
-        'rotatePivotZ': 'targetRotatePivotZ',
-        'rotatePivotTranslateX': 'targetRotateTranslateX',
-        'rotatePivotTranslateY': 'targetRotateTranslateY',
-        'rotatePivotTranslateZ': 'targetRotateTranslateZ',
-        'scalePivotX': 'targetScalePivotX',
-        'scalePivotY': 'targetScalePivotY',
-        'scalePivotZ': 'targetScalePivotZ',
-        'scalePivotTranslateX': 'targetScaleTranslateX',
-        'scalePivotTranslateY': 'targetScaleTranslateY',
-        'scalePivotTranslateZ': 'targetScaleTranslateZ',
-        'rotateX': 'targetRotateX',
-        'rotateY': 'targetRotateY',
-        'rotateZ': 'targetRotateZ',
-        'rotateOrder': 'targetRotateOrder',
-        'jointOrientX': 'targetJointOrientX',
-        'jointOrientY': 'targetJointOrientY',
-        'jointOrientZ': 'targetJointOrientZ',
-        'scaleX': 'targetScaleX',
-        'scaleY': 'targetScaleY',
-        'scaleZ': 'targetScaleZ',
-        'inverseScale': 'targetInverseScale',
-        'segmentScaleCompensate': 'targetScaleCompensate'
-    }
+    # region Attributes
+    enableRestPosition = mpyattribute.MPyAttribute('enableRestPosition')
+    lockOutput = mpyattribute.MPyAttribute('lockOutput')
+    # endregion
 
-    __outputs__ = {
-        'constraintTranslateX': 'translateX',
-        'constraintTranslateY': 'translateY',
-        'constraintTranslateZ': 'translateZ',
-        'constraintRotateX': 'rotateX',
-        'constraintRotateY': 'rotateY',
-        'constraintRotateZ': 'rotateZ',
-        'constraintScaleX': 'scaleX',
-        'constraintScaleY': 'scaleY',
-        'constraintScaleZ': 'scaleZ'
-    }
-
-    def __init__(self, *args, **kwargs):
-        """
-        Private method called after a new instance has been created.
-        """
-
-        # Call parent method
-        #
-        super(ConstraintMixin, self).__init__(*args, **kwargs)
-
+    # region Methods
     def constraintObject(self):
         """
         Returns the object being driven by this constraint node.
@@ -94,7 +56,7 @@ class ConstraintMixin(transformmixin.TransformMixin):
         """
         Updates the constraint object for this instance.
 
-        :type constraintObject: mpy.mpynode.MPyNode
+        :type constraintObject: transformmixin.TransformMixin
         :key maintainOffset: bool
         :key skipTranslateX: bool
         :key skipTranslateY: bool
@@ -114,19 +76,40 @@ class ConstraintMixin(transformmixin.TransformMixin):
 
             return
 
-        # Re-parent this constraint
+        # Rename constraint and re-parent
         #
-        self.setParent(constraintObject)
-
-        # Update constraint name
-        #
-        constraintName = '{nodeName}_{typeName}1'.format(nodeName=constraintObject.displayName(), typeName=self.typeName)
+        constraintName = '{nodeName}_{typeName}1'.format(nodeName=constraintObject.name(), typeName=self.typeName)
         self.setName(constraintName)
+
+        self.setParent(constraintObject)
 
         # Update rest matrix
         #
         restMatrix = constraintObject.getAttr('matrix')
         self.setRestMatrix(restMatrix)
+
+        # Connect input attributes
+        #
+        for (destinationName, sourceName) in self.__inputs__.items():
+
+            # Check if plugs exists
+            #
+            if not constraintObject.hasAttr(sourceName) or not self.hasAttr(destinationName):
+
+                continue
+
+            # Get associated plugs
+            #
+            source = constraintObject.findPlug(sourceName)
+            destination = self.findPlug(destinationName)
+
+            if source.isArray:
+
+                source.selectAncestorLogicalIndex(constraintObject.instanceNumber())
+
+            # Connect plugs
+            #
+            self.connectPlugs(source, destination, force=True)
 
         # Connect output attributes
         #
@@ -134,21 +117,12 @@ class ConstraintMixin(transformmixin.TransformMixin):
 
             # Check if attribute should be skipped
             #
-            attributeName = destinationName[0].upper() + destinationName[1:]
-            key = 'skip{attributeName}'.format(attributeName=attributeName)
-
+            key = 'skip{attributeName}'.format(attributeName=stringutils.titleize(destinationName))
             skipAttribute = kwargs.get(key, False)
 
             if skipAttribute:
 
                 log.info('Skipping constraint attribute: %s' % destinationName)
-                continue
-
-            # Check if attributes exist
-            #
-            if not self.hasAttr(sourceName) or not constraintObject.hasAttr(destinationName):
-
-                log.info('Unable to locate constraint attributes: %s and %s' % (sourceName, destinationName))
                 continue
 
             # Get associated plugs
@@ -158,86 +132,11 @@ class ConstraintMixin(transformmixin.TransformMixin):
 
             # Connect plugs
             #
-            self.breakConnections(source, source=False, destination=True)
             self.connectPlugs(source, destination, force=True)
-
-        # Update constraint parent inverse matrix
-        #
-        source = constraintObject.findPlug('parentInverseMatrix[%s]' % constraintObject.instanceNumber())
-        destination = self.findPlug('constraintParentInverseMatrix')
-
-        constraintObject.connectPlugs(source, destination, force=True)
-
-        # Check if constraint supports rotation order
-        # This is only seen in orient and transform constraints
-        #
-        if self.hasAttr('constraintRotateOrder'):
-
-            constraintObject.connectPlugs('rotateOrder', self.findPlug('constraintRotateOrder'), force=True)
-
-        # Check if constraint supports joint orient
-        # This is only seen in orient and transform constraints
-        #
-        if self.hasAttr('constraintJointOrient') and constraintObject.hasAttr('jointOrient'):
-
-            # Connect child plugs
-            #
-            source = constraintObject.findPlug('jointOrient')
-            destination = self.findPlug('constraintJointOrient')
-
-            for i in range(source.numChildren()):
-
-                constraintObject.connectPlugs(source.child(i), destination.child(i), force=True)
-
-    def interpolationType(self):
-        """
-        Getter method used to retrieve the interpolation type for this constraint.
-
-        :rtype: int
-        """
-
-        return om.MPlug(self.object(), self.attribute('interpType')).asInt()
-
-    def setInterpolationType(self, interpolationType):
-        """
-        Setter method used to update the interpolation type for this constraint.
-
-        :type interpolationType: int
-        :rtype: None
-        """
-
-        om.MPlug(self.object(), self.attribute('interpType')).setInt(interpolationType)
-
-    def offset(self):
-        """
-        Getter method used to retrieve the offset for this constraint.
-        Only a few constraints support this method such as point and orient constraints!
-
-        :rtype: om.MVector
-        """
-
-        return om.MVector(
-            om.MPlug(self.object(), self.attribute('offsetX')).asFloat(),
-            om.MPlug(self.object(), self.attribute('offsetY')).asFloat(),
-            om.MPlug(self.object(), self.attribute('offsetZ')).asFloat()
-        )
-
-    def setOffset(self, offset):
-        """
-        Setter method used to update the offset for this constraint.
-        Only a few constraints support this method such as point and orient constraints!
-
-        :type offset: om.MVector
-        :rtype: None
-        """
-
-        om.MPlug(self.object(), self.attribute('offsetX')).setFloat(offset.x)
-        om.MPlug(self.object(), self.attribute('offsetY')).setFloat(offset.y)
-        om.MPlug(self.object(), self.attribute('offsetZ')).setFloat(offset.z),
 
     def targets(self):
         """
-        Collects all of the available constraint targets.
+        Returns all the available constraint targets.
 
         :rtype: list[ConstraintTarget]
         """
@@ -246,7 +145,7 @@ class ConstraintMixin(transformmixin.TransformMixin):
 
     def targetObjects(self):
         """
-        Retrieves the target objects driving this constraint.
+        Returns all the available constraint target nodes.
 
         :rtype: list[mpynode.MPyNode]
         """
@@ -255,7 +154,7 @@ class ConstraintMixin(transformmixin.TransformMixin):
 
     def iterTargets(self):
         """
-        Generator method used to iterate through all available constraint targets.
+        Returns a generator that yields all the available constraint targets.
 
         :rtype: iter
         """
@@ -268,14 +167,24 @@ class ConstraintMixin(transformmixin.TransformMixin):
 
     def targetCount(self):
         """
-        Evaluates the number of active target elements available.
+        Evaluates the number of active target elements.
 
         :rtype: int
         """
 
-        return om.MPlug(self.object(), self.attribute('target')).evaluateNumElements()
+        return self.findPlug('target').evaluateNumElements()
 
-    def addTarget(self, target, maintainOffset=True):
+    def nextAvailableTargetIndex(self):
+        """
+        Returns the next available target index.
+
+        :rtype: int
+        """
+
+        plug = self.findPlug('target')
+        return plugutils.getNextAvailableElement(plug)
+
+    def addTarget(self, target, maintainOffset=False):
         """
         Adds a new target to this constraint.
 
@@ -286,53 +195,50 @@ class ConstraintMixin(transformmixin.TransformMixin):
 
         # Iterate through required target attributes
         #
-        plug = self.findPlug('target')
-        index = plug.evaluateNumElements()
+        index = self.nextAvailableTargetIndex()
 
-        for (sourceName, destinationName) in self.__targets__.items():
+        for (destinationName, sourceName) in self.__targets__.items():
 
-            # Check if constraint has attribute
+            # Check if attributes exist
             #
             if not target.hasAttr(sourceName) or not self.hasAttr(destinationName):
 
-                log.info('Unable to locate constraint attributes: %s and %s' % (sourceName, destinationName))
                 continue
 
-            # Connect plugs
+            # Find associated plugs
             #
             source = target.findPlug(sourceName)
             destination = self.findPlug('target[%s].%s' % (index, destinationName))
 
+            if source.isArray:
+
+                source.selectAncestorLogicalIndex(target.instanceNumber())
+
+            # Connect plugs
+            #
             self.connectPlugs(source, destination)
 
-        # Connect parent matrix attribute
-        #
-        source = target.findPlug('parentMatrix[%s]' % target.instanceNumber())
-        destination = self.findPlug('target[%s].targetParentMatrix' % index)
-
-        self.connectPlugs(source, destination)
-
-        # Connect weight attributes
+        # Add target weight attribute
         #
         nodeName = target.displayName()
+        attributeName = '{nodeName}W{index}'.format(nodeName=nodeName, index=index)
 
-        attribute = self.addAttr(
-            longName='{nodeName}W{index}'.format(nodeName=nodeName, index=index),
-            attributeType='float',
-            min=0.0, max=1.0
-        )
+        attribute = self.addAttr(longName=attributeName, attributeType='float', min=0.0, max=1.0, channelBox=True, keyable=True)
 
+        # Connect target weight attributes
+        #
         source = om.MPlug(self.object(), attribute)
+        source.setFloat(1.0)  # Don't forget to enable target!
         destination = self.findPlug('target[%s].targetWeight' % index)
 
         self.connectPlugs(source, destination)
 
-        # Enable weight attribute
+        # Check if offset should be maintained
         #
-        source.setFloat(1.0)
+        if maintainOffset:
 
-        # Return new target index
-        #
+            self.maintainOffset()
+
         return index
 
     def addTargets(self, targets, maintainOffset=False):
@@ -348,105 +254,56 @@ class ConstraintMixin(transformmixin.TransformMixin):
 
             self.addTarget(target, maintainOffset=maintainOffset)
 
-    def removeTarget(self, index):
+    @abstractmethod
+    def maintainOffset(self):
+        """
+        Ensures the constraint object's transform matches the rest matrix.
+
+        :rtype: None
+        """
 
         pass
 
-    def restTranslate(self, context=om.MDGContext.kNormal):
+    def removeTarget(self, index):
         """
-        Returns the rest translate component from this constraint.
-        This value is used when there are no target weights.
+        Removes the specified target from this constraint.
 
-        :type context: om.MDGContext
-        :rtype: om.MVector
-        """
-
-        return om.MVector(
-            self.findPlug('restTranslateX').asFloat(context=context),
-            self.findPlug('restTranslateY').asFloat(context=context),
-            self.findPlug('restTranslateZ').asFloat(context=context)
-        )
-
-    def setRestTranslate(self, restTranslate):
-        """
-        Updates the rest translate for this constraint.
-
-        :type restTranslate: om.MVector
+        :type index: int
         :rtype: None
         """
 
-        # Assign translation to plug
+        # Break connections to target element
         #
-        self.findPlug('restTranslateX').setFloat(restTranslate.x)
-        self.findPlug('restTranslateY').setFloat(restTranslate.y)
-        self.findPlug('restTranslateZ').setFloat(restTranslate.z)
+        plug = self.findPlug('target')
+        plug.selectAncestorLogicalIndex(index)
 
-    def restRotate(self, context=om.MDGContext.kNormal):
+        for attributeName in self.__targets__.keys():
+
+            child = plug.child(self.attribute(attributeName))
+            plugutils.breakConnections(child)
+
+        # Remove custom attribute
+        #
+        child = plug.child(self.attribute('targetWeight'))
+        attribute = child.source().attribute()
+        plugutils.breakConnections(child)
+
+        self.removeAttr(attribute)
+
+        # Remove element from array
+        #
+        plugutils.removeMultiInstances(plug, [index])
+
+    def clearTargets(self):
         """
-        Returns the rest rotation component from this constraint.
-        This value is used when there are no target weights.
+        Removes all the targets from this constraint.
 
-        :type context: om.MDGContext
-        :rtype: om.MEulerRotation
-        """
-
-        return om.MEulerRotation(
-            self.findPlug('restRotateX').asFloat(context=context),
-            self.findPlug('restRotateY').asFloat(context=context),
-            self.findPlug('restRotateZ').asFloat(context=context),
-            order=self.rotateOrder(context=context)
-        )
-
-    def setRestRotate(self, restRotation):
-        """
-        Updates the rest rotate for this constraint.
-
-        :type restRotation: om.MEulerRotation
         :rtype: None
         """
 
-        # Check if rotation needs reordering
-        #
-        rotateOrder = self.rotateOrder()
+        for i in reversed(range(self.targetCount())):
 
-        if restRotation.order != rotateOrder:
-
-            restRotation = restRotation.reorder(rotateOrder)
-
-        # Assign rotation to plugs
-        #
-        self.findPlug('restRotateX').setFloat(restRotation.x)
-        self.findPlug('restRotateY').setFloat(restRotation.y)
-        self.findPlug('restRotateZ').setFloat(restRotation.z)
-
-    def restScale(self, context=om.MDGContext.kNormal):
-        """
-        Returns the rest translate component from this constraint.
-        This value is used when there are no target weights.
-
-        :type context: om.MDGContext
-        :rtype: list[float, float, float]
-        """
-
-        return [
-            self.findPlug('restScaleX').asFloat(context=context),
-            self.findPlug('restScaleY').asFloat(context=context),
-            self.findPlug('restScaleZ').asFloat(context=context)
-        ]
-
-    def setRestScale(self, restScale):
-        """
-        Updates the rest translate for this constraint.
-
-        :type restScale: list[float, float, float]
-        :rtype: None
-        """
-
-        # Assign scale to plugs
-        #
-        self.findPlug('restScaleX').setFloat(restScale[0])
-        self.findPlug('restScaleY').setFloat(restScale[1])
-        self.findPlug('restScaleZ').setFloat(restScale[2])
+            self.removeTarget(i)
 
     def restMatrix(self):
         """
@@ -455,12 +312,32 @@ class ConstraintMixin(transformmixin.TransformMixin):
         :rtype: om.MMatrix
         """
 
+        # Check if constraint has rest translate
+        #
+        translateMatrix = om.MMatrix.kIdentity
+
+        if self.hasAttr('restTranslate'):
+
+            translateMatrix = transformutils.createTranslateMatrix(self.getAttr('restTranslate'))
+
+        # Check if constraint has rest rotate
+        #
+        rotateMatrix = om.MMatrix.kIdentity
+
+        if self.hasAttr('restRotate'):
+
+            rotateMatrix = transformutils.createRotationMatrix(self.getAttr('restRotate'))
+
+        # Check if constraint has rest scale
+        #
+        scaleMatrix = om.MMatrix.kIdentity
+
+        if self.hasAttr('restScale'):
+
+            scaleMatrix = transformutils.createScaleMatrix(self.getAttr('restScale'))
+
         # Compose rest matrix
         #
-        translateMatrix = transformutils.createTranslateMatrix(self.restTranslate())
-        rotateMatrix = transformutils.createRotationMatrix(self.restRotate())
-        scaleMatrix = transformutils.createScaleMatrix(1.0)
-
         return scaleMatrix * rotateMatrix * translateMatrix
 
     def setRestMatrix(self, restMatrix):
@@ -473,25 +350,28 @@ class ConstraintMixin(transformmixin.TransformMixin):
 
         # Decompose rest matrix
         #
-        translate, rotate, scale = transformutils.decomposeTransformMatrix(restMatrix, rotateOrder=self.rotateOrder())
+        translate, rotate, scale = transformutils.decomposeTransformMatrix(restMatrix)
 
         # Check if constraint has rest translate
         #
         if self.hasAttr('restTranslate'):
 
-            self.setRestTranslate(translate)
+            self.setAttr('restTranslate', translate)
 
         # Check if constraint has rest rotate
         #
-        if self.hasAttr('restRotate'):
+        if self.hasAttr('restRotate') and self.hasAttr('constraintRotateOrder'):
 
-            self.setRestRotate(rotate)
+            rotateOrder = self.getAttr('constraintRotateOrder')
+            rotate.reorderIt(rotateOrder)
+
+            self.setAttr('restRotate', rotate)
 
         # Check if constraint has rest scale
         #
         if self.hasAttr('restScale'):
 
-            self.setRestScale(scale)
+            self.setAttr('restScale', scale)
 
     def restInverseMatrix(self):
         """
@@ -519,6 +399,7 @@ class ConstraintMixin(transformmixin.TransformMixin):
         """
 
         return self.worldRestMatrix().inverse()
+    # endregion
 
 
 class ConstraintTarget(object):
@@ -526,6 +407,7 @@ class ConstraintTarget(object):
     Base class used to interface with constraint targets.
     """
 
+    # region Dunderscores
     __slots__ = ('_constraint', '_index')
 
     def __init__(self, constraint, **kwargs):
@@ -544,7 +426,9 @@ class ConstraintTarget(object):
         #
         self._constraint = constraint.weakReference()
         self._index = kwargs.get('index', 0)
+    # endregion
 
+    # region Properties
     @property
     def constraint(self):
         """
@@ -564,7 +448,9 @@ class ConstraintTarget(object):
         """
 
         return self._index
+    # endregion
 
+    # region Methods
     def targetPlug(self):
         """
         Returns the element associated with this constraint target.
@@ -717,6 +603,4 @@ class ConstraintTarget(object):
         self.targetChildPlug('targetOffsetRotateX').setFloat(rotation.x)
         self.targetChildPlug('targetOffsetRotateY').setFloat(rotation.y)
         self.targetChildPlug('targetOffsetRotateZ').setFloat(rotation.z)
-
-    def resetOffsetTransform(self):
-        pass
+    # endregion
