@@ -56,5 +56,5 @@ class ScaleConstraintMixin(constraintmixin.ConstraintMixin):
         :rtype: None
         """
 
-        pass
+        raise NotImplementedError()
     # endregion

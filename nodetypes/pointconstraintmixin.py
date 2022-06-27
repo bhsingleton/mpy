@@ -1,4 +1,5 @@
 from maya.api import OpenMaya as om
+from dcc.maya.libs import transformutils
 from . import constraintmixin
 from .. import mpyattribute
 
@@ -65,5 +66,20 @@ class PointConstraintMixin(constraintmixin.ConstraintMixin):
         :rtype: None
         """
 
-        pass
+        # Reset offset
+        #
+        self.offset = [0.0, 0.0, 0.0]
+
+        # Get constraint matrix
+        #
+        constraintTranslate = self.getAttr('constraintTranslate')
+        constraintMatrix = transformutils.createTranslateMatrix(constraintTranslate)
+
+        # Update offset
+        #
+        restMatrix = self.restMatrix()
+        offsetMatrix = restMatrix * constraintMatrix.inverse()
+        offsetTranslate = transformutils.breakMatrix(offsetMatrix)[3]
+
+        self.offset = offsetTranslate
     # endregion

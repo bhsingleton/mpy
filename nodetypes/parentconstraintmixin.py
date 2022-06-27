@@ -86,5 +86,5 @@ class ParentConstraintMixin(constraintmixin.ConstraintMixin):
         :rtype: None
         """
 
-        pass
+        raise NotImplementedError()
     # endregion

@@ -1,4 +1,5 @@
-from maya import cmds as mc
+import math
+
 from maya.api import OpenMaya as om
 from dcc.maya.libs import transformutils
 from . import constraintmixin
@@ -84,6 +85,34 @@ class AimConstraintMixin(constraintmixin.ConstraintMixin):
     # endregion
 
     # region Methods
+    def worldUpObject(self):
+        """
+        Returns the world-up object for this constraint.
+
+        :rtype: mpynode.nodetypes.transformmixin.TransformMixin
+        """
+
+        plug = self.findPlug('worldUpMatrix')
+        source = plug.source()
+
+        if not source.isNull():
+
+            return self.pyFactory(source.node())
+
+        else:
+
+            return None
+
+    def setWorldUpObject(self, node):
+        """
+        Updates the world-up object for this constraint.
+
+        :type node: mpynode.nodetypes.transformmixin.TransformMixin
+        :rtype: None
+        """
+
+        node.connectPlugs('worldMatrix[%s]' % node.instanceNumber(), self.findPlug('worldUpMatrix'), force=True)
+
     def maintainOffset(self):
         """
         Ensures the constraint object's transform matches the rest matrix.
@@ -91,5 +120,27 @@ class AimConstraintMixin(constraintmixin.ConstraintMixin):
         :rtype: None
         """
 
-        pass
+        # Reset offset
+        #
+        self.offset = [0.0, 0.0, 0.0]
+
+        # Get current constraint matrix
+        #
+        constraintAngles = self.getAttr('constraintRotate', convertUnits=False)
+        constraintRotateOrder = self.getAttr('constraintRotateOrder')
+        constraintEulerRotation = om.MEulerRotation([x.asRadians() for x in constraintAngles], order=constraintRotateOrder)
+
+        constraintMatrix = constraintEulerRotation.asMatrix()
+
+        # Update offset
+        #
+        restAngles = self.getAttr('restRotate', convertUnits=False)
+        restEulerRotation = om.MEulerRotation([x.asRadians() for x in restAngles], order=constraintRotateOrder)
+
+        offsetMatrix = restEulerRotation.asMatrix() * constraintMatrix.inverse()
+        offsetEulerRotation = transformutils.decomposeTransformMatrix(offsetMatrix, rotateOrder=constraintRotateOrder)[1]
+
+        self.offsetX = math.degrees(offsetEulerRotation.x)
+        self.offsetY = math.degrees(offsetEulerRotation.y)
+        self.offsetZ = math.degrees(offsetEulerRotation.z)
     # endregion

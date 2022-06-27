@@ -1,4 +1,7 @@
+import math
+
 from maya.api import OpenMaya as om
+from dcc.maya.libs import transformutils
 from . import constraintmixin
 from .. import mpyattribute
 
@@ -38,6 +41,7 @@ class OrientConstraintMixin(constraintmixin.ConstraintMixin):
         'inverseScaleZ': 'inverseScaleZ',
         'constraintParentInverseMatrix': 'parentInverseMatrix'
     }
+
     __outputs__ = {
         'constraintRotateX': 'rotateX',
         'constraintRotateY': 'rotateY',
@@ -65,5 +69,27 @@ class OrientConstraintMixin(constraintmixin.ConstraintMixin):
         :rtype: None
         """
 
-        pass
+        # Reset offset
+        #
+        self.offset = [0.0, 0.0, 0.0]
+
+        # Get current constraint matrix
+        #
+        constraintAngles = self.getAttr('constraintRotate', convertUnits=False)
+        constraintRotateOrder = self.getAttr('constraintRotateOrder')
+        constraintEulerRotation = om.MEulerRotation([x.asRadians() for x in constraintAngles], order=constraintRotateOrder)
+
+        constraintMatrix = constraintEulerRotation.asMatrix()
+
+        # Update offset
+        #
+        restAngles = self.getAttr('restRotate', convertUnits=False)
+        restEulerRotation = om.MEulerRotation([x.asRadians() for x in restAngles], order=constraintRotateOrder)
+
+        offsetMatrix = restEulerRotation.asMatrix() * constraintMatrix.inverse()
+        offsetEulerRotation = transformutils.decomposeTransformMatrix(offsetMatrix, rotateOrder=constraintRotateOrder)[1]
+
+        self.offsetX = math.degrees(offsetEulerRotation.x)
+        self.offsetY = math.degrees(offsetEulerRotation.y)
+        self.offsetZ = math.degrees(offsetEulerRotation.z)
     # endregion

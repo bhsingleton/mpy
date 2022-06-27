@@ -1,3 +1,5 @@
+import math
+
 from maya import cmds as mc
 from maya.api import OpenMaya as om
 from abc import abstractmethod
@@ -33,40 +35,19 @@ class ConstraintMixin(transformmixin.TransformMixin):
     def constraintObject(self):
         """
         Returns the object being driven by this constraint node.
-        The constraint parent inverse matrix plug is usually the common denominator in all constraint nodes.
-        It should be fairly safe to query the connection to find this object.
+        In most cases this returns the immediate parent node.
 
         :rtype: mpynode.MPyNode
         """
 
-        # Check if plug has a connection
-        #
-        plug = self.findPlug('constraintParentInverseMatrix')
-        source = plug.source()
-
-        if not source.isNull:
-
-            return self.pyFactory(source.node())
-
-        else:
-
-            return None
+        return self.parent()
 
     def setConstraintObject(self, constraintObject, **kwargs):
         """
         Updates the constraint object for this instance.
 
         :type constraintObject: transformmixin.TransformMixin
-        :key maintainOffset: bool
-        :key skipTranslateX: bool
-        :key skipTranslateY: bool
-        :key skipTranslateZ: bool
-        :key skipRotateX: bool
-        :key skipRotateY: bool
-        :key skipRotateZ: bool
-        :key skipScaleX: bool
-        :key skipScaleY: bool
-        :key skipScaleZ: bool
+        :key enableRestPosition: bool
         :rtype: None
         """
 
@@ -78,15 +59,22 @@ class ConstraintMixin(transformmixin.TransformMixin):
 
         # Rename constraint and re-parent
         #
-        constraintName = '{nodeName}_{typeName}1'.format(nodeName=constraintObject.name(), typeName=self.typeName)
+        nodeName = constraintObject.name()
+        constraintName = '{nodeName}_{typeName}1'.format(nodeName=nodeName, typeName=self.typeName)
+        
         self.setName(constraintName)
-
         self.setParent(constraintObject)
 
         # Update rest matrix
         #
-        restMatrix = constraintObject.getAttr('matrix')
-        self.setRestMatrix(restMatrix)
+        enableRestPosition = kwargs.get('enableRestPosition', True)
+
+        if enableRestPosition:
+
+            restMatrix = kwargs.get('restMatrix', constraintObject.matrix())
+
+            self.enableRestPosition = True
+            self.setRestMatrix(restMatrix)
 
         # Connect input attributes
         #
@@ -113,16 +101,18 @@ class ConstraintMixin(transformmixin.TransformMixin):
 
         # Connect output attributes
         #
+        skipAll = kwargs.get('skipAll', False)
+
         for (sourceName, destinationName) in self.__outputs__.items():
 
             # Check if attribute should be skipped
             #
             key = 'skip{attributeName}'.format(attributeName=stringutils.titleize(destinationName))
-            skipAttribute = kwargs.get(key, False)
+            skipAttribute = kwargs.get(key, skipAll)
 
             if skipAttribute:
 
-                log.info('Skipping constraint attribute: %s' % destinationName)
+                log.debug('Skipping "%s.%s" > "%s.%s" constraint!' % (constraintName, sourceName, nodeName, destinationName))
                 continue
 
             # Get associated plugs
@@ -132,13 +122,13 @@ class ConstraintMixin(transformmixin.TransformMixin):
 
             # Connect plugs
             #
-            self.connectPlugs(source, destination, force=True)
+            self.connectPlugs(source, destination)
 
     def targets(self):
         """
         Returns all the available constraint targets.
 
-        :rtype: list[ConstraintTarget]
+        :rtype: List[ConstraintTarget]
         """
 
         return list(self.iterTargets())
@@ -147,7 +137,7 @@ class ConstraintMixin(transformmixin.TransformMixin):
         """
         Returns all the available constraint target nodes.
 
-        :rtype: list[mpynode.MPyNode]
+        :rtype: List[transformmixin.TransformMixin]
         """
 
         return [x.targetObject() for x in self.iterTargets()]
@@ -184,17 +174,19 @@ class ConstraintMixin(transformmixin.TransformMixin):
         plug = self.findPlug('target')
         return plugutils.getNextAvailableElement(plug)
 
-    def addTarget(self, target, maintainOffset=False):
+    def addTarget(self, target, weight=1.0, maintainOffset=False):
         """
         Adds a new target to this constraint.
 
-        :type target: mpynode.MPyNode
+        :type target: transformmixin.TransformMixin
+        :type weight: float
         :type maintainOffset: bool
         :rtype: int
         """
 
         # Iterate through required target attributes
         #
+        target = self.pyFactory(target)
         index = self.nextAvailableTargetIndex()
 
         for (destinationName, sourceName) in self.__targets__.items():
@@ -223,14 +215,24 @@ class ConstraintMixin(transformmixin.TransformMixin):
         nodeName = target.displayName()
         attributeName = '{nodeName}W{index}'.format(nodeName=nodeName, index=index)
 
-        attribute = self.addAttr(longName=attributeName, attributeType='float', min=0.0, max=1.0, channelBox=True, keyable=True)
+        attribute = self.addAttr(
+            longName=attributeName,
+            attributeType='float',
+            min=0.0,
+            max=1.0,
+            readable=True,
+            writable=True,
+            storable=True,
+            keyable=True,
+            channelBox=True
+        )
 
         # Connect target weight attributes
         #
         source = om.MPlug(self.object(), attribute)
-        source.setFloat(1.0)  # Don't forget to enable target!
-        destination = self.findPlug('target[%s].targetWeight' % index)
+        source.setFloat(weight)
 
+        destination = self.findPlug('target[%s].targetWeight' % index)
         self.connectPlugs(source, destination)
 
         # Check if offset should be maintained
@@ -245,7 +247,7 @@ class ConstraintMixin(transformmixin.TransformMixin):
         """
         Adds a list of new targets to this constraint.
 
-        :type targets: list[mpynode.MPyNode]
+        :type targets: List[transformmixin.TransformMixin]
         :type maintainOffset: bool
         :rtype: int
         """
@@ -318,7 +320,8 @@ class ConstraintMixin(transformmixin.TransformMixin):
 
         if self.hasAttr('restTranslate'):
 
-            translateMatrix = transformutils.createTranslateMatrix(self.getAttr('restTranslate'))
+            restTranslate = self.getAttr('restTranslate')
+            translateMatrix = transformutils.createTranslateMatrix(restTranslate)
 
         # Check if constraint has rest rotate
         #
@@ -326,7 +329,8 @@ class ConstraintMixin(transformmixin.TransformMixin):
 
         if self.hasAttr('restRotate'):
 
-            rotateMatrix = transformutils.createRotationMatrix(self.getAttr('restRotate'))
+            restRotate = self.getAttr('restRotate')
+            rotateMatrix = transformutils.createRotationMatrix(restRotate)
 
         # Check if constraint has rest scale
         #
@@ -334,7 +338,8 @@ class ConstraintMixin(transformmixin.TransformMixin):
 
         if self.hasAttr('restScale'):
 
-            scaleMatrix = transformutils.createScaleMatrix(self.getAttr('restScale'))
+            restScale = self.getAttr('restScale')
+            scaleMatrix = transformutils.createScaleMatrix(restScale)
 
         # Compose rest matrix
         #
@@ -350,7 +355,7 @@ class ConstraintMixin(transformmixin.TransformMixin):
 
         # Decompose rest matrix
         #
-        translate, rotate, scale = transformutils.decomposeTransformMatrix(restMatrix)
+        translate, eulerRotation, scale = transformutils.decomposeTransformMatrix(restMatrix)
 
         # Check if constraint has rest translate
         #
@@ -360,12 +365,14 @@ class ConstraintMixin(transformmixin.TransformMixin):
 
         # Check if constraint has rest rotate
         #
-        if self.hasAttr('restRotate') and self.hasAttr('constraintRotateOrder'):
+        if self.hasAttr('restRotate'):
 
             rotateOrder = self.getAttr('constraintRotateOrder')
-            rotate.reorderIt(rotateOrder)
+            eulerRotation.reorderIt(rotateOrder)
 
-            self.setAttr('restRotate', rotate)
+            self.setAttr('restRotateX', math.degrees(eulerRotation.x))
+            self.setAttr('restRotateY', math.degrees(eulerRotation.y))
+            self.setAttr('restRotateZ', math.degrees(eulerRotation.z))
 
         # Check if constraint has rest scale
         #

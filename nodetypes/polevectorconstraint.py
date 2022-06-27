@@ -83,5 +83,5 @@ class PoleVectorConstraintMixin(constraintmixin.ConstraintMixin):
         :rtype: None
         """
 
-        pass
+        raise NotImplementedError()
     # endregion
