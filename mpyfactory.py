@@ -3,9 +3,9 @@ import os
 from maya import cmds as mc
 from maya.api import OpenMaya as om
 from six import string_types
+from dcc.abstract import proxyfactory
 from dcc.maya.libs import dagutils
 from . import mpynode, nodetypes, plugintypes
-from .abstract import abstractfactory
 
 import logging
 logging.basicConfig()
@@ -13,7 +13,7 @@ log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
 
 
-class MPyFactory(abstractfactory.AbstractFactory):
+class MPyFactory(proxyfactory.ProxyFactory):
     """
     Overload of AbstractFactory used to manage python interfaces for Maya scene nodes.
     """
