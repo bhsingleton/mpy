@@ -1,3 +1,5 @@
+import math
+
 from maya import cmds as mc
 from maya.api import OpenMaya as om
 from dcc.maya.libs import shapeutils, transformutils
@@ -68,7 +70,7 @@ class TransformMixin(dagmixin.DagMixin):
 
     def resetTranslation(self):
         """
-        Resets the translation component back to zero.
+        Resets the transform's translation component back to zero.
 
         :rtype: None
         """
@@ -77,7 +79,7 @@ class TransformMixin(dagmixin.DagMixin):
 
     def rotateOrder(self, context=om.MDGContext.kNormal):
         """
-        Returns the rotation order for this component.
+        Returns the transform's rotation order.
 
         :type context: om.MDGContext
         :rtype: int
@@ -98,7 +100,7 @@ class TransformMixin(dagmixin.DagMixin):
 
     def setEulerRotation(self, eulerRotation):
         """
-        Updates the transform's rotation component
+        Updates the transform's euler rotation component.
 
         :type eulerRotation: om.MEulerRotation
         :rtype: None
@@ -108,7 +110,7 @@ class TransformMixin(dagmixin.DagMixin):
 
     def resetEulerRotation(self):
         """
-        Resets the rotation component back to zero.
+        Resets the transform's rotation component back to zero.
 
         :rtype: None
         """
@@ -120,7 +122,7 @@ class TransformMixin(dagmixin.DagMixin):
         Returns the transform's scale component.
 
         :type context: om.MDGContext
-        :rtype: list[float, float, float]
+        :rtype: List[float, float, float]
         """
 
         return transformutils.getScale(self.dagPath(), context=context)
@@ -129,15 +131,20 @@ class TransformMixin(dagmixin.DagMixin):
         """
         Updates the transform's scale component
 
-        :type scale: list[float, float, float]
+        :type scale: List[float, float, float]
         :rtype: None
         """
 
-        transformutils.setScale(self.dagPath(), scale)
+        # Check if scale is valid
+        # No need to introduce minor decimal discrepancies!
+        #
+        if not transformutils.isClose(self.scale(), scale):
+
+            transformutils.setScale(self.dagPath(), scale)
 
     def resetScale(self):
         """
-        Resets the scale component back to one.
+        Resets the transform's scale component back to one.
 
         :rtype: None
         """
@@ -146,7 +153,7 @@ class TransformMixin(dagmixin.DagMixin):
 
     def resetPivots(self):
         """
-        Resets all of the transform's pivot components.
+        Resets all the transform's pivot components.
 
         :rtype: None
         """
@@ -162,27 +169,42 @@ class TransformMixin(dagmixin.DagMixin):
 
         return self.getAttr('matrix')
 
-    def setMatrix(self, matrix):
+    def setMatrix(self, matrix, skipTranslate=False, skipRotate=False, skipScale=False):
         """
         Updates the local transformation matrix for this transform.
 
         :type matrix: om.MMatrix
+        :type skipTranslate: bool
+        :type skipRotate: bool
+        :type skipScale: bool
         :rtype: None
         """
 
         # Decompose transform matrix
         #
-        translation, rotation, scale = transformutils.decomposeTransformMatrix(matrix)
+        translation, eulerRotation, scale = transformutils.decomposeTransformMatrix(matrix)
 
-        # Set transform components
+        # Check if translation should be skipped
         #
-        self.setTranslation(translation)
-        self.setEulerRotation(rotation)
-        self.setScale(scale)
+        if not skipTranslate:
+
+            self.setTranslation(translation)
+
+        # Check if rotation should be skipped
+        #
+        if not skipRotate:
+
+            self.setEulerRotation(eulerRotation)
+
+        # Check if scale should be skipped
+        #
+        if not skipScale:
+
+            self.setScale(scale)
 
     def resetMatrix(self):
         """
-        Resets all of transform's components.
+        Resets all the transform components.
 
         :rtype: None
         """
@@ -190,6 +212,24 @@ class TransformMixin(dagmixin.DagMixin):
         self.resetTranslation()
         self.resetEulerRotation()
         self.resetScale()
+
+    def worldMatrix(self):
+        """
+        Returns the world matrix for this transform.
+
+        :rtype: om.MMatrix
+        """
+
+        return self.getAttr('worldMatrix[%s]' % self.instanceNumber())
+
+    def worldInverseMatrix(self):
+        """
+        Returns the world inverse-matrix for this transform.
+
+        :rtype: om.MMatrix
+        """
+
+        return self.worldMatrix().inverse()
 
     def keyTransform(self):
         """
@@ -443,7 +483,7 @@ class TransformMixin(dagmixin.DagMixin):
 
     def colorizeShapes(self, **kwargs):
         """
-        Colorizes all of the shape nodes below this transform.
+        Colorizes all the shape nodes below this transform.
 
         :key side: int
         :key: colorIndex: int
