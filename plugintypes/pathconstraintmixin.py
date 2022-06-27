@@ -50,10 +50,14 @@ class PathConstraintMixin(constraintmixin.ConstraintMixin):
     worldUpVectorX = mpyattribute.MPyAttribute('worldUpVectorX')
     worldUpVectorY = mpyattribute.MPyAttribute('worldUpVectorY')
     worldUpVectorZ = mpyattribute.MPyAttribute('worldUpVectorZ')
-    offset = mpyattribute.MPyAttribute('offset')
-    offsetX = mpyattribute.MPyAttribute('offsetX')
-    offsetY = mpyattribute.MPyAttribute('offsetY')
-    offsetZ = mpyattribute.MPyAttribute('offsetZ')
+    offsetTranslate = mpyattribute.MPyAttribute('offsetTranslate')
+    offsetTranslateX = mpyattribute.MPyAttribute('offsetTranslateX')
+    offsetTranslateY = mpyattribute.MPyAttribute('offsetTranslateY')
+    offsetTranslateZ = mpyattribute.MPyAttribute('offsetTranslateZ')
+    offsetRotate = mpyattribute.MPyAttribute('offsetRotate')
+    offsetRotateX = mpyattribute.MPyAttribute('offsetRotateX')
+    offsetRotateY = mpyattribute.MPyAttribute('offsetRotateY')
+    offsetRotateZ = mpyattribute.MPyAttribute('offsetRotateZ')
     restTranslate = mpyattribute.MPyAttribute('restTranslate')
     restTranslateX = mpyattribute.MPyAttribute('restTranslateX')
     restTranslateY = mpyattribute.MPyAttribute('restTranslateY')
@@ -72,5 +76,5 @@ class PathConstraintMixin(constraintmixin.ConstraintMixin):
         :rtype: None
         """
 
-        pass
+        raise NotImplementedError()
     # endregion
