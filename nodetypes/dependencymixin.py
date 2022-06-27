@@ -392,27 +392,30 @@ class DependencyMixin(mpynode.MPyNode):
 
             raise TypeError('removeAttr() expects either a str or MObject (%s given)!' % type(attribute).__name__)
 
-    def getAttr(self, plug):
+    def getAttr(self, plug, convertUnits=True):
         """
         Returns the value from the supplied plug.
 
         :type plug: Union[str, om.MObject, om.MPlug]
-        :rtype: object
+        :type convertUnits: bool
+        :rtype: Any
         """
 
         # Check plug type
         #
         if isinstance(plug, om.MPlug):
 
-            return plugmutators.getValue(plug)
+            return plugmutators.getValue(plug, convertUnits=convertUnits)
 
         elif isinstance(plug, string_types):
 
-            return self.getAttr(self.findPlug(plug))
+            plug = self.findPlug(plug)
+            return self.getAttr(plug, convertUnits=convertUnits)
 
         elif isinstance(plug, om.MObject):
 
-            return self.getAttr(om.MPlug(self.object(), plug))
+            plug = om.MPlug(self.object(), plug)
+            return self.getAttr(plug, convertUnits=convertUnits)
 
         else:
 
@@ -734,7 +737,7 @@ class DependencyMixin(mpynode.MPyNode):
                 #
                 for i in range(source.numChildren()):
 
-                    self.connectPlugs(source.child(i), destination.child(i))
+                    self.connectPlugs(source.child(i), destination.child(i), force=force)
 
             else:
 
