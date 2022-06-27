@@ -36,7 +36,7 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
 
         else:
 
-            return super(DagMixin).__getitem__(key)
+            return super(DagMixin, self).__getitem__(key)
 
     def __reduce__(self):
         """
@@ -334,6 +334,19 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
         else:
 
             return parents[-1]
+
+    def trace(self):
+        """
+        Returns a generator that yields the parents leading to this node.
+
+        :rtype: iter
+        """
+
+        for parent in reversed(list(self.iterParents())):
+
+            yield parent
+
+        yield self
 
     def child(self, index):
         """
