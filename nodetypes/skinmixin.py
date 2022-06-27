@@ -130,7 +130,7 @@ class SkinMixin(deformermixin.DeformerMixin):
         """
         Returns a dictionary of index-influence pairs from this skin cluster.
 
-        :rtype: Dict[int, object]
+        :rtype: Dict[int, om.MObject]
         """
 
         return list(self.iterInfluences())
@@ -155,6 +155,29 @@ class SkinMixin(deformermixin.DeformerMixin):
         """
 
         skinutils.removeInfluence(self.object(), influenceId)
+
+    def preBindMatrix(self, influenceId):
+        """
+        Returns the pre-bind matrix for the specified influence ID.
+        Be aware these matrices are the equivalent of a transform's worldInverseMatrix!
+
+        :type influenceId: int
+        :rtype: om.MMatrix
+        """
+
+        return self.getAttr('bindPreMatrix[%s]' % influenceId)
+
+    def setPreBindMatrix(self, influenceId, preBindMatrix):
+        """
+        Updates the pre-bind matrix for the specified influence ID.
+        Be aware these matrices are the equivalent of a transform's worldInverseMatrix!
+
+        :type influenceId: int
+        :type preBindMatrix: om.MMatrix
+        :rtype: None
+        """
+
+        self.setAttr('bindPreMatrix[%s]' % influenceId, preBindMatrix)
 
     def iterWeightList(self, *args):
         """
