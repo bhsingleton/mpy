@@ -2,10 +2,11 @@ import os
 
 from maya import cmds as mc
 from maya.api import OpenMaya as om
-from PySide2 import QtGui
+from Qt import QtGui
 from six import string_types
 from dcc.maya.libs import attributeutils, plugutils, plugmutators, dagutils
 from .. import mpyattribute, mpynode
+from ..collections import userproperties
 
 import logging
 logging.basicConfig()
@@ -20,6 +21,16 @@ class DependencyMixin(mpynode.MPyNode):
 
     # region Dunderscores
     __apitype__ = om.MFn.kDependencyNode
+
+    def __init__(self, obj, **kwargs):
+
+        # Call parent method
+        #
+        super(DependencyMixin, self).__init__(obj, **kwargs)
+
+        # Declare private variables
+        #
+        self._userProperties = userproperties.UserProperties(self.object())
 
     def __getitem__(self, key):
         """
@@ -58,6 +69,50 @@ class DependencyMixin(mpynode.MPyNode):
     frozen = mpyattribute.MPyAttribute('frozen')
     isHistoricallyInteresting = mpyattribute.MPyAttribute('isHistoricallyInteresting')
     nodeState = mpyattribute.MPyAttribute('nodeState')
+    # endregion
+
+    # region Properties
+    @property
+    def userProperties(self):
+        """
+        Getter method that returns the user properties.
+
+        :rtype: userproperties.UserProperties
+        """
+
+        return self._userProperties
+
+    @userProperties.setter
+    def userProperties(self, userProperties):
+        """
+        Setter method that updates the user properties.
+
+        :type userProperties: dict
+        :rtype: None
+        """
+
+        self._userProperties.update(userProperties)
+
+    @property
+    def userPropertyBuffer(self):
+        """
+        Getter method that returns the user property buffer.
+
+        :rtype: str
+        """
+
+        return self._userProperties.buffer()
+
+    @userPropertyBuffer.setter
+    def userPropertyBuffer(self, userPropertyBuffer):
+        """
+        Setter method that updates the user property buffer.
+
+        :type userPropertyBuffer: str
+        :rtype: None
+        """
+
+        self._userProperties.setBuffer(userPropertyBuffer)
     # endregion
 
     # region Methods
@@ -241,17 +296,6 @@ class DependencyMixin(mpynode.MPyNode):
 
             return None
 
-    def rename(self, name):
-        """
-        Method used to rename this instance to the supplied name.
-        No error checking is performed so please inspect your values before supplying them to this method!
-
-        :type name: str
-        :rtype: str
-        """
-
-        return self.functionSet().setName(name)
-
     def lock(self):
         """
         Method used to lock this node and prevent user changes.
@@ -392,30 +436,37 @@ class DependencyMixin(mpynode.MPyNode):
 
             raise TypeError('removeAttr() expects either a str or MObject (%s given)!' % type(attribute).__name__)
 
-    def getAttr(self, plug, convertUnits=True):
+    def getAttr(self, plug, context=None, convertUnits=True):
         """
         Returns the value from the supplied plug.
 
         :type plug: Union[str, om.MObject, om.MPlug]
+        :type context: om.MDGContext
         :type convertUnits: bool
         :rtype: Any
         """
+
+        # Check if context was supplied
+        #
+        if context is None:
+
+            context = om.MDGContext.kNormal
 
         # Check plug type
         #
         if isinstance(plug, om.MPlug):
 
-            return plugmutators.getValue(plug, convertUnits=convertUnits)
+            return plugmutators.getValue(plug, context=context, convertUnits=convertUnits)
 
         elif isinstance(plug, string_types):
 
             plug = self.findPlug(plug)
-            return self.getAttr(plug, convertUnits=convertUnits)
+            return self.getAttr(plug, context=context, convertUnits=convertUnits)
 
         elif isinstance(plug, om.MObject):
 
             plug = om.MPlug(self.object(), plug)
-            return self.getAttr(plug, convertUnits=convertUnits)
+            return self.getAttr(plug, context=context, convertUnits=convertUnits)
 
         else:
 
@@ -839,7 +890,8 @@ class DependencyMixin(mpynode.MPyNode):
         """
         Returns a list of nodes that this object is dependent on.
 
-        :rtype: list[DependencyMixin]
+        :type apiType: int
+        :rtype: List[DependencyMixin]
         """
 
         return [self.pyFactory(x) for x in dagutils.iterDependencies(self.object(), apiType, direction=om.MItDependencyGraph.kUpstream)]
@@ -848,7 +900,8 @@ class DependencyMixin(mpynode.MPyNode):
         """
         Returns a list of nodes that are dependent on this object.
 
-        :return: list[DependencyMixin]
+        :type apiType: int
+        :return: List[DependencyMixin]
         """
 
         return [self.pyFactory(x) for x in dagutils.iterDependencies(self.object(), apiType, direction=om.MItDependencyGraph.kDownstream)]
