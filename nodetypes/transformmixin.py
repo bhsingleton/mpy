@@ -45,6 +45,31 @@ class TransformMixin(dagmixin.DagMixin):
 
         return super(TransformMixin, self).functionSet()
 
+    def setParent(self, parent, absolute=False):
+        """
+        Updates the parent for this node.
+        This overload supports the use of transform preservation when changing parents.
+
+        :type parent: Union[None, str, om.MObject, DagMixin]
+        :type absolute: bool
+        :rtype: None
+        """
+
+        # Cache world-matrix
+        #
+        worldMatrix = self.worldMatrix()
+
+        # Call parent method
+        #
+        super(TransformMixin, self).setParent(parent)
+
+        # Check if world-matrix should be preserved
+        #
+        if absolute:
+
+            matrix = worldMatrix * self.exclusiveMatrixInverse()
+            self.setMatrix(matrix, skipScale=True)
+
     def translation(self, space=om.MSpace.kTransform, context=om.MDGContext.kNormal):
         """
         Returns the transform's translation component.
