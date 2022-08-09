@@ -4,6 +4,7 @@ from maya import cmds as mc
 from maya.api import OpenMaya as om
 from six import string_types
 from dcc.abstract import proxyfactory
+from dcc.python import stringutils
 from dcc.maya.libs import dagutils
 from . import mpynode, nodetypes, plugintypes
 
@@ -92,7 +93,7 @@ class MPyFactory(proxyfactory.ProxyFactory):
     def isPlugin(self, dependNode):
         """
         Checks if the supplied node is derived from a plugin.
-        By default the function set will always return a string.
+        By default, the function set will always return a string.
         So we run a path validation to test.
 
         :type dependNode: om.MObject
@@ -326,21 +327,21 @@ class MPyFactory(proxyfactory.ProxyFactory):
 
         return list(self.iterNodesByTypeName(typeName))
 
-    def createNode(self, typeName, name='', parent=None, skipSelect=True):
+    def createNode(self, typeName, name='', parent=None, **kwargs):
         """
         Creates a new scene node and immediately wraps it in a MPyNode interface.
-        Any dictionaries supplied as a name will be passed to namingutils for concatenation.
 
         :type typeName: str
         :type name: str
         :type parent: Union[str, om.MObject, om.MDagPath, mpynode.MPyNode]
-        :type skipSelect: bool
+        :key shared: bool
+        :key skipSelect: bool
         :rtype: mpynode.MPyNode
         """
 
-        # Check if name is valid
+        # Check if a null-name was supplied
         #
-        if isinstance(name, string_types) and len(name) == 0:
+        if stringutils.isNullOrEmpty(name):
 
             name = '{typeName}1'.format(typeName=typeName)
 
@@ -362,13 +363,104 @@ class MPyFactory(proxyfactory.ProxyFactory):
         #
         try:
 
-            partialPathName = mc.createNode(typeName, name=name, parent=parent, skipSelect=skipSelect)
-            return mpynode.MPyNode(partialPathName)
+            nodeName = mc.createNode(typeName, name=name, parent=parent, **kwargs)
+            return mpynode.MPyNode(nodeName)
 
         except RuntimeError as exception:
 
-            log.warning(exception)
+            log.error(exception)
             return None
+
+    def createShadingNode(self, typeName, name='', parent=None, **kwargs):
+        """
+        Creates a new shading node and immediately wraps it in a MPyNode interface.
+
+        :type typeName: str
+        :type name: str
+        :type parent: Union[str, om.MObject, om.MDagPath, mpynode.MPyNode]
+        :key asLight: bool
+        :key asPostProcess: bool
+        :key asRendering: bool
+        :key asShader: bool
+        :key asTexture: bool
+        :key asUtility: bool
+        :key isColorManaged: bool
+        :key shared: bool
+        :key skipSelect: bool
+        :rtype: mpynode.MPyNode
+        """
+
+        # Check if a null-name was supplied
+        #
+        if stringutils.isNullOrEmpty(name):
+
+            name = '{typeName}1'.format(typeName=typeName)
+
+        # Check if a non-string parent was supplied
+        #
+        if isinstance(parent, mpynode.MPyNode):
+
+            parent = parent.fullPathName()
+
+        elif isinstance(parent, (om.MObject, om.MDagPath)):
+
+            parent = om.MFnDagNode(parent).fullPathName()
+
+        else:
+
+            pass
+
+        # Try and create shader node
+        #
+        try:
+
+            shaderName = mc.shadingNode(typeName, name=name, parent=parent, **kwargs)
+            return mpynode.MPyNode(shaderName)
+
+        except RuntimeError as exception:
+
+            log.error(exception)
+            return None
+
+    def createShader(self, typeName, name=''):
+        """
+        Creates a new shader and immediately wraps the node and engine in a MPyNode interface.
+
+        :type typeName: str
+        :type name: str
+        :rtype: Tuple[mpynode.MPyNode, mpynode.MPyNode]
+        """
+
+        # Check if a null-name was supplied
+        #
+        shaderName, shadingGroupName = None, None
+
+        if stringutils.isNullOrEmpty(name):
+
+            shaderName = '{typeName}1'.format(typeName=typeName)
+            shadingGroupName = '{shaderName}SG'.format(shaderName=shaderName)
+
+        else:
+
+            shaderName = name
+            shadingGroupName = '{shaderName}SG'.format(shaderName=shaderName)
+
+        # Try and create shader components
+        #
+        try:
+
+            shaderName = mc.shadingNode(typeName, name=shaderName, asShader=True)
+            shadingGroupName = mc.sets(name=shadingGroupName, empty=True, renderable=True, noSurfaceShader=True)
+
+            shader, shadingGroup = mpynode.MPyNode(shaderName), mpynode.MPyNode(shadingGroupName)
+            shader.connectPlugs('outColor', shadingGroup['surfaceShader'])
+
+            return shader, shadingGroup
+
+        except RuntimeError as exception:
+
+            log.error(exception)
+            return None, None
 
     def createReference(self, filePath, namespace=''):
         """
