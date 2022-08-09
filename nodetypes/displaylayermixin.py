@@ -83,30 +83,34 @@ class DisplayLayerMixin(dependencymixin.DependencyMixin):
         #
         destination = self.findPlug('identification')
 
-        if not destination.isDestination:
-
-            # Get display layer manager
-            # Find display layer id plug
-            #
-            layerManager = self.pyFactory.getNodeByName('layerManager')
-            source = layerManager.findPlug('displayLayerId')
-
-            # Select next available plug element
-            # Be sure to set the id before connecting plugs!
-            #
-            index = plugutils.getNextAvailableConnection(source)
-
-            source.selectAncestorLogicalIndex(index)
-            source.setInt(index)
-
-            # Connect plugs
-            #
-            log.info('Registering "%s" display layer @ "%s.displayLayerId[%s]"!' % (self.name(), layerManager.name(), index))
-            plugutils.connectPlugs(source, destination, force=True)
-
-        else:
+        if destination.isDestination:
 
             log.info('Display layer "%s" has already been registered!' % self.name())
+            return
+
+
+        # Get display layer manager
+        # Find display layer id plug
+        #
+        layerManager = self.pyFactory.getNodeByName('layerManager')
+        plug = layerManager.findPlug('displayLayerId')
+
+        # Select next available plug element
+        # Be sure to set the id before connecting plugs!
+        #
+        index = plugutils.getNextAvailableConnection(plug)
+
+        if index == 0:
+
+            index = plug.evaluateNumElements() + 1  # Index 0 is reserved for the default layer!
+
+        source = plug.elementByLogicalIndex(index)
+        source.setShort(index)
+
+        # Connect plugs
+        #
+        log.info('Registering "%s" display layer @ "%s.displayLayerId[%s]"!' % (self.name(), layerManager.name(), index))
+        plugutils.connectPlugs(source, destination, force=True)
 
     def hasNode(self, node):
         """
