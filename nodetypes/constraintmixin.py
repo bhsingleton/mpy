@@ -107,7 +107,7 @@ class ConstraintMixin(transformmixin.TransformMixin):
 
             # Check if attribute should be skipped
             #
-            key = 'skip{attributeName}'.format(attributeName=stringutils.titleize(destinationName))
+            key = 'skip{attributeName}'.format(attributeName=stringutils.pascalize(destinationName))
             skipAttribute = kwargs.get(key, skipAll)
 
             if skipAttribute:
