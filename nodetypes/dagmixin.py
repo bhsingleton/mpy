@@ -1,7 +1,7 @@
 from maya import cmds as mc
 from maya.api import OpenMaya as om
 from collections import deque
-from six import integer_types
+from six import integer_types, string_types
 from dcc.maya.libs import dagutils
 from . import containerbasemixin
 from .. import mpyattribute
@@ -244,9 +244,17 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
 
             return None
 
+        # Ensure parent isn't world
+        #
+        parent = fnDagNode.parent(self.instanceNumber())
+
+        if not parent.hasFn(om.MFn.kWorld):
+
+            return self.pyFactory(parent)
+
         else:
 
-            return self.pyFactory(fnDagNode.parent(self.instanceNumber()))
+            return None
 
     def hasParent(self):
         """
@@ -255,33 +263,51 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
         :rtype: bool
         """
 
-        return self.functionSet().parentCount() > 0
+        return not self.functionSet().parent(self.instanceNumber()).hasFn(om.MFn.kWorld)
 
     def setParent(self, parent):
         """
         Updates the parent for this node.
 
-        :type parent: DagMixin
+        :type parent: Union[None, str, om.MObject, DagMixin]
         :rtype: None
         """
 
-        # Check if parent is valid
-        #
-        if not parent.hasFn(om.MFn.kDagNode):
-
-            return
-
         # Check for redundancy
         #
-        if parent == self.parent():
+        if self.parent() == parent:
 
             return
 
-        # Setup dag modifier
+        # Evaluate parent type
         #
-        dagModifer = om.MDagModifier()
-        dagModifer.reparentNode(self.object(), parent.object())
-        dagModifer.doIt()
+        if isinstance(parent, DagMixin):
+
+            parent = parent.object()
+
+        elif isinstance(parent, string_types):
+
+            parent = dagutils.getMObjectByName(parent)
+
+        elif parent is None:
+
+            parent = om.MObject.kNullObj
+
+        else:
+
+            pass
+
+        # Execute dag modifier
+        #
+        if isinstance(parent, om.MObject):
+
+            dagModifier = om.MDagModifier()
+            dagModifier.reparentNode(self.object(), parent)
+            dagModifier.doIt()
+
+        else:
+
+            raise TypeError('setParent() expects an MObject (%s given)!' % type(parent).__name__)
 
     def iterParents(self, apiType=om.MFn.kDagNode):
         """
