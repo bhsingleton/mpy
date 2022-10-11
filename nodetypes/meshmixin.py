@@ -25,6 +25,7 @@ class MeshComponent(collections_abc.MutableSequence):
     Once an iterator exits a function it is immediately deleted by the garbage collector.
     """
 
+    # region Dunderscores
     __slots__ = (
         '_handle',
         '_apiType',
@@ -54,7 +55,7 @@ class MeshComponent(collections_abc.MutableSequence):
         Private method called after a new instance has been created.
         This class can be instantiated in multiple ways:
         A single value can be supplied containing either a string component or a mesh object.
-        Otherwise a node and component object can be provided if a string argument is not sufficient.
+        Otherwise, a node and component object can be provided if a string argument is not sufficient.
         """
 
         # Call parent method
@@ -66,7 +67,7 @@ class MeshComponent(collections_abc.MutableSequence):
         self._handle = None
         self._apiType = None
         self._apiTypeStr = None
-        self._weights = {}  # This dictionary is only useful when initialized via MGlobal.getRichSelection()
+        self._weights = {}  # This dictionary only exists when initialized via MGlobal.getRichSelection()
         self._elements = deque()
         self._maxElements = None
         self._occupied = None
@@ -77,7 +78,7 @@ class MeshComponent(collections_abc.MutableSequence):
 
         if numArgs == 0:
 
-            raise TypeError('%s() expects at least 1 argument!' % self.__class__.__name__)
+            raise TypeError('%s() expects at least 1 argument (%s given)!' % (self.__class__.__name__, numArgs))
 
         elif numArgs == 1:
 
@@ -116,7 +117,7 @@ class MeshComponent(collections_abc.MutableSequence):
 
                 self.setComponent(args[1])
 
-            elif isinstance(args[1], (int, list, tuple, deque, om.MIntArray)):
+            elif isinstance(args[1], (collections_abc.Sequence, om.MIntArray)):
 
                 self.setApiType(kwargs.get('apiType', om.MFn.kMeshVertComponent))
                 self.setElements(args[1])
@@ -133,7 +134,7 @@ class MeshComponent(collections_abc.MutableSequence):
         """
         Private method called whenever addition is performed on this component.
 
-        :param value: list[int]
+        :param value: List[int]
         :rtype: MeshComponent
         """
 
@@ -144,7 +145,7 @@ class MeshComponent(collections_abc.MutableSequence):
         """
         Private method called whenever in place addition is performed on this component.
 
-        :type value: list[int]
+        :type value: List[int]
         :rtype: None
         """
 
@@ -154,7 +155,7 @@ class MeshComponent(collections_abc.MutableSequence):
         """
         Private method called whenever subtraction is performed on this component.
 
-        :param value: list[int]
+        :param value: List[int]
         :rtype: MeshComponent
         """
 
@@ -165,33 +166,11 @@ class MeshComponent(collections_abc.MutableSequence):
         """
         Private method called whenever in place subtraction is performed on this component.
 
-        :type value: list[int]
+        :type value: List[int]
         :rtype: None
         """
 
         return self.remove(value)
-
-    def __contains__(self, value):
-        """
-        Private method used to check if the component contains the supplied element.
-
-        :type value: int
-        :rtype: bool
-        """
-
-        # Check value type
-        #
-        if isinstance(value, int):
-
-            return self._occupied.get(value, False)
-
-        elif isinstance(value, (list, tuple, deque, om.MIntArray)):
-
-            return all([self._occupied.get(x, False) for x in value])
-
-        else:
-
-            raise TypeError('__contains__() expects an int (%s given)!' % type(value).__name__)
 
     def __getitem__(self, key):
         """
@@ -225,6 +204,37 @@ class MeshComponent(collections_abc.MutableSequence):
 
         self.remove(key)
 
+    def __contains__(self, value):
+        """
+        Private method used to check if the component contains the supplied element.
+
+        :type value: int
+        :rtype: bool
+        """
+
+        # Check value type
+        #
+        if isinstance(value, int):
+
+            return self._occupied.get(value, False)
+
+        elif isinstance(value, (list, tuple, deque, om.MIntArray)):
+
+            return all([self._occupied.get(x, False) for x in value])
+
+        else:
+
+            raise TypeError('__contains__() expects an int (%s given)!' % type(value).__name__)
+
+    def __iter__(self):
+        """
+        Returns a generator that yields component indices.
+
+        :rtype: iter
+        """
+
+        return iter(self._elements)
+
     def __len__(self):
         """
         Private method called whenever the len method is used on this component.
@@ -243,25 +253,32 @@ class MeshComponent(collections_abc.MutableSequence):
         """
 
         return self.__class__(self._handle, *args, apiType=self._apiType)
+    # endregion
 
+    # region Methods
     def remove(self, elements):
         """
-        Removes elements from this component.
-        When batch adding items make sure to manually control the rebuild boolean to optimize performance.
+        Removes the specified elements from this component.
 
-        :type elements: Union[int, MutableSequence, om.MIntArray]
+        :type elements: Union[int, List[int], om.MIntArray]
         :rtype: self
         """
 
         # Check value type
         #
-        if isinstance(elements, (collections_abc.MutableSequence, om.MIntArray)):
+        if isinstance(elements, (collections_abc.Sequence, om.MIntArray)):
 
             # Iterate through integer items
             #
             for element in elements:
 
-                # Check if element exists
+                # Inspect element type
+                #
+                if not isinstance(element, int):
+
+                    continue
+
+                # Check if element already exists
                 #
                 if not self._occupied[element]:
 
@@ -276,7 +293,7 @@ class MeshComponent(collections_abc.MutableSequence):
 
         elif isinstance(elements, int):
 
-            return self.remove(om.MIntArray([elements]))
+            return self.remove([elements])
 
         else:
 
@@ -284,19 +301,25 @@ class MeshComponent(collections_abc.MutableSequence):
 
     def append(self, elements):
         """
-        Appends a list of elements to this components.
+        Appends the supplied elements to this component.
 
-        :type elements: Union[int, MutableSequence, om.MIntArray]
+        :type elements: Union[int, List[int], om.MIntArray]
         :rtype: self
         """
 
         # Check value type
         #
-        if isinstance(elements, (collections_abc.MutableSequence, om.MIntArray)):
+        if isinstance(elements, (collections_abc.Sequence, om.MIntArray)):
 
             # Iterate through integer items
             #
             for element in elements:
+
+                # Inspect element type
+                #
+                if not isinstance(element, int):
+
+                    continue
 
                 # Check if element already exists
                 #
@@ -317,36 +340,36 @@ class MeshComponent(collections_abc.MutableSequence):
 
         else:
 
-            raise TypeError('Unable to append elements using %s type!' % type(elements).__name__)
+            raise TypeError('Unable to append elements using "%s" type!' % type(elements).__name__)
 
     def extend(self, elements):
         """
-        Extends this component using a list of elements.
+        Extends this component using the supplied elements.
 
-        :type elements: Union[int, MutableSequence, om.MIntArray]
+        :type elements: Union[int, List[int], om.MIntArray]
         :rtype: self
         """
 
         # Check value type
         #
-        if isinstance(elements, (collections_abc.MutableSequence, om.MIntArray)):
+        if isinstance(elements, (collections_abc.Sequence, om.MIntArray)):
 
             return self.append(elements)
 
         elif isinstance(elements, int):
 
-            return self.append((elements,))
+            return self.append([elements])
 
         else:
 
-            raise TypeError('Unable to extend list using %s type!' % type(elements).__name__)
+            raise TypeError('Unable to extend list using "%s" type!' % type(elements).__name__)
 
     def insert(self, index, element):
         """
         Inserts an element into this component.
 
         :type index: int
-        :type element: Union[int, MutableSequence, om.MIntArray]
+        :type element: Union[int, List[int], om.MIntArray]
         :rtype: self
         """
 
@@ -519,7 +542,7 @@ class MeshComponent(collections_abc.MutableSequence):
         """
         Returns the elements associated with this component.
 
-        :rtype: list[int]
+        :rtype: List[int]
         """
 
         return list(self._elements)
@@ -559,7 +582,7 @@ class MeshComponent(collections_abc.MutableSequence):
         """
         Returns a sorted list of elements from this component.
 
-        :rtype: list[int]
+        :rtype: List[int]
         """
 
         return list(sorted(self._elements))
@@ -931,7 +954,7 @@ class MeshComponent(collections_abc.MutableSequence):
 
     def points(self):
         """
-        Returns all of the points associated with this component.
+        Returns all the points associated with this component.
 
         :rtype: om.MPointArray
         """
@@ -991,7 +1014,7 @@ class MeshComponent(collections_abc.MutableSequence):
         """
         Returns the selection strings used to recreate this component.
 
-        :rtype: list[str]
+        :rtype: List[str]
         """
 
         # Define selection list
@@ -1052,7 +1075,7 @@ class MeshComponent(collections_abc.MutableSequence):
         """
         Returns a list of all the shells belonging to the associated mesh.
 
-        :rtype: list[list[int]]
+        :rtype: List[List[int]]
         """
 
         # Initialize iterator
@@ -1091,13 +1114,13 @@ class MeshComponent(collections_abc.MutableSequence):
         """
         Returns a list of items that exist in both lists.
 
-        :type value: list[int]
-        :rtype: list[int]
+        :type value: List[int]
+        :rtype: List[int]
         """
 
         # Check value type
         #
-        if isinstance(value, (list, tuple, set, deque, om.MIntArray)):
+        if isinstance(value, (collections_abc.Sequence, om.MIntArray)):
 
             return [x for x in value if self._occupied.get(x, False)]
 
@@ -1109,13 +1132,13 @@ class MeshComponent(collections_abc.MutableSequence):
         """
         Returns a list of items that are unique to both lists.
 
-        :type value: list[int]
-        :rtype: list[int]
+        :type value: List[int]
+        :rtype: List[int]
         """
 
         # Check value type
         #
-        if isinstance(value, (list, tuple, set, deque, om.MIntArray)):
+        if isinstance(value, (collections_abc.Sequence, om.MIntArray)):
 
             return [x for x in value if not self._occupied.get(x, True)]
 
@@ -1138,35 +1161,41 @@ class MeshComponent(collections_abc.MutableSequence):
 
         if selectionCount != 1:
 
-            raise RuntimeError('Unable to create mesh component from active selection!')
+            raise TypeError('fromSelection() expects 1 selected mesh (%s given)!' % selectionCount)
 
         return cls(*selection[0])
+    # endregion
 
 
 class MeshVertexComponent(MeshComponent):
     """
-    Overload of MeshComponent used to quickly create vertex mesh components.
+    Overload of MeshComponent that interfaces with mesh vertex components.
     """
 
+    # region Dunderscores
     __slots__ = ()
 
     def __init__(self, *args, **kwargs):
         """
         Private method called after a new instance has been created.
+
+        :rtype: None
         """
 
         # Call parent method
         #
         super(MeshVertexComponent, self).__init__(*args, apiType=om.MFn.kMeshVertComponent)
+    # endregion
 
+    # region Methods
     def getColors(self, colorSetName=None, asHexCode=False):
         """
-        Method used to collect all of the colours associated with this vertex.
-        This method does not accomodate for face-vertex colours.
+        Returns a list colours associated with this vertex component.
+        This method does not accommodate for face-vertex colours.
 
         :type colorSetName: str
         :type asHexCode: bool
-        :rtype: list[str]
+        :rtype: List[str]
         """
 
         # Consume all elements
@@ -1197,8 +1226,8 @@ class MeshVertexComponent(MeshComponent):
 
     def retraceElements(self):
         """
-        Method used to reorder the internal elements based on a continuous path.
-        This method expects the elements to already belong to a vertex loop!
+        Reorders the internal elements to maintain a vertex loop.
+        A type error will be raised this component is not an edge loop!
 
         :rtype: None
         """
@@ -1222,7 +1251,7 @@ class MeshVertexComponent(MeshComponent):
 
             if numConnectedVertices != 1:
 
-                raise RuntimeError('Unable to retrace broken edge loop!')
+                raise TypeError('retraceElements() expects a valid edge loop!')
 
             # Append item to traversed
             #
@@ -1235,8 +1264,7 @@ class MeshVertexComponent(MeshComponent):
 
     def length(self):
         """
-        Method used to derive the distance along a loop.
-        This method expects the elements to already be in the correct order.
+        Returns the length of this vertex component.
 
         :rtype: float
         """
@@ -1254,31 +1282,37 @@ class MeshVertexComponent(MeshComponent):
             distance += point1.distanceTo(point2)
 
         return distance
+    # endregion
 
 
 class MeshEdgeComponent(MeshComponent):
     """
-    Overload of MeshComponent used to quickly create edge mesh components.
+    Overload of MeshComponent that interfaces with mesh edge components.
     """
 
+    # region Dunderscores
     __slots__ = ()
 
     def __init__(self, *args, **kwargs):
         """
         Private method called after a new instance has been created.
+
+        :rtype: None
         """
 
         # Call parent method
         #
         super(MeshEdgeComponent, self).__init__(*args, apiType=om.MFn.kMeshEdgeComponent)
+    # endregion
 
+    # region Methods
     def consolidateElements(self, retraceElements=False):
         """
-        Method used to organize an edge component into groups of consecutive pairs.
-        This method will overwrite any entries with duplicate element counts!
+        Returns a list of consecutive edge loop components.
+        Enabling retrace elements will ensure the elements are ordered from start to finish.
 
         :type retraceElements: bool
-        :rtype: list[MeshEdgeComponent]
+        :rtype: List[MeshEdgeComponent]
         """
 
         # Iterate through elements
@@ -1332,8 +1366,8 @@ class MeshEdgeComponent(MeshComponent):
 
     def retraceElements(self):
         """
-        Method used to reorder the internal elements.
-        This method expects the elements to already belong to an edge loop!
+        Reorders the internal elements to maintain an edge loop.
+        A type error will be raised this component is not an edge loop!
 
         :rtype: None
         """
@@ -1357,7 +1391,7 @@ class MeshEdgeComponent(MeshComponent):
 
             if numConnectedEdges != 1:
 
-                raise RuntimeError('Unable to retrace broken edge loop!')
+                raise TypeError('retraceElements() expects a valid edge loop!')
 
             # Append item to traversed
             #
@@ -1370,37 +1404,43 @@ class MeshEdgeComponent(MeshComponent):
 
     def length(self):
         """
-        Method used to determine the distance of this edge component.
+        Returns the length of this edge component.
 
         :rtype: float
         """
 
-        pass
+        raise NotImplementedError()
+    # endregion
 
 
 class MeshPolygonComponent(MeshComponent):
     """
-    Overload of MeshComponent used to quickly create polygon mesh components.
+    Overload of MeshComponent that interfaces with mesh polygon components.
     """
 
+    # region Dunderscores
     __slots__ = ()
 
     def __init__(self, *args, **kwargs):
         """
         Private method called after a new instance has been created.
+
+        :rtype: None
         """
 
         # Call parent method
         #
         super(MeshPolygonComponent, self).__init__(*args, apiType=om.MFn.kMeshPolygonComponent)
+    # endregion
 
+    # region Methods
     def getEdges(self, indices=None):
         """
         Method used to collect interior edges rather than connected edges.
         An optional list of indices can be provided to query instead of the internal elements.
 
-        :type indices: list[int]
-        :rtype: list[int]
+        :type indices: List[int]
+        :rtype: List[int]
         """
 
         # Check for supplied indices
@@ -1425,13 +1465,52 @@ class MeshPolygonComponent(MeshComponent):
 
         return list(edgeIndices)
 
+    def getEdgeBoundary(self):
+        """
+        Converts this component to an edge boundary.
+
+        :rtype: List[int]
+        """
+
+        # Collect boundary edges
+        #
+        edgeComponent = self.convert(om.MFn.kMeshEdgeComponent)
+        boundary = deque()
+
+        for edgeIndex in edgeComponent:
+
+            # Get connected faces
+            #
+            connectedFaces = edgeComponent.getConnectedFaces([edgeIndex])
+            numConnectedFaces = len(connectedFaces)
+
+            if numConnectedFaces == 1:  # Redundancy check
+
+                boundary.append(edgeIndex)
+                continue
+
+            # Collect faces that are in this component
+            #
+            containedFaces = [faceIndex for faceIndex in connectedFaces if faceIndex in self]
+            numContainedFaces = len(containedFaces)
+
+            if numContainedFaces == 1:
+
+                boundary.append(edgeIndex)
+
+            else:
+
+                continue
+
+        return list(boundary)
+
     def getVertices(self, indices=None):
         """
         Method used to collect interior vertices rather than connected vertices.
         An optional list of indices can be provided to query instead of the internal elements.
 
-        :type indices: list[int]
-        :rtype: list[int]
+        :type indices: List[int]
+        :rtype: List[int]
         """
 
         # Check for supplied indices
@@ -1443,7 +1522,7 @@ class MeshPolygonComponent(MeshComponent):
         # Iterate through component
         #
         iterator = om.MItMeshPolygon(self.dagPath())
-        queue = deque(self._elements)
+        queue = deque(indices)
 
         vertexIndices = deque()
 
@@ -1455,13 +1534,15 @@ class MeshPolygonComponent(MeshComponent):
             vertexIndices.extend(iterator.getVertices())
 
         return list(vertexIndices)
+    # endregion
 
 
 class MeshMixin(shapemixin.ShapeMixin):
     """
-    Overload of ProxyNode class used to interface with reference nodes.
+    Overload of ShapeMixin used to interface with mesh nodes.
     """
 
+    # region Dunderscores
     __apitype__ = om.MFn.kMesh
 
     __components__ = {
@@ -1473,6 +1554,8 @@ class MeshMixin(shapemixin.ShapeMixin):
     def __init__(self, *args, **kwargs):
         """
         Private method called after a new instance has been created.
+
+        :rtype: None
         """
 
         # Call parent method
@@ -1484,7 +1567,7 @@ class MeshMixin(shapemixin.ShapeMixin):
         Private method called whenever the user evokes this class.
         This method will return a mesh component based on the supplied elements.
 
-        :type elements: list[int]
+        :type elements: List[int]
         :type apiType: int
         :rtype: Union[MeshVertexComponent, MeshEdgeComponent, MeshPolygonComponent]
         """
@@ -1500,10 +1583,12 @@ class MeshMixin(shapemixin.ShapeMixin):
         else:
 
             raise TypeError('__call__() a compatible api type (%s given)!' % apiType)
+    # endregion
 
+    # region Methods
     def functionSet(self):
         """
-        Private method used to retrieve a function set compatible with this object.
+        Returns a function set compatible with this object.
 
         :rtype: om.MFnMesh
         """
@@ -1512,7 +1597,7 @@ class MeshMixin(shapemixin.ShapeMixin):
 
     def controlPoints(self):
         """
-        Private method used to retrieve the control points for this shape.
+        Returns the control points for this shape.
 
         :rtype: om.MPointArray
         """
@@ -1521,7 +1606,7 @@ class MeshMixin(shapemixin.ShapeMixin):
 
     def numControlPoints(self):
         """
-        Private method used to retrieve the number of control points for this shape.
+        Evaluates the number of control points for this shape.
 
         :rtype: int
         """
@@ -1530,9 +1615,9 @@ class MeshMixin(shapemixin.ShapeMixin):
 
     def selectVertices(self, vertexIndices):
         """
-        Method used to select the supplied vertex indices.
+        Selects the supplied vertex indices.
 
-        :type vertexIndices: list[int]
+        :type vertexIndices: List[int]
         :rtype: none
         """
 
@@ -1540,7 +1625,7 @@ class MeshMixin(shapemixin.ShapeMixin):
 
     def getSelectedVertices(self):
         """
-        Returns the selected vertices for this mesh.
+        Returns the selected vertices from this mesh.
 
         :rtype: MeshVertexComponent
         """
@@ -1560,9 +1645,9 @@ class MeshMixin(shapemixin.ShapeMixin):
 
     def selectPolygons(self, polygonIndices):
         """
-        Method used to select the supplied polygon indices.
+        Selects the supplied polygon indices.
 
-        :type polygonIndices: list[int]
+        :type polygonIndices: List[int]
         :rtype: none
         """
 
@@ -1570,7 +1655,7 @@ class MeshMixin(shapemixin.ShapeMixin):
 
     def getSelectedPolygons(self):
         """
-        Returns the selected vertices for this mesh.
+        Returns the selected polygons from this mesh.
 
         :rtype: MeshPolygonComponent
         """
@@ -1590,9 +1675,9 @@ class MeshMixin(shapemixin.ShapeMixin):
 
     def selectEdges(self, edgeIndices):
         """
-        Method used to select the supplied edge indices.
+        Selects the supplied edge indices.
 
-        :type edgeIndices: list[int]
+        :type edgeIndices: List[int]
         :rtype: none
         """
 
@@ -1600,7 +1685,7 @@ class MeshMixin(shapemixin.ShapeMixin):
 
     def getSelectedEdges(self):
         """
-        Returns the selected vertices for this mesh.
+        Returns the selected edges from this mesh.
 
         :rtype: MeshEdgeComponent
         """
@@ -1618,45 +1703,33 @@ class MeshMixin(shapemixin.ShapeMixin):
 
             return MeshEdgeComponent(handle)
 
-    def selectShell(self, apiType=None):
+    def selectShell(self):
         """
-        Method used to expand the active selection to the connected component elements.
-        An additional api type can be provided to change this operation.
+        Expands the active selection to all the connected component elements.
 
-        :type apiType: int
-        :rtype: bool
+        :rtype: None
         """
 
         # Check active component
         #
         component = self.component()
 
-        if not component.isNull():
+        if component.isNull():
 
-            # Initialize mesh component
-            # Only convert if api type is different
-            #
-            meshComponent = MeshComponent(self.handle(), component)
+            log.debug('selectShell() expects at least 1 selection component!')
+            return
 
-            if meshComponent.apiType() != apiType and apiType is not None:
-
-                meshComponent = meshComponent.convert(om.MFn.kMeshVertComponent)
-
-            # Select shell component
-            #
-            shell = meshComponent.shell()
-            shell.select()
-
-        else:
-
-            log.debug('No mesh components found in the active selection.')
+        # Select shell component
+        #
+        shell = MeshComponent(self.handle(), component).shell()
+        shell.select()
 
     def getNearestNeighbours(self, vertexIndices):
         """
-        Gets the nearest neighbouring vertex for each supplied vertex.
+        Returns the nearest neighbouring vertex for each supplied vertex.
 
-        :type vertexIndices: list[int]
-        :rtype: list[int]
+        :type vertexIndices: List[int]
+        :rtype: List[int]
         """
 
         # Check value type
@@ -1710,18 +1783,18 @@ class MeshMixin(shapemixin.ShapeMixin):
 
         return closest
 
-    def getClosestPoints(self, vertexIndices):
+    def getClosestVertices(self, vertexIndices):
         """
-        Gets the closest vertex from the supplied list of vertices.
+        Returns the closest vertices to the specified vertex indices.
         Be careful when merging numpy arrays as they do not merge as expected!
 
-        :type vertexIndices: list[int]
-        :rtype: list[int]
+        :type vertexIndices: List[int]
+        :rtype: List[int]
         """
 
         # Check value type
         #
-        if not isinstance(vertexIndices, (list, tuple, om.MIntArray)):
+        if not isinstance(vertexIndices, (collections_abc.Sequence, om.MIntArray)):
 
             raise TypeError('getClosestPoints() expects a list (%s given)!' % type(vertexIndices).__name__)
 
@@ -1730,26 +1803,26 @@ class MeshMixin(shapemixin.ShapeMixin):
         controlPoints = self.controlPoints()
         numControlPoints = len(controlPoints)
 
-        dataPoints = {x: controlPoints[x] for x in range(numControlPoints) if x not in vertexIndices}
-        dataMap = {x: y for x, y in enumerate(dataPoints.keys())}
+        dataPoints = {vertexIndex: controlPoints[vertexIndex] for vertexIndex in range(numControlPoints) if vertexIndex not in vertexIndices}
+        dataMap = {physicalIndex: logicalIndex for (physicalIndex, logicalIndex) in enumerate(dataPoints.keys())}
 
         # Initialize point tree with modified points
         #
         tree = cKDTree(dataPoints.values())
 
-        # Get closest points
+        # Get the closest points
         #
-        points = [controlPoints[x] for x in vertexIndices]
+        points = [controlPoints[vertexIndex] for vertexIndex in vertexIndices]
         distances, indices = tree.query(points)
 
-        return [dataMap[x] for x in indices]
+        return [dataMap[index] for index in indices]
 
     def getClosestPolygons(self, points):
         """
-        Method used to collect all of the closest polygons based a list of points.
+        Returns the closest polygons to the specified points.
 
         :type points: om.MPoint
-        :rtype: list[tuple[int, int]]
+        :rtype: List[Tuple[int, int]]
         """
 
         # Iterate through points
@@ -1772,11 +1845,11 @@ class MeshMixin(shapemixin.ShapeMixin):
 
     def getVertexAlongNormals(self, vertexIndices, tolerance=1e-3):
         """
-        Gets the closest vertex along the vertex normal from the supplied vertices.
+        Returns the closest vertices from the specified vertex normals.
 
-        :type vertexIndices: list[int]
+        :type vertexIndices: List[int]
         :type tolerance: float
-        :rtype: list[int]
+        :rtype: List[int]
         """
 
         # Check value type
@@ -1884,12 +1957,11 @@ class MeshMixin(shapemixin.ShapeMixin):
 
         return closest
 
-    def symmetryTable(self):
+    def ensureSymmetryTable(self):
         """
-        Returns the symmetry table from this mesh.
-        If no symmetry table exists then the attribute is created to store one.
+        Ensures that the symmetry table attribute exists on this mesh.
 
-        :rtype: dict[int:int]
+        :rtype: None
         """
 
         # Check if attribute exists
@@ -1901,18 +1973,28 @@ class MeshMixin(shapemixin.ShapeMixin):
             mc.addAttr(fullPathName, longName='symmetryTable', dataType="string")
             mc.setAttr('%s.symmetryTable' % fullPathName, '{}', type="string")
 
+    def symmetryTable(self):
+        """
+        Returns the symmetry table from this mesh.
+        If no symmetry table exists then an attribute is created to store one.
+
+        :rtype: Dict[int, int]
+        """
+
         # Evaluate string attribute
         #
-        value = mc.getAttr('%s.symmetryTable' % fullPathName)
+        self.ensureSymmetryTable()
+
+        value = mc.getAttr('%s.symmetryTable' % self.fullPathName())
         symmetryTable = eval(value)
 
         return symmetryTable
 
     def setSymmetryTable(self, value):
         """
-        Updates the symmetry table on this mesh.
+        Updates the symmetry table for this mesh.
 
-        :type value: dict[int:int]
+        :type value: dict[int, int]
         :rtype: None
         """
 
@@ -1922,18 +2004,11 @@ class MeshMixin(shapemixin.ShapeMixin):
 
             raise TypeError('setSymmetryTable() expects a dict (%s given)!' % type(value).__name__)
 
-        # Check if attribute exists
-        #
-        fullPathName = self.fullPathName()
-
-        if not mc.attributeQuery('symmetryTable', node=fullPathName, exists=True):
-
-            mc.addAttr(fullPathName, longName='symmetryTable', dataType="string")
-            mc.setAttr('%s.symmetryTable' % fullPathName, '{}', type="string")
-
         # Commit changes to intermediate object
         #
-        mc.setAttr('%s.symmetryTable' % fullPathName, repr(value), type="string")
+        self.ensureSymmetryTable()
+
+        mc.setAttr('%s.symmetryTable' % self.fullPathName(), repr(value), type="string")
         log.info('Successfully updated symmetry table with %s vertices!' % len(value.keys()))
 
     def resetSymmetryTable(self):
@@ -1947,17 +2022,17 @@ class MeshMixin(shapemixin.ShapeMixin):
 
     def mirrorVertexIndices(self, vertexIndices, mirrorTolerance=0.1):
         """
-        Finds the opposite vertices for the given vertex indices.
+        Returns the opposite vertices for the specified vertex indices.
         This class will dynamically build a symmetry table as the user continues to mirror vertices.
 
-        :type vertexIndices: list[int]
+        :type vertexIndices: List[int]
         :type mirrorTolerance: float
         :rtype: dict[int: int]
         """
 
         # Check value type
         #
-        if not isinstance(vertexIndices, (list, set, tuple, deque, om.MIntArray)):
+        if not isinstance(vertexIndices, (collections_abc.Sequence, om.MIntArray)):
 
             raise TypeError('mirrorVertexIndices() expects a list (%s given)!' % type(vertexIndices).__name__)
 
@@ -2031,23 +2106,4 @@ class MeshMixin(shapemixin.ShapeMixin):
         # Return mirror vertex indices
         #
         return mirrorSelection
-
-    def selectShell(self):
-        """
-        Recursive function designed to select an entire element.
-        :rtype: bool
-        """
-
-        # Check active component
-        #
-        component = self.component()
-
-        if component.isNull():
-
-            log.debug('selectShell() expects at least 1 selection component!')
-            return
-
-        # Select shell component
-        #
-        shell = MeshComponent(self.handle(), component).shell()
-        shell.select()
+    # endregion
