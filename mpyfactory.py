@@ -16,7 +16,7 @@ log.setLevel(logging.INFO)
 
 class MPyFactory(proxyfactory.ProxyFactory):
     """
-    Overload of AbstractFactory used to manage python interfaces for Maya scene nodes.
+    Overload of ProxyFactory that manages python interfaces for Maya scene nodes.
     """
 
     __slots__ = ('__plugins__',)
@@ -364,6 +364,34 @@ class MPyFactory(proxyfactory.ProxyFactory):
         try:
 
             nodeName = mc.createNode(typeName, name=name, parent=parent, **kwargs)
+            return mpynode.MPyNode(nodeName)
+
+        except RuntimeError as exception:
+
+            log.error(exception)
+            return None
+
+    def createDisplayLayer(self, name, includeSelected=False, includeDescendants=False):
+        """
+        Creates a new display layer and immediately wraps it in an MPyNode interface.
+
+        :type name: str
+        :type includeSelected: bool
+        :type includeDescendants: bool
+        :rtype: mpynode.MPyNode
+        """
+
+        # Check if a null-name was supplied
+        #
+        if stringutils.isNullOrEmpty(name):
+
+            name = 'layer1'
+
+        # Try and display layer
+        #
+        try:
+
+            nodeName = mc.createDisplayLayer(name=name, empty=(not includeSelected), noRecurse=(not includeDescendants))
             return mpynode.MPyNode(nodeName)
 
         except RuntimeError as exception:
