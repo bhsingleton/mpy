@@ -744,7 +744,7 @@ class DependencyMixin(mpynode.MPyNode):
 
     def findPlug(self, name):
         """
-        Method used to find a plug based on the given string path.
+        Returns a plug based on the supplied string path.
         Unlike the api method, this implementation supports both compound and indexed plugs.
 
         :type name: str
@@ -752,6 +752,16 @@ class DependencyMixin(mpynode.MPyNode):
         """
 
         return plugutils.findPlug(self.object(), name)
+
+    def isPlugConstrained(self, plug):
+        """
+        Evaluates if the supplied plug is constrained.
+
+        :type plug: om.MPlug
+        :rtype: bool
+        """
+
+        return plugutils.isPlugConstrained(plug)
 
     def connectPlugs(self, source, destination, force=False):
         """
