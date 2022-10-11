@@ -17,9 +17,43 @@ class BlendShapeMixin(deformermixin.DeformerMixin):
     # endregion
 
     # region Methods
+    def addTarget(self, name, target, weight=1.0, index=None):
+        """
+        Adds the supplied target to this blend shape.
+
+        :type name: str
+        :type target: om.MObject
+        :type weight: float
+        :type index: Union[int, None]
+        :rtype: None
+        """
+
+        # Evaluate supplied index
+        #
+        if index is None:
+
+            index = self.targetCount()
+
+        # Update geometry target
+        #
+        geometryTarget = GeometryTarget(self, index=index)
+        geometryTarget.setAlias(name)
+        geometryTarget.setWeight(weight)
+        geometryTarget.setMeshData(target)
+
+    def removeTarget(self, target):
+        """
+        Removes the specified target from this blend shape.
+
+        :type target: om.MObject
+        :rtype: None
+        """
+
+        raise NotImplementedError()
+
     def iterTargets(self):
         """
-        Returns a generator that yields all of the existing blend shape targets.
+        Returns a generator that yields all existing blend shape targets.
 
         :rtype: iter
         """
@@ -34,7 +68,7 @@ class BlendShapeMixin(deformermixin.DeformerMixin):
         """
         Returns a list of blend shape targets.
 
-        :rtype: list[GeometryTarget]
+        :rtype: List[GeometryTarget]
         """
 
         return list(self.iterTargets())
@@ -133,21 +167,16 @@ class GeometryTarget(object):
         plug = self.blendShape.findPlug('weight')
         plug.selectAncestorLogicalIndex(self.index)
 
-        # Get attribute name
-        #
-        attributeName = plug.partialName(includeNodeName=False, includeInstancedIndices=False, useLongNames=True)
-
         # Assign alias to plug
         #
-        success = self.blendShape.setAlias(alias, attributeName, plug, add=True)
+        success = self.blendShape.setAlias(alias, plug, replace=True)
 
         if not success:
 
             log.warning(
-                'Unable to assign "{alias}" alias to "{nodeName}.{attributeName}" attribute!'.format(
+                'Unable to assign "{alias}" alias to "{plugName}" attribute!'.format(
                     alias=alias,
-                    nodeName=self.blendShape.name(),
-                    attributeName=attributeName
+                    plugName=plug.name()
                 )
             )
 
@@ -201,12 +230,11 @@ class GeometryTarget(object):
         """
         Returns the mesh data object associated with this blend shape target.
         Since inbetween targets can be stored the node allows for indexed targets.
-        In order to access these please see the following:
-            index = wt * 1000 + 5000.
-        Thus a weight of 1.0 corresponds to the index 6000.
-        By default we'll leave this at 6000 since Unreal doesn't support inbetweens.
+        In order to access these please see the following: index = (weight * 1000) + 5000.
+        Thus, a weight of 1.0 corresponds to the index 6000.
+        By default, we'll leave this at 6000 since Unreal doesn't support in-between targets.
 
-        :param weightIndex: int
+        :type weightIndex: int
         :rtype: om.MObject
         """
 
@@ -217,4 +245,41 @@ class GeometryTarget(object):
                 weightIndex=weightIndex
             )
         ).asMObject()
+
+    def setMeshData(self, meshData, weightIndex=6000):
+        """
+        Updates the mesh data associated with this blend shape target.
+        Both shape nodes and mesh data objects are supported by this method.
+
+        :type meshData: om.MObject
+        :type weightIndex: int
+        :rtype: None
+        """
+
+        # Get destination plug
+        #
+        plug = self.blendShape.findPlug(
+            '.inputTarget[{input}].inputTargetGroup[{index}].inputTargetItem[{weightIndex}].inputGeomTarget'.format(
+                input=self.input,
+                index=self.index,
+                weightIndex=weightIndex
+            )
+        )
+
+        # Evaluate object type
+        #
+        if meshData.hasFn(om.MFn.kMesh):
+
+            mesh = self.blendShape.pyFactory(meshData)
+            otherPlug = mesh.findPlug('worldMesh[%s]' % mesh.instanceNumber())
+
+            mesh.connectPlugs(otherPlug, plug, force=True)
+
+        elif meshData.hasFn(om.MFn.kMeshData):
+
+            plug.setMObject(meshData)
+
+        else:
+
+            raise TypeError('setMeshData() expects a valid object (%s given)!' % meshData.apiTypeStr)
     # endregion
