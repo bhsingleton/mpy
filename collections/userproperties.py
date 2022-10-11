@@ -3,6 +3,7 @@ import json
 from maya import cmds as mc
 from maya.api import OpenMaya as om
 from six.moves import collections_abc
+from dcc.python import stringutils
 from dcc.maya.libs import dagutils
 
 import logging
@@ -176,27 +177,38 @@ class UserProperties(collections_abc.MutableMapping):
         #
         fullPathName = self.objectPath()
 
-        if not mc.attributeQuery('notes', node=fullPathName, exists=True):
+        hasAttribute = mc.attributeQuery('notes', node=fullPathName, exists=True)
+        isLocked = mc.lockNode(fullPathName, query=True, lock=True)[0]
+
+        if not hasAttribute and not isLocked:
 
             mc.addAttr(fullPathName, longName='notes', shortName='nts', dataType='string', cachedInternally=True)
 
-    def buffer(self):
+    def tryGetBuffer(self):
         """
         Returns the user property buffer from the notes plug.
+        If the plug does not exist then an empty string is returned instead.
 
         :rtype: str
         """
 
-        self.ensureNotes()
-        notes = mc.getAttr('%s.notes' % self.objectPath())
+        try:
 
-        if notes is not None:
+            return self.buffer()
 
-            return notes
-
-        else:
+        except ValueError:
 
             return ''
+
+    def buffer(self):
+        """
+        Returns the user property buffer from the notes plug.
+        If the plug does not exist then a runtime error is raised!
+
+        :rtype: str
+        """
+
+        return mc.getAttr('%s.notes' % self.objectPath())
     
     def setBuffer(self, buffer):
         """
@@ -208,7 +220,7 @@ class UserProperties(collections_abc.MutableMapping):
 
         # Evaluate buffer size
         #
-        if len(buffer) == 0:
+        if stringutils.isNullOrEmpty(buffer):
 
             return
 
@@ -235,7 +247,7 @@ class UserProperties(collections_abc.MutableMapping):
         :rtype: None
         """
 
-        self.setBuffer(self.buffer())
+        self.setBuffer(self.tryGetBuffer())
 
     def invalidate(self):
         """
@@ -244,10 +256,16 @@ class UserProperties(collections_abc.MutableMapping):
         :rtype: None
         """
 
+        # Redundancy check
+        #
+        if len(self.__properties__) == 0:
+
+            return
+
+        # Update notes plug
+        #
         self.ensureNotes()
 
-        if len(self.__properties__) > 0:
-
-            notes = json.dumps(self.__properties__, indent=4)
-            mc.setAttr('%s.notes' % self.objectPath(), notes, type='string')
+        notes = json.dumps(self.__properties__, indent=4)
+        mc.setAttr('%s.notes' % self.objectPath(), notes, type='string')
     # endregion
