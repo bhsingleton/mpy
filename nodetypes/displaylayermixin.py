@@ -72,46 +72,6 @@ class DisplayLayerMixin(dependencymixin.DependencyMixin):
     # endregion
 
     # region Methods
-    def register(self):
-        """
-        Registers this layer with the layer manager.
-
-        :rtype: None
-        """
-
-        # Check if plug is already connected
-        #
-        destination = self.findPlug('identification')
-
-        if destination.isDestination:
-
-            log.info('Display layer "%s" has already been registered!' % self.name())
-            return
-
-
-        # Get display layer manager
-        # Find display layer id plug
-        #
-        layerManager = self.pyFactory.getNodeByName('layerManager')
-        plug = layerManager.findPlug('displayLayerId')
-
-        # Select next available plug element
-        # Be sure to set the id before connecting plugs!
-        #
-        index = plugutils.getNextAvailableConnection(plug)
-
-        if index == 0:
-
-            index = plug.evaluateNumElements() + 1  # Index 0 is reserved for the default layer!
-
-        source = plug.elementByLogicalIndex(index)
-        source.setShort(index)
-
-        # Connect plugs
-        #
-        log.info('Registering "%s" display layer @ "%s.displayLayerId[%s]"!' % (self.name(), layerManager.name(), index))
-        plugutils.connectPlugs(source, destination, force=True)
-
     def hasNode(self, node):
         """
         Evaluates if the supplied node belongs to this layer.
