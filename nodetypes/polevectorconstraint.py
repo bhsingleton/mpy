@@ -71,10 +71,10 @@ class PoleVectorConstraintMixin(constraintmixin.ConstraintMixin):
         # Connect input attributes
         #
         startJoint = self.pyFactory(constraintObject.getAttr('startJoint'))
-        startJoint.connectPlugs('translateX', self.findPlug('constraintRotatePivotX'))
-        startJoint.connectPlugs('translateY', self.findPlug('constraintRotatePivotY'))
-        startJoint.connectPlugs('translateZ', self.findPlug('constraintRotatePivotZ'))
-        startJoint.connectPlugs('parentMatrix[%s]' % startJoint.instanceNumber(), self.findPlug('pivotSpace'))
+        startJoint.connectPlugs('translateX', self['constraintRotatePivotX'])
+        startJoint.connectPlugs('translateY', self['constraintRotatePivotY'])
+        startJoint.connectPlugs('translateZ', self['constraintRotatePivotZ'])
+        startJoint.connectPlugs('parentMatrix[%s]' % startJoint.instanceNumber(), self['pivotSpace'])
 
     def maintainOffset(self):
         """
