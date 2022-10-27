@@ -174,22 +174,29 @@ class ConstraintMixin(transformmixin.TransformMixin):
         plug = self.findPlug('target')
         return plugutils.getNextAvailableElement(plug)
 
-    def addTarget(self, target, weight=1.0, maintainOffset=False):
+    def addTarget(self, target, weight=1.0, connections=None, maintainOffset=False):
         """
         Adds a new target to this constraint.
 
         :type target: transformmixin.TransformMixin
         :type weight: float
+        :type connections: Union[Dict[str, str], None]
         :type maintainOffset: bool
         :rtype: int
         """
+
+        # Check if any connection overrides were supplied
+        #
+        if stringutils.isNullOrEmpty(connections):
+
+            connections = self.__targets__
 
         # Iterate through required target attributes
         #
         target = self.pyFactory(target)
         index = self.nextAvailableTargetIndex()
 
-        for (destinationName, sourceName) in self.__targets__.items():
+        for (destinationName, sourceName) in connections.items():
 
             # Check if attributes exist
             #
@@ -204,7 +211,7 @@ class ConstraintMixin(transformmixin.TransformMixin):
 
             if source.isArray:
 
-                source.selectAncestorLogicalIndex(target.instanceNumber())
+                source.selectAncestorLogicalIndex(target.instanceNumber())  # Should be relatively safe?
 
             # Connect plugs
             #
@@ -212,8 +219,7 @@ class ConstraintMixin(transformmixin.TransformMixin):
 
         # Add target weight attribute
         #
-        nodeName = target.displayName()
-        attributeName = '{nodeName}W{index}'.format(nodeName=nodeName, index=index)
+        attributeName = '{nodeName}W{index}'.format(nodeName=target.name(), index=index)
 
         attribute = self.addAttr(
             longName=attributeName,
