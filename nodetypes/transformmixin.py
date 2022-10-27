@@ -389,7 +389,7 @@ class TransformMixin(dagmixin.DagMixin):
 
         # Create point helper shape
         #
-        name = '{name}Shape'.format(name=self.displayName())
+        name = '{name}Shape'.format(name=self.name())
         locator = self.pyFactory.createNode('locator', name=name, parent=self)
 
         # Check if local position was supplied
@@ -426,7 +426,7 @@ class TransformMixin(dagmixin.DagMixin):
 
         # Create point helper shape
         #
-        name = '{name}Shape'.format(name=self.displayName())
+        name = '{name}Shape'.format(name=self.name())
         pointHelper = self.pyFactory.createNode('pointHelper', name=name, parent=self)
 
         # Check if any shapes were supplied
@@ -625,7 +625,7 @@ class TransformMixin(dagmixin.DagMixin):
 
         # Create new controller tag
         #
-        controllerTag = self.pyFactory.createNode('controller', name='{nodeName}_tag'.format(nodeName=self.displayName()))
+        controllerTag = self.pyFactory.createNode('controller', name='{nodeName}_tag'.format(nodeName=self.name()))
 
         controllerTag.controllerObject = self.object()
         controllerTag.side = kwargs.get('side', 2)
