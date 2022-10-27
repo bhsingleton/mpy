@@ -11,7 +11,7 @@ log.setLevel(logging.INFO)
 
 class TransformConstraintMixin(constraintmixin.ConstraintMixin):
     """
-    Overload of ConstraintMixin that interfaces with orient constraints.
+    Overload of ConstraintMixin that interfaces with transform constraints.
     """
 
     # region Dunderscores

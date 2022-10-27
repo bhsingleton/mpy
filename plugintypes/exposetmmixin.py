@@ -10,7 +10,7 @@ log.setLevel(logging.INFO)
 
 class ExposeTmMixin(transformmixin.TransformMixin):
     """
-    Overload of TransformMixin that interfaces with orient constraints.
+    Overload of TransformMixin that interfaces with expose transforms.
     """
 
     # region Dunderscores
