@@ -23,6 +23,12 @@ class DependencyMixin(mpynode.MPyNode):
     __apitype__ = om.MFn.kDependencyNode
 
     def __init__(self, obj, **kwargs):
+        """
+        Private method called after a new instance is created.
+
+        :type obj: Union[str, om.MObject]
+        :rtype: None
+        """
 
         # Call parent method
         #
@@ -73,6 +79,57 @@ class DependencyMixin(mpynode.MPyNode):
 
     # region Properties
     @property
+    def typeName(self):
+        """
+        Getter method used to retrieve the type name for this node.
+
+        :rtype: str
+        """
+
+        return self.functionSet().typeName
+
+    @property
+    def isLocked(self):
+        """
+        Property method used to determine if this node is locked.
+
+        :rtype: bool
+        """
+
+        return self.functionSet().isLocked
+
+    @isLocked.setter
+    def isLocked(self, isLocked):
+        """
+        Setter method used to change the lock state on this node.
+
+        :type isLocked: bool
+        :rtype: bool
+        """
+
+        self.functionSet().isLocked = isLocked
+
+    @property
+    def isFromPlugin(self):
+        """
+        Getter method used to determine if this node is derived from a plugin file.
+
+        :rtype: bool
+        """
+
+        return os.path.exists(self.functionSet().pluginName)
+
+    @property
+    def isFromReferencedFile(self):
+        """
+        Getter method used to determine if this node is derived from a referenced file.
+
+        :rtype: bool
+        """
+
+        return self.functionSet().isFromReferencedFile
+
+    @property
     def userProperties(self):
         """
         Getter method that returns the user properties.
@@ -116,14 +173,24 @@ class DependencyMixin(mpynode.MPyNode):
     # endregion
 
     # region Methods
-    def name(self):
+    def name(self, includeNamespace=False):
         """
         Returns the name of this node.
 
+        :type includeNamespace: bool
         :rtype: str
         """
 
-        return self.functionSet().name()
+        absoluteName = self.functionSet().name()
+        name = dagutils.stripAll(absoluteName)
+
+        if includeNamespace:
+
+            return '{namespace}:{name}'.format(namespace=self.namespace(), name=name)
+
+        else:
+
+            return name
 
     def setName(self, newName):
         """
@@ -136,16 +203,6 @@ class DependencyMixin(mpynode.MPyNode):
 
         return self.functionSet().setName(newName)
 
-    def displayName(self):
-        """
-        Returns a name suitable for user interfaces.
-        This includes no namespace or pipes.
-
-        :rtype: str
-        """
-
-        return dagutils.stripAll(self.name())
-
     def namespace(self):
         """
         Returns the namespace this node belongs to.
@@ -154,16 +211,6 @@ class DependencyMixin(mpynode.MPyNode):
         """
 
         return self.functionSet().namespace
-
-    @property
-    def typeName(self):
-        """
-        Getter method used to retrieve the type name for this node.
-
-        :rtype: str
-        """
-
-        return self.functionSet().typeName
 
     def icon(self):
         """
@@ -258,26 +305,6 @@ class DependencyMixin(mpynode.MPyNode):
 
         self.time().setAttr('outTime', currentTime)
 
-    @property
-    def isFromPlugin(self):
-        """
-        Getter method used to determine if this node is derived from a plugin file.
-
-        :rtype: bool
-        """
-
-        return os.path.exists(self.functionSet().pluginName)
-
-    @property
-    def isFromReferencedFile(self):
-        """
-        Getter method used to determine if this node is derived from a referenced file.
-
-        :rtype: bool
-        """
-
-        return self.functionSet().isFromReferencedFile
-
     def getAssociatedReferenceNode(self):
         """
         Returns the reference node associated with this node.
@@ -313,27 +340,6 @@ class DependencyMixin(mpynode.MPyNode):
         """
 
         self.functionSet().isLocked = False
-
-    @property
-    def isLocked(self):
-        """
-        Property method used to determine if this node is locked.
-
-        :rtype: bool
-        """
-
-        return self.functionSet().isLocked
-
-    @isLocked.setter
-    def isLocked(self, isLocked):
-        """
-        Setter method used to change the lock state on this node.
-
-        :type isLocked: bool
-        :rtype: bool
-        """
-
-        self.functionSet().isLocked = isLocked
 
     def uuid(self):
         """
@@ -389,7 +395,7 @@ class DependencyMixin(mpynode.MPyNode):
     def addAttr(self, *args, **kwargs):
         """
         Adds a user attribute to this node.
-        No need for the data type flag since attributeutils compensates for that.
+        This method accepts data types as attribute type flags for your convenience.
 
         :key longName: str
         :key attributeType: str
@@ -623,37 +629,11 @@ class DependencyMixin(mpynode.MPyNode):
 
             return False
 
-    def hideAttr(self, attribute):
+    def hideAttr(self, *attributes):
         """
         Hides an attribute that belongs to this node.
 
-        :type attribute: Union[str, om.MObject]
-        :rtype: None
-        """
-
-        # Check attribute type
-        #
-        if isinstance(attribute, string_types):
-
-            attribute = self.attribute(attribute)
-
-        # Verify attribute is valid
-        #
-        if not attribute.hasFn(om.MFn.kAttribute):
-
-            return
-
-        # Modify attribute
-        #
-        fnAttribute = om.MFnAttribute(attribute)
-        fnAttribute.hidden = True
-        fnAttribute.channelBox = False
-
-    def hideAttrs(self, attributes):
-        """
-        Hides a list of attributes that belong to this attribute.
-
-        :type attributes: list
+        :type attributes: Union[str, List[str]]
         :rtype: None
         """
 
@@ -661,39 +641,29 @@ class DependencyMixin(mpynode.MPyNode):
         #
         for attribute in attributes:
 
-            self.hideAttr(attribute)
+            # Check attribute type
+            #
+            if isinstance(attribute, string_types):
 
-    def showAttr(self, attribute):
+                attribute = self.attribute(attribute)
+
+            # Verify attribute is valid
+            #
+            if not attribute.hasFn(om.MFn.kAttribute):
+
+                continue
+
+            # Modify attribute
+            #
+            fnAttribute = om.MFnAttribute(attribute)
+            fnAttribute.hidden = True
+            fnAttribute.channelBox = False
+
+    def showAttr(self, *attributes):
         """
         Un-hides an attribute that belongs to this node.
 
-        :type attribute: Union[str, om.MObject]
-        :rtype: None
-        """
-
-        # Check attribute type
-        #
-        if isinstance(attribute, string_types):
-
-            attribute = self.attribute(attribute)
-
-        # Verify attribute is valid
-        #
-        if not attribute.hasFn(om.MFn.kAttribute):
-
-            return
-
-        # Modify attribute
-        #
-        fnAttribute = om.MFnAttribute(attribute)
-        fnAttribute.hidden = False
-        fnAttribute.channelBox = True
-
-    def showAttrs(self, attributes):
-        """
-        Un-hides a list of attributes that belong to this attribute.
-
-        :type attributes: list[str]
+        :type attributes: Union[str, List[str]]
         :rtype: None
         """
 
@@ -701,23 +671,29 @@ class DependencyMixin(mpynode.MPyNode):
         #
         for attribute in attributes:
 
-            self.showAttr(attribute)
+            # Check attribute type
+            #
+            if isinstance(attribute, string_types):
 
-    def keyAttr(self, attribute):
+                attribute = self.attribute(attribute)
+
+            # Verify attribute is valid
+            #
+            if not attribute.hasFn(om.MFn.kAttribute):
+
+                continue
+
+            # Modify attribute
+            #
+            fnAttribute = om.MFnAttribute(attribute)
+            fnAttribute.hidden = False
+            fnAttribute.channelBox = True
+
+    def keyAttr(self, *attributes):
         """
         Keys an attribute that belongs to this node.
 
-        :type attribute: Union[str, om.MObject]
-        :rtype: None
-        """
-
-        pass
-
-    def keyAttrs(self, attributes):
-        """
-        Keys a list of attributes that belongs to this node.
-
-        :type attributes: Union[str, om.MObject]
+        :type attributes: Union[str, List[str]]
         :rtype: None
         """
 
