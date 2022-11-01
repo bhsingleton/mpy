@@ -225,10 +225,6 @@ class ConstraintMixin(transformmixin.TransformMixin):
             longName=attributeName,
             attributeType='float',
             min=0.0,
-            max=1.0,
-            readable=True,
-            writable=True,
-            storable=True,
             keyable=True,
             channelBox=True
         )
