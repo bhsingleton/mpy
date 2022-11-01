@@ -501,9 +501,11 @@ class MPyFactory(proxyfactory.ProxyFactory):
 
         # Check if file exists
         #
-        if not os.path.exists(filePath):
+        absolutePath = os.path.normpath(os.path.expandvars(filePath))
 
-            raise TypeError('createReference() expects a valid file!')
+        if not os.path.exists(absolutePath):
+
+            raise TypeError('createReference() cannot locate file: %s' % filePath)
 
         # Create new reference
         #
