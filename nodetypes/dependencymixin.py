@@ -4,6 +4,7 @@ from maya import cmds as mc
 from maya.api import OpenMaya as om
 from Qt import QtGui
 from six import string_types
+from dcc.python import stringutils
 from dcc.maya.libs import attributeutils, plugutils, plugmutators, dagutils
 from .. import mpyattribute, mpynode
 from ..collections import userproperties
@@ -42,7 +43,7 @@ class DependencyMixin(mpynode.MPyNode):
         """
         Private method used to an indexed plug.
 
-        :type key: str
+        :type key: Union[str, om.MObject]
         :rtype: om.MPlug
         """
 
@@ -52,7 +53,7 @@ class DependencyMixin(mpynode.MPyNode):
         """
         Private method used to update an indexed plug.
 
-        :type key: str
+        :type key: Union[str, om.MObject]
         :type value: Any
         :rtype: None
         """
@@ -364,14 +365,20 @@ class DependencyMixin(mpynode.MPyNode):
     def iterAttr(self, **kwargs):
         """
         Returns a generator that can iterate over attributes derived from this node.
-        This method piggy backs off of the maya command.
+        This method piggybacks off of the maya command.
 
         :rtype: iter
         """
 
-        for name in mc.listAttr(self.absoluteName(), **kwargs):
+        attributes = mc.listAttr(self.name(includeNamespace=True), **kwargs)
 
-            yield self.attribute(name)
+        if not stringutils.isNullOrEmpty(attributes):
+
+            return iter(map(self.attribute, attributes))
+
+        else:
+
+            return iter([])
 
     def listAttr(self, **kwargs):
         """
@@ -723,11 +730,23 @@ class DependencyMixin(mpynode.MPyNode):
         Returns a plug based on the supplied string path.
         Unlike the api method, this implementation supports both compound and indexed plugs.
 
-        :type name: str
+        :type name: Union[str, om.MObject]
         :rtype: om.MPlug
         """
 
-        return plugutils.findPlug(self.object(), name)
+        # Evaluate supplied argument
+        #
+        if isinstance(name, string_types):
+
+            return plugutils.findPlug(self.object(), name)
+
+        elif isinstance(name, om.MObject):
+
+            return om.MPlug(self.object(), name)
+
+        else:
+
+            raise TypeError('findPlug() expects either a str or MObject (%s given)!' % type(name).__name__)
 
     def isPlugConstrained(self, plug):
         """
