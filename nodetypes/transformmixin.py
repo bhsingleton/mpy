@@ -185,14 +185,15 @@ class TransformMixin(dagmixin.DagMixin):
 
         transformutils.resetPivots(self.dagPath())
 
-    def matrix(self):
+    def matrix(self, asTransformationMatrix=False):
         """
         Returns the local transformation matrix for this transform.
 
-        :rtype: om.MMatrix
+        :type asTransformationMatrix: bool
+        :rtype: Union[om.MMatrix, om.MTransformationMatrix]
         """
 
-        return self.getAttr('matrix')
+        return transformutils.getMatrix(self.dagPath(), asTransformationMatrix=asTransformationMatrix)
 
     def setMatrix(self, matrix, skipTranslate=False, skipRotate=False, skipScale=False):
         """
