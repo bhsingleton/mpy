@@ -1,6 +1,6 @@
 from maya.api import OpenMaya as om
 from .. import mpyattribute
-from ..nodetypes import transformmixin
+from . import maxformmixin
 
 import logging
 logging.basicConfig()
@@ -8,7 +8,7 @@ log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
 
 
-class ExposeTmMixin(transformmixin.TransformMixin):
+class MaxformMixin(maxformmixin.MaxformMixin):
     """
     Overload of TransformMixin that interfaces with expose transforms.
     """
