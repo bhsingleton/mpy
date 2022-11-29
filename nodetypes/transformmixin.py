@@ -102,6 +102,17 @@ class TransformMixin(dagmixin.DagMixin):
 
         transformutils.resetTranslation(self.dagPath())
 
+    def translateTo(self, position):
+        """
+        Translates this node to the specified position.
+        Unlike `setTranslation`, this method adds the translational difference to the current transform matrix.
+
+        :type position: om.MVector
+        :rtype: None
+        """
+
+        transformutils.translateTo(self.dagPath(), position)
+
     def rotateOrder(self, context=om.MDGContext.kNormal):
         """
         Returns the transform's rotation order.
@@ -121,7 +132,7 @@ class TransformMixin(dagmixin.DagMixin):
         :rtype: om.MEulerRotation
         """
 
-        transformutils.getEulerRotation(self.dagPath(), context=context)
+        return transformutils.getEulerRotation(self.dagPath(), context=context)
 
     def setEulerRotation(self, eulerRotation):
         """
@@ -142,6 +153,17 @@ class TransformMixin(dagmixin.DagMixin):
 
         transformutils.resetEulerRotation(self.dagPath())
 
+    def rotateTo(self, eulerRotation):
+        """
+        Rotates this node to the specified orientation.
+        Unlike `setEulerRotation`, this method adds the rotational difference to the current transform matrix.
+
+        :type eulerRotation: om.MEulerRotation
+        :rtype: None
+        """
+
+        transformutils.rotateTo(self.dagPath(), eulerRotation)
+
     def scale(self, context=om.MDGContext.kNormal):
         """
         Returns the transform's scale component.
@@ -160,8 +182,8 @@ class TransformMixin(dagmixin.DagMixin):
         :rtype: None
         """
 
-        # Check if scale is valid
-        # No need to introduce minor decimal discrepancies!
+        # Check if scale change is required
+        # Introducing non-unit scale values can cause Maya to not behave as expected!
         #
         if not transformutils.isClose(self.scale(), scale):
 
@@ -175,6 +197,17 @@ class TransformMixin(dagmixin.DagMixin):
         """
 
         transformutils.resetScale(self.dagPath())
+
+    def scaleTo(self, scale):
+        """
+        Scales this node to the specified size.
+        Unlike `setScale`, this method adds the scalar difference to the current transform matrix.
+
+        :type scale: Union[List[float, float, float], om.MVector]
+        :rtype: None
+        """
+
+        transformutils.scaleTo(self.dagPath(), scale)
 
     def resetPivots(self):
         """
@@ -206,27 +239,13 @@ class TransformMixin(dagmixin.DagMixin):
         :rtype: None
         """
 
-        # Decompose transform matrix
-        #
-        translation, eulerRotation, scale = transformutils.decomposeTransformMatrix(matrix)
-
-        # Check if translation should be skipped
-        #
-        if not skipTranslate:
-
-            self.setTranslation(translation)
-
-        # Check if rotation should be skipped
-        #
-        if not skipRotate:
-
-            self.setEulerRotation(eulerRotation)
-
-        # Check if scale should be skipped
-        #
-        if not skipScale:
-
-            self.setScale(scale)
+        transformutils.applyTransformMatrix(
+            self.dagPath(),
+            matrix,
+            skipTranslate=skipTranslate,
+            skipRotate=skipRotate,
+            skipScale=skipScale
+        )
 
     def resetMatrix(self):
         """
