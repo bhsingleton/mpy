@@ -16,7 +16,7 @@ log.setLevel(logging.INFO)
 
 class ConstraintMixin(transformmixin.TransformMixin):
     """
-    Overload of TransformMixin class used to interface with constraints.
+    Overload of `TransformMixin` used to interface with constraint nodes.
     """
 
     # region Dunderscores
@@ -78,7 +78,9 @@ class ConstraintMixin(transformmixin.TransformMixin):
 
         # Connect input attributes
         #
-        for (destinationName, sourceName) in self.__inputs__.items():
+        inputs = kwargs.get('inputs', self.__inputs__)
+
+        for (destinationName, sourceName) in inputs.items():
 
             # Check if plugs exists
             #
@@ -102,8 +104,9 @@ class ConstraintMixin(transformmixin.TransformMixin):
         # Connect output attributes
         #
         skipAll = kwargs.get('skipAll', False)
+        outputs = kwargs.get('outputs', self.__outputs__)
 
-        for (sourceName, destinationName) in self.__outputs__.items():
+        for (sourceName, destinationName) in outputs.items():
 
             # Check if attribute should be skipped
             #
@@ -174,27 +177,22 @@ class ConstraintMixin(transformmixin.TransformMixin):
         plug = self.findPlug('target')
         return plugutils.getNextAvailableElement(plug)
 
-    def addTarget(self, target, weight=1.0, connections=None, maintainOffset=False):
+    def addTarget(self, target, weight=1.0, maintainOffset=False, **kwargs):
         """
         Adds a new target to this constraint.
 
         :type target: transformmixin.TransformMixin
         :type weight: float
-        :type connections: Union[Dict[str, str], None]
         :type maintainOffset: bool
         :rtype: int
         """
-
-        # Check if any connection overrides were supplied
-        #
-        if stringutils.isNullOrEmpty(connections):
-
-            connections = self.__targets__
 
         # Iterate through required target attributes
         #
         target = self.pyFactory(target)
         index = self.nextAvailableTargetIndex()
+
+        connections = kwargs.get('connections', self.__targets__)
 
         for (destinationName, sourceName) in connections.items():
 
