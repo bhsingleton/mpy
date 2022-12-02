@@ -14,11 +14,20 @@ log.setLevel(logging.INFO)
 
 class DagMixin(containerbasemixin.ContainerBaseMixin):
     """
-    Overload of NodeMixin used to interface with DAG nodes inside the scene file.
+    Overload of `ContainerBaseMixin` used to interface with DAG nodes inside the scene file.
     """
 
     # region Dunderscores
     __apitype__ = om.MFn.kDagNode
+
+    def __str__(self):
+        """
+        Private method that stringifies this node.
+
+        :rtype: str
+        """
+
+        return self.partialPathName()
 
     def __getitem__(self, key):
         """
@@ -40,10 +49,10 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
 
     def __reduce__(self):
         """
-        The cPickle module uses the __reduce__() method to instruct it on how to simplify the class into a string.
+        The cPickle module uses the __reduce__() method to instruct it on how to simplify this class into a string.
 
         :return: Tuple containing the class and constructor arguments.
-        :rtype: tuple[type, tuple[str]]
+        :rtype: Tuple[type, Tuple[str]]
         """
 
         return self.nodeClass(), (self.fullPathName(),)

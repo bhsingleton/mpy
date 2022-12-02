@@ -17,7 +17,7 @@ log.setLevel(logging.INFO)
 
 class DependencyMixin(mpynode.MPyNode):
     """
-    Overload of PyNode used to interface with dependency graph nodes.
+    Overload of `MPyNode` used to interface with dependency graph nodes.
     """
 
     # region Dunderscores
@@ -38,6 +38,24 @@ class DependencyMixin(mpynode.MPyNode):
         # Declare private variables
         #
         self._userProperties = userproperties.UserProperties(self.object())
+
+    def __repr__(self):
+        """
+        Private method that returns a string representation of this node.
+
+        :rtype: str
+        """
+
+        return f'<{self.typeName}:{self.name()} @ {self.handle().hashCode()}>'
+
+    def __str__(self):
+        """
+        Private method that stringifies this node.
+
+        :rtype: str
+        """
+
+        return self.name(includeNamespace=True)
 
     def __getitem__(self, key):
         """
