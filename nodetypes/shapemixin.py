@@ -11,7 +11,7 @@ log.setLevel(logging.INFO)
 
 class ShapeMixin(dagmixin.DagMixin):
     """
-    Overload of DagMixin used to interface with shape nodes inside the scene file.
+    Overload of `DagMixin` used to interface with shape nodes inside the scene file.
     """
 
     # region Dunderscores
@@ -152,7 +152,7 @@ class ShapeMixin(dagmixin.DagMixin):
 
     def setControlPoints(self, points):
         """
-        Updates the control points for this shape.
+        Updates the control points for this shape node.
 
         :type points: om.MPointArray
         :rtype: None
@@ -183,4 +183,23 @@ class ShapeMixin(dagmixin.DagMixin):
             element.child(0).setFloat(point[0])
             element.child(1).setFloat(point[1])
             element.child(2).setFloat(point[2])
+
+    def resetTransform(self):
+        """
+        Resets the parent transform back to origin while preserving the control points.
+
+        :rtype: None
+        """
+
+        # Apply parent matrix to control points
+        #
+        parent = self.parent()
+        matrix = parent.matrix()
+
+        controlPoints = [controlPoint * matrix for controlPoint in self.controlPoints()]
+        self.setControlPoints(controlPoints)
+
+        # Reset parent transform
+        #
+        parent.resetMatrix()
     # endregion
