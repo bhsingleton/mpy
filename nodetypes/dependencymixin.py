@@ -909,23 +909,26 @@ class DependencyMixin(mpynode.MPyNode):
         #
         plugutils.removeMultiInstances(plug, indices)
 
-    def dependsOn(self, apiType=om.MFn.kDependencyNode):
+    def dependsOn(self, apiType=om.MFn.kDependencyNode, typeName=''):
         """
         Returns a list of nodes that this object is dependent on.
 
         :type apiType: int
+        :type typeName: str
         :rtype: List[DependencyMixin]
         """
 
-        return [self.pyFactory(x) for x in dagutils.iterDependencies(self.object(), apiType, direction=om.MItDependencyGraph.kUpstream)]
+        return [self.pyFactory(dependency) for dependency in dagutils.iterDependencies(self.object(), apiType, typeName=typeName, direction=om.MItDependencyGraph.kUpstream)]
 
-    def dependents(self, apiType=om.MFn.kDependencyNode):
+    def dependents(self, apiType=om.MFn.kDependencyNode, typeName=''):
         """
         Returns a list of nodes that are dependent on this object.
 
         :type apiType: int
+        :type typeName: str
         :return: List[DependencyMixin]
         """
 
-        return [self.pyFactory(x) for x in dagutils.iterDependencies(self.object(), apiType, direction=om.MItDependencyGraph.kDownstream)]
+        return [self.pyFactory(dependency) for dependency in dagutils.iterDependencies(self.object(), apiType, typeName=typeName, direction=om.MItDependencyGraph.kDownstream)]
+
     # endregion
