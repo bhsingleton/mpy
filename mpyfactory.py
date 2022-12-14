@@ -19,20 +19,25 @@ class MPyFactory(proxyfactory.ProxyFactory):
     Overload of ProxyFactory that manages python interfaces for Maya scene nodes.
     """
 
+    # region Dunderscores
     __slots__ = ('__plugins__',)
 
     def __init__(self, *args, **kwargs):
         """
         Private method called after a new instance has been created.
+
+        :rtype: None
         """
+
+        # Check if instance has already been initialized
+        #
+        if not self.hasInstance():
+
+            self.__plugins__ = dict(self.iterPackages(plugintypes, classAttr='__plugin__'))
 
         # Call parent method
         #
         super(MPyFactory, self).__init__(*args, **kwargs)
-
-        # Declare class variables
-        #
-        self.__plugins__ = dict(self.iterPackages(plugintypes, classAttr='__plugin__'))
 
     def __call__(self, dependNode):
         """
@@ -44,12 +49,14 @@ class MPyFactory(proxyfactory.ProxyFactory):
         """
 
         return mpynode.MPyNode(dependNode)
+    # endregion
 
+    # region Methods
     def packages(self):
         """
         Returns a list of packages to be searched for factory classes.
 
-        :rtype: list[module]
+        :rtype: List[module]
         """
 
         return [nodetypes]
@@ -245,18 +252,18 @@ class MPyFactory(proxyfactory.ProxyFactory):
         If you want to return the root namespace objects be sure to supply a semicolon!
 
         :type namespace: str
-        :rtype: iter
+        :rtype: Iterator[mpynode.MPyNode]
         """
 
         # Check for root namespace
         #
-        if len(namespace) == 0:
+        if stringutils.isNullOrEmpty(namespace):
 
             namespace = ':'
 
-        # Try and collect namespace objects
+        # Check if namespace exists
         #
-        try:
+        if om.MNamespace.namespaceExists(namespace):
 
             # Iterate through objects in namespace
             #
@@ -264,17 +271,16 @@ class MPyFactory(proxyfactory.ProxyFactory):
 
                 yield mpynode.MPyNode(dependNode)
 
-        except RuntimeError as exception:
+        else:
 
-            log.error(exception)
-            return
+            return iter([])
 
     def getNodesByNamespace(self, namespace):
         """
         Returns a list of nodes belonging to the supplied namespace.
 
         :type namespace: str
-        :rtype: list[mpynode.MPyNode]
+        :rtype: List[mpynode.MPyNode]
         """
 
         return list(self.iterNodesByNamespace(namespace))
@@ -284,7 +290,7 @@ class MPyFactory(proxyfactory.ProxyFactory):
         Returns a generator that iterates over nodes based on the given api type.
 
         :type apiType: int
-        :rtype: iter
+        :rtype: Iterator[mpynode.MPyNode]
         """
 
         # Iterate through dependency nodes
@@ -298,7 +304,7 @@ class MPyFactory(proxyfactory.ProxyFactory):
         Returns a list of nodes based on the given api type.
 
         :type apiType: int
-        :rtype: list[mpynode.MPyNode]
+        :rtype: List[mpynode.MPyNode]
         """
 
         return list(self.iterNodesByApiType(apiType=apiType))
@@ -308,7 +314,7 @@ class MPyFactory(proxyfactory.ProxyFactory):
         Returns a generator that yields nodes based on the supplied type name.
 
         :type typeName: str
-        :rtype: iter
+        :rtype: Iterator[mpynode.MPyNode]
         """
 
         # Iterate through dependency nodes
@@ -322,10 +328,56 @@ class MPyFactory(proxyfactory.ProxyFactory):
         Returns a list of nodes based on the given type name.
 
         :type typeName: str
-        :rtype: list[mpynode.MPyNode]
+        :rtype: List[mpynode.MPyNode]
         """
 
         return list(self.iterNodesByTypeName(typeName))
+
+    def iterSelection(self, apiType=om.MFn.kDependencyNode):
+        """
+        Returns a generator that can iterate through the active selection.
+        An optional api type can be supplied to narrow down the selection.
+
+        :type apiType: int
+        :rtype: Iterator[mpynode.MPyNode]
+        """
+
+        for dependNode in dagutils.iterActiveSelection(apiType=apiType):
+
+            yield mpynode.MPyNode(dependNode)
+
+    def selection(self, apiType=om.MFn.kDependencyNode):
+        """
+        Returns the active selection.
+        An optional api type can be supplied to narrow down the selection.
+
+        :type apiType: int
+        :rtype: List[mpynode.MPyNode]
+        """
+
+        return list(self.iterSelection(apiType=apiType))
+
+    def getAttributeTemplate(self, name):
+        """
+        Returns an attribute template from the supplied name.
+        No error checking is performed to test if this file actually exists!
+
+        :rtype: str
+        """
+
+        filename = '{name}.json'.format(name=name)
+        return os.path.join(os.path.dirname(__file__), 'templates', filename)
+
+    def getShapeTemplate(self, name):
+        """
+        Returns a shape template from the supplied name.
+        No error checking is performed to test if this file actually exists!
+
+        :rtype: str
+        """
+
+        filename = '{name}.json'.format(name=name)
+        return os.path.join(os.path.dirname(__file__), 'shapes', filename)
 
     def createNode(self, typeName, name='', parent=None, **kwargs):
         """
@@ -520,54 +572,7 @@ class MPyFactory(proxyfactory.ProxyFactory):
 
             nodeName = '{namespace}RN'.format(namespace=namespace)
             return mpynode.MPyNode(nodeName)  # TODO: This needs improving!
-
-    @classmethod
-    def selection(cls, apiType=om.MFn.kDependencyNode):
-        """
-        Returns the active selection.
-        An optional api type can be supplied to narrow down the selection.
-
-        :type apiType: int
-        :rtype: list[mpynode.MPyNode]
-        """
-
-        return list(cls.iterSelection(apiType=apiType))
-
-    @staticmethod
-    def iterSelection(apiType=om.MFn.kDependencyNode):
-        """
-        Returns a generator that can iterate through the active selection.
-        An optional api type can be supplied to narrow down the selection.
-
-        :type apiType: int
-        :rtype: list[mpynode.MPyNode]
-        """
-
-        for dependNode in dagutils.iterActiveSelection(apiType=apiType):
-
-            yield mpynode.MPyNode(dependNode)
-
-    def getAttributeTemplate(self, name):
-        """
-        Returns an attribute template from the supplied name.
-        No error checking is performed to test if this file actually exists!
-
-        :rtype: str
-        """
-
-        filename = '{name}.json'.format(name=name)
-        return os.path.join(os.path.dirname(__file__), 'templates', filename)
-
-    def getShapeTemplate(self, name):
-        """
-        Returns a shape template from the supplied name.
-        No error checking is performed to test if this file actually exists!
-
-        :rtype: str
-        """
-
-        filename = '{name}.json'.format(name=name)
-        return os.path.join(os.path.dirname(__file__), 'shapes', filename)
+    # endregion
 
 
 def getPyFactory():
