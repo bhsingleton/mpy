@@ -460,7 +460,7 @@ class ConstraintTarget(object):
     # region Methods
     def targetPlug(self):
         """
-        Returns the element associated with this constraint target.
+        Returns the plug element associated with this constraint target.
 
         :rtype: om.MPlug
         """
@@ -469,7 +469,7 @@ class ConstraintTarget(object):
 
     def targetChildPlug(self, name):
         """
-        Search method used to locate the child plug derived from this constraint target.
+        Returns a child plug from the associated plug element.
 
         :type name: str
         :rtype: om.MPlug
@@ -488,7 +488,7 @@ class ConstraintTarget(object):
 
     def setName(self, name):
         """
-        Method used to change the alias name on the indexed weight attribute.
+        Updates the alias name for this constraint target.
 
         :type name: str
         :rtype: bool
@@ -522,7 +522,7 @@ class ConstraintTarget(object):
 
     def targetObject(self):
         """
-        Retrieves the target object driving this constraint channel.
+        Returns the target object driving this constraint channel.
         If no source connection is found then none will be returned!
 
         :rtype: mpynode.MPyNode
