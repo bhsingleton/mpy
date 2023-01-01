@@ -35,10 +35,10 @@ class MPyNode(with_metaclass(ABCMeta, mobjectwrapper.MObjectWrapper)):
 
         # Inspect object type
         #
-        if isinstance(obj, cls.__accepts__):
+        if isinstance(obj, cls.__accepts__):  # Default
 
-            # Inspect class type
-            # If PyNode is being directly instantiated then we must replace the base class
+            # Evaluate class type
+            # If MPyNode is being directly instantiated then we must replace the base class!
             #
             if cls is MPyNode:
 
@@ -64,7 +64,7 @@ class MPyNode(with_metaclass(ABCMeta, mobjectwrapper.MObjectWrapper)):
 
     # region Properties
     @classproperty
-    def pyFactory(cls):
+    def nodeManager(cls):
         """
         Returns the node factory class.
         It's a bit hacky but this way we can bypass cyclical import errors.
@@ -77,7 +77,7 @@ class MPyNode(with_metaclass(ABCMeta, mobjectwrapper.MObjectWrapper)):
         if cls.__pyfactory__ is None:
 
             from . import mpyfactory
-            cls.__pyfactory__ = mpyfactory.getPyFactoryReference()
+            cls.__pyfactory__ = mpyfactory.MPyFactory.getInstance(asWeakReference=True)
 
         return cls.__pyfactory__()
     # endregion
@@ -139,7 +139,7 @@ class MPyNode(with_metaclass(ABCMeta, mobjectwrapper.MObjectWrapper)):
         if instance is not None:
 
             # Check if instance is still alive
-            # If not then we need to reinitialize it
+            # If not then we need to reinitialize it!
             #
             if not instance.isAlive():
 
@@ -156,10 +156,76 @@ class MPyNode(with_metaclass(ABCMeta, mobjectwrapper.MObjectWrapper)):
             # Be sure to replace the base class with the correct type!
             #
             instance = super(MPyNode, cls).__new__(cls)
-            instance.__class__ = cls.pyFactory.getClass(dependNode)
+            instance.__class__ = cls.nodeManager.getClass(dependNode)
 
             cls.__instances__[hashCode] = instance
             return instance
+
+    @classmethod
+    def create(cls, typeName, name='', parent=None, skipSelect=True):
+        """
+        Returns a new dependency node of the specified type.
+
+        :type typeName: str
+        :type name: Union[str, Dict[str, Any]]
+        :type parent: Union[str, om.MObject, om.MDagPath, MPyNode]
+        :type skipSelect: bool
+        :rtype: MPyNode
+        """
+
+        return cls.nodeManager.createNode(typeName, name=name, parent=parent)
+
+    def hasExtension(self):
+        """
+        Evaluates if this instance has an extension.
+
+        :rtype: bool
+        """
+
+        return self.nodeManager.isExtension(self.object())
+
+    def addExtension(self, extensionClass):
+        """
+        Adds the supplied extension to this node.
+
+        :type extensionClass: class
+        :rtype: None
+        """
+
+        # Redundancy check
+        #
+        if self.hasExtension():
+
+            return
+
+        # Reinitialize instance
+        #
+        self.__class__ = self.nodeManager.createExtensionClass(self.__class__, extensionClass)
+        self.__init__(self.object())
+
+    def removeExtension(self):
+        """
+        Removes any extensions from this node.
+
+        :rtype: None
+        """
+
+        # Redundancy check
+        #
+        if not self.hasExtension():
+
+            return
+
+        # Remove extension related attributes
+        #
+        plug = self.findPlug('metadata')
+
+        self.breakConnections(plug, recursive=True)
+        self.removeAttr(plug.attribute())
+
+        # Update class
+        #
+        self.__class__ = self.nodeManager.getClass(self.object())
 
     def delete(self):
         """

@@ -59,14 +59,21 @@ class MPyContext(object):
 class MPyAttribute(object):
     """
     Base class used to represent Maya attributes as a python property.
-    With this approach there is no MDGContext support so support is limited to non-keyable attributes!
-    You could use an entry/exit point to mitigate this drawback if needed?
+    If a different context is required to access attributes be sure to use a `MPyContext` statement!
     """
 
-    __slots__ = ('name', 'fget', 'fset', 'fdel', 'fchange')
+    __slots__ = (
+        'name',
+        'constructors',
+        'fget',
+        'fset',
+        'fdel',
+        'fchange'
+    )
+
     __context__ = om.MDGContext.kNormal
 
-    def __init__(self, name, fget=None, fset=None, fdel=None):
+    def __init__(self, name, fget=None, fset=None, fdel=None, **constructors):
         """
         Private method called after a new instance has been created.
 
@@ -74,6 +81,11 @@ class MPyAttribute(object):
         :type fget: function
         :type fset: function
         :type fdel: function
+        :key readable: bool
+        :key writable: bool
+        :key storable: bool
+        :key keyable: bool
+        :key attributeType: str
         :rtype: None
         """
 
@@ -84,6 +96,7 @@ class MPyAttribute(object):
         # Store reference to attribute
         #
         self.name = name
+        self.constructors = constructors
 
         self.fget = fget
         self.fset = fset
@@ -218,7 +231,7 @@ class MPyAttribute(object):
 
         return self
 
-    def resetValue(self, func):
+    def validateAndResetValue(self, func):
         """
         Function decorator used to intercept delete operations.
 

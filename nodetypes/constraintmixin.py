@@ -189,7 +189,7 @@ class ConstraintMixin(transformmixin.TransformMixin):
 
         # Iterate through required target attributes
         #
-        target = self.pyFactory(target)
+        target = self.nodeManager(target)
         index = self.nextAvailableTargetIndex()
 
         connections = kwargs.get('connections', self.__targets__)
@@ -533,7 +533,7 @@ class ConstraintTarget(object):
 
         if not source.isNull:
 
-            return self.constraint.pyFactory(source.node())
+            return self.constraint.nodeManager(source.node())
 
         else:
 

@@ -77,7 +77,7 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
         :rtype: om.MFnDagNode
         """
 
-        return self.__functionset__.__call__(self.dagPath())
+        return self.__function_set__.__call__(self.dagPath())
 
     def dagPath(self):
         """
@@ -259,7 +259,7 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
 
         if not parent.hasFn(om.MFn.kWorld):
 
-            return self.pyFactory(parent)
+            return self.nodeManager(parent)
 
         else:
 
@@ -391,7 +391,7 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
         :rtype: DagMixin
         """
 
-        return self.pyFactory(self.functionSet().child(index))
+        return self.nodeManager(self.functionSet().child(index))
 
     def childCount(self):
         """
@@ -413,7 +413,7 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
 
         for child in dagutils.iterChildren(self.dagPath(), apiType=apiType):
 
-            yield self.pyFactory(child)
+            yield self.nodeManager(child)
 
     def iterShapes(self):
         """

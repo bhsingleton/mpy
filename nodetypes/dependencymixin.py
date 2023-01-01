@@ -303,7 +303,7 @@ class DependencyMixin(mpynode.MPyNode):
         :rtype: DependencyMixin
         """
 
-        return self.pyFactory(list(dagutils.iterNodes(apiType=om.MFn.kTime))[0])
+        return self.nodeManager(list(dagutils.iterNodes(apiType=om.MFn.kTime))[0])
 
     def currentTime(self):
         """
@@ -336,7 +336,7 @@ class DependencyMixin(mpynode.MPyNode):
         #
         if self.isFromReferencedFile:
 
-            return self.pyFactory(dagutils.getAssociatedReferenceNode(self.object()))
+            return self.nodeManager(dagutils.getAssociatedReferenceNode(self.object()))
 
         else:
 
@@ -856,7 +856,7 @@ class DependencyMixin(mpynode.MPyNode):
         :type plug: Union[str, om.MPlug]
         :type source: bool
         :type destination: bool
-        :type recursive:bool
+        :type recursive: bool
         :rtype: None
         """
 
@@ -918,7 +918,7 @@ class DependencyMixin(mpynode.MPyNode):
         :rtype: List[DependencyMixin]
         """
 
-        return [self.pyFactory(dependency) for dependency in dagutils.iterDependencies(self.object(), apiType, typeName=typeName, direction=om.MItDependencyGraph.kUpstream)]
+        return [self.nodeManager(dependency) for dependency in dagutils.iterDependencies(self.object(), apiType, typeName=typeName, direction=om.MItDependencyGraph.kUpstream)]
 
     def dependents(self, apiType=om.MFn.kDependencyNode, typeName=''):
         """
@@ -929,6 +929,6 @@ class DependencyMixin(mpynode.MPyNode):
         :return: List[DependencyMixin]
         """
 
-        return [self.pyFactory(dependency) for dependency in dagutils.iterDependencies(self.object(), apiType, typeName=typeName, direction=om.MItDependencyGraph.kDownstream)]
+        return [self.nodeManager(dependency) for dependency in dagutils.iterDependencies(self.object(), apiType, typeName=typeName, direction=om.MItDependencyGraph.kDownstream)]
 
     # endregion

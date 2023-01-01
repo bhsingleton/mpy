@@ -61,7 +61,7 @@ class MaxformMixin(maxformmixin.MaxformMixin):
         #
         if not exposeNode.isNull():
 
-            return self.pyFactory(exposeNode)
+            return self.nodeManager(exposeNode)
 
         else:
 
@@ -80,7 +80,7 @@ class MaxformMixin(maxformmixin.MaxformMixin):
         #
         if not localReferenceNode.isNull():
 
-            return self.pyFactory(localReferenceNode)
+            return self.nodeManager(localReferenceNode)
 
         else:
 

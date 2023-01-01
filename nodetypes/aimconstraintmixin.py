@@ -97,7 +97,7 @@ class AimConstraintMixin(constraintmixin.ConstraintMixin):
 
         if not source.isNull():
 
-            return self.pyFactory(source.node())
+            return self.nodeManager(source.node())
 
         else:
 

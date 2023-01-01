@@ -91,7 +91,7 @@ class ReferenceMixin(dependencymixin.DependencyMixin):
 
             # Initialize node interface
             #
-            return self.pyFactory(found)
+            return self.nodeManager(found)
 
         elif isinstance(found, list):
 
@@ -106,7 +106,7 @@ class ReferenceMixin(dependencymixin.DependencyMixin):
 
             elif numNodes == 1:
 
-                return self.pyFactory(nodes[0])
+                return self.nodeManager(nodes[0])
 
             else:
 
@@ -146,7 +146,7 @@ class ReferenceMixin(dependencymixin.DependencyMixin):
         :rtype: Reference
         """
 
-        return self.pyFactory(self.functionSet().parentReference())
+        return self.nodeManager(self.functionSet().parentReference())
 
     def reload(self):
         """

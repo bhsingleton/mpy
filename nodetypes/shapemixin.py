@@ -35,7 +35,7 @@ class ShapeMixin(dagmixin.DagMixin):
         try:
 
             results = mc.deformer(self.fullPathName(), type=typeName)
-            return self.pyFactory.getNodeByName(results[-1])
+            return self.nodeManager.getNodeByName(results[-1])
 
         except RuntimeError as exception:
 

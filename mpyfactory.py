@@ -1,10 +1,12 @@
+import inspect
 import os
 
 from maya import cmds as mc
 from maya.api import OpenMaya as om
 from six import string_types
 from dcc.abstract import proxyfactory
-from dcc.python import stringutils
+from dcc.python import stringutils, importutils
+from dcc.naming import namingutils
 from dcc.maya.libs import dagutils
 from . import mpynode, nodetypes, plugintypes
 
@@ -20,7 +22,7 @@ class MPyFactory(proxyfactory.ProxyFactory):
     """
 
     # region Dunderscores
-    __slots__ = ('__plugins__',)
+    __slots__ = ('__plugins__', '__extensions__')
 
     def __init__(self, *args, **kwargs):
         """
@@ -34,6 +36,7 @@ class MPyFactory(proxyfactory.ProxyFactory):
         if not self.hasInstance():
 
             self.__plugins__ = dict(self.iterPackages(plugintypes, classAttr='__plugin__'))
+            self.__extensions__ = {}
 
         # Call parent method
         #
@@ -93,15 +96,19 @@ class MPyFactory(proxyfactory.ProxyFactory):
 
             return self.getPlugin(dependNode)
 
+        elif self.isExtension(dependNode):
+
+            return self.getExtension(dependNode)
+
         else:
 
             return self.getMixin(dependNode)
 
     def isPlugin(self, dependNode):
         """
-        Checks if the supplied node is derived from a plugin.
+        Evaluates if the supplied node is derived from a plugin.
         By default, the function set will always return a string.
-        So we run a path validation to test.
+        So we run a path validation to test it.
 
         :type dependNode: om.MObject
         :rtype: bool
@@ -111,7 +118,7 @@ class MPyFactory(proxyfactory.ProxyFactory):
 
     def getPlugin(self, dependNode):
         """
-        Returns a mixin class that is compatible with the given dependency node.
+        Returns a plugin class that is compatible with the given dependency node.
 
         :type dependNode: om.MObject
         :rtype: class
@@ -129,6 +136,77 @@ class MPyFactory(proxyfactory.ProxyFactory):
         else:
 
             return self.getMixin(dependNode)
+
+    def isExtension(self, dependNode):
+        """
+        Evaluates if the supplied node uses an extension interface.
+        This consists of a python class name and module path.
+
+        :type dependNode: om.MObject
+        :rtype: bool
+        """
+
+        fnDependNode = om.MFnDependencyNode(dependNode)
+        return fnDependNode.hasAttribute('__class__') and fnDependNode.hasAttribute('__module__')
+
+    def createExtensionClass(self, mixinClass, extensionClass):
+        """
+        Combines the supplied mixin and extension classes into a new class.
+
+        :type mixinClass: class
+        :type extensionClass: class
+        :rtype: class
+        """
+
+        # Evaluate supplied classes
+        #
+        if not inspect.isclass(extensionClass) or not inspect.isclass(mixinClass):
+
+            raise TypeError('createExtensionClass() expects a mixin and extension class!')
+
+        # Check if class already exists
+        #
+        fullTypeName = '{mixinName}+{extensionName}'.format(mixinName=mixinClass.__name__, extensionName=extensionClass.__name__)
+        cls = self.__extensions__.get(fullTypeName, None)
+
+        if cls is None:
+
+            cls = type(fullTypeName, (mixinClass, extensionClass), {})
+            self.__extensions__[fullTypeName] = cls
+
+        return cls
+
+    def getExtension(self, dependNode):
+        """
+        Returns an extension class that is compatible with the given dependency node.
+
+        :type dependNode: om.MObject
+        :rtype: class
+        """
+
+        # Check if this node uses an extension interface
+        #
+        if not self.isExtension(dependNode):
+
+            raise TypeError('getExtension() cannot locate extension attributes!')
+
+        # Get class name and module path
+        #
+        fnDependNode = om.MFnDependencyNode(dependNode)
+
+        className = fnDependNode.findPlug('__name__', False).asString()
+        modulePath = fnDependNode.findPlug('__module__', False).asString()
+
+        if stringutils.isNullOrEmpty(className) or stringutils.isNullOrEmpty(modulePath):
+
+            raise TypeError('getExtension() expects a valid class and module!')
+
+        # Find associated interfaces
+        #
+        extensionClass = importutils.findClass(className, modulePath)
+        mixinClass = self.getPlugin(dependNode)
+
+        return self.createExtensionClass(mixinClass, extensionClass)
 
     def getMixin(self, dependNode):
         """
@@ -333,6 +411,60 @@ class MPyFactory(proxyfactory.ProxyFactory):
 
         return list(self.iterNodesByTypeName(typeName))
 
+    def iterExtensions(self):
+        """
+        Returns a generator that yields nodes with extensions.
+
+        :rtype: Iterator[mpynodeextension.MPyNodeExtension]
+        """
+
+        nodeNames = mc.ls('*.__class__', long=True)
+
+        if not stringutils.isNullOrEmpty(nodeNames):
+
+            yield map(mpynode.MPyNode, nodeNames)
+
+        else:
+
+            return iter([])
+
+    def getExtensions(self):
+        """
+        Returns a list of nodes with extensions.
+
+        :rtype: List[mpynodeextension.MPyNodeExtension]
+        """
+
+        return list(self.iterExtensions())
+
+    def iterExtensionsByTypeName(self, typeName):
+        """
+        Returns a generator that yields nodes with the specified extension name.
+
+        :rtype: Iterator[mpynodeextension.MPyNodeExtension]
+        """
+
+        for extension in self.iterExtensions():
+
+            typeNames = [base.__name__ for base in extension.__class__.iterBases()]
+
+            if typeName in typeNames:
+
+                yield extension
+
+            else:
+
+                continue
+
+    def getExtensionsByTypeName(self, typeName):
+        """
+        Returns a list of nodes with the specified extension name.
+
+        :rtype: List[mpynodeextension.MPyNodeExtension]
+        """
+
+        return list(self.iterExtensionsByTypeName(typeName))
+
     def iterSelection(self, apiType=om.MFn.kDependencyNode):
         """
         Returns a generator that can iterate through the active selection.
@@ -357,17 +489,6 @@ class MPyFactory(proxyfactory.ProxyFactory):
 
         return list(self.iterSelection(apiType=apiType))
 
-    def getAttributeTemplate(self, name):
-        """
-        Returns an attribute template from the supplied name.
-        No error checking is performed to test if this file actually exists!
-
-        :rtype: str
-        """
-
-        filename = '{name}.json'.format(name=name)
-        return os.path.join(os.path.dirname(__file__), 'templates', filename)
-
     def getShapeTemplate(self, name):
         """
         Returns a shape template from the supplied name.
@@ -376,56 +497,74 @@ class MPyFactory(proxyfactory.ProxyFactory):
         :rtype: str
         """
 
+        directory = os.path.dirname(os.path.abspath(__file__))
         filename = '{name}.json'.format(name=name)
-        return os.path.join(os.path.dirname(__file__), 'shapes', filename)
+
+        return os.path.join(directory, 'shapes', filename)
 
     def createNode(self, typeName, name='', parent=None, **kwargs):
         """
-        Creates a new scene node and immediately wraps it in a MPyNode interface.
+        Creates a new scene node and wraps it in a MPyNode interface.
 
         :type typeName: str
-        :type name: str
+        :type name: Union[str, dict]
         :type parent: Union[str, om.MObject, om.MDagPath, mpynode.MPyNode]
         :key shared: bool
         :key skipSelect: bool
         :rtype: mpynode.MPyNode
         """
 
-        # Check if a null-name was supplied
+        # Evaluate supplied name
         #
-        if stringutils.isNullOrEmpty(name):
+        if isinstance(name, dict):
 
-            name = '{typeName}1'.format(typeName=typeName)
+            name = namingutils.concatenateName(**name)
 
-        # Check if a non-string parent was supplied
+        # Check if a parent was supplied
         #
-        if isinstance(parent, mpynode.MPyNode):
+        if parent is None:
 
-            parent = parent.fullPathName()
+            # Create dependency node
+            #
+            fnDependNode = om.MFnDependencyNode()
+            dependNode = fnDependNode.create(typeName)
 
-        elif isinstance(parent, (om.MObject, om.MDagPath)):
+            # Check if a valid name was supplied
+            #
+            if not stringutils.isNullOrEmpty(name):
 
-            parent = om.MFnDagNode(parent).fullPathName()
+                fnDependNode.setName(name)
+
+            return mpynode.MPyNode(dependNode)
 
         else:
 
-            pass
+            # Ensure parent type is compatible
+            #
+            if isinstance(parent, mpynode.MPyNode):
 
-        # Try and create node
-        #
-        try:
+                parent = parent.object()
 
-            nodeName = mc.createNode(typeName, name=name, parent=parent, **kwargs)
-            return mpynode.MPyNode(nodeName)
+            else:
 
-        except RuntimeError as exception:
+                parent = dagutils.getMObject(parent)
 
-            log.error(exception)
-            return None
+            # Create dag node
+            #
+            fnDagNode = om.MFnDagNode()
+            dagNode = fnDagNode.create(typeName, parent=parent)
+
+            # Check if a valid name was supplied
+            #
+            if not stringutils.isNullOrEmpty(name):
+
+                fnDagNode.setName(name)
+
+            return mpynode.MPyNode(dagNode)
 
     def createDisplayLayer(self, name, includeSelected=False, includeDescendants=False):
         """
-        Creates a new display layer and immediately wraps it in an MPyNode interface.
+        Creates a new display layer and wraps it in an MPyNode interface.
 
         :type name: str
         :type includeSelected: bool
@@ -453,7 +592,7 @@ class MPyFactory(proxyfactory.ProxyFactory):
 
     def createShadingNode(self, typeName, name='', parent=None, **kwargs):
         """
-        Creates a new shading node and immediately wraps it in a MPyNode interface.
+        Creates a new shading node and wraps it in a MPyNode interface.
 
         :type typeName: str
         :type name: str
@@ -504,7 +643,7 @@ class MPyFactory(proxyfactory.ProxyFactory):
 
     def createShader(self, typeName, name=''):
         """
-        Creates a new shader and immediately wraps the node and engine in a MPyNode interface.
+        Creates a new shader and wraps the node and engine in a MPyNode interface.
 
         :type typeName: str
         :type name: str
@@ -544,7 +683,7 @@ class MPyFactory(proxyfactory.ProxyFactory):
 
     def createReference(self, filePath, namespace=''):
         """
-        Returns a new reference node using the supplied file.
+        Creates a new reference node using the supplied file.
 
         :type filePath: str
         :type namespace: str
@@ -573,25 +712,3 @@ class MPyFactory(proxyfactory.ProxyFactory):
             nodeName = '{namespace}RN'.format(namespace=namespace)
             return mpynode.MPyNode(nodeName)  # TODO: This needs improving!
     # endregion
-
-
-def getPyFactory():
-    """
-    Returns the PyFactory instance.
-    Reduces the amount of extra code I have to write...
-
-    :rtype: MPyFactory
-    """
-
-    return MPyFactory.getInstance()
-
-
-def getPyFactoryReference():
-    """
-    Returns the PyFactory instance as a weak reference.
-    Again, reduces the amount of extra code I have to write...
-
-    :rtype: weakref.ref
-    """
-
-    return getPyFactory().weakReference()

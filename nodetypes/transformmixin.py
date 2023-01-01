@@ -395,7 +395,7 @@ class TransformMixin(dagmixin.DagMixin):
         :rtype: list[om.MObject]
         """
 
-        filePath = self.pyFactory.getShapeTemplate(shape)
+        filePath = self.nodeManager.getShapeTemplate(shape)
         return shapeutils.applyShapeTemplate(filePath, parent=self.object(), **kwargs)
 
     def addLocator(self, *args, **kwargs):
@@ -410,7 +410,7 @@ class TransformMixin(dagmixin.DagMixin):
         # Create point helper shape
         #
         name = '{name}Shape'.format(name=self.name())
-        locator = self.pyFactory.createNode('locator', name=name, parent=self)
+        locator = self.nodeManager.createNode('locator', name=name, parent=self)
 
         # Check if local position was supplied
         #
@@ -447,7 +447,7 @@ class TransformMixin(dagmixin.DagMixin):
         # Create point helper shape
         #
         name = '{name}Shape'.format(name=self.name())
-        pointHelper = self.pyFactory.createNode('pointHelper', name=name, parent=self)
+        pointHelper = self.nodeManager.createNode('pointHelper', name=name, parent=self)
 
         # Check if any shapes were supplied
         #
@@ -619,7 +619,7 @@ class TransformMixin(dagmixin.DagMixin):
 
             if node.hasFn(om.MFn.kControllerTag) and plugName == 'controllerObject':
 
-                return self.pyFactory(node)
+                return self.nodeManager(node)
 
             else:
 
@@ -645,7 +645,7 @@ class TransformMixin(dagmixin.DagMixin):
 
         # Create new controller tag
         #
-        controllerTag = self.pyFactory.createNode('controller', name='{nodeName}_tag'.format(nodeName=self.name()))
+        controllerTag = self.nodeManager.createNode('controller', name='{nodeName}_tag'.format(nodeName=self.name()))
 
         controllerTag.controllerObject = self.object()
         controllerTag.side = kwargs.get('side', 2)
@@ -711,7 +711,7 @@ class TransformMixin(dagmixin.DagMixin):
 
         # Create constraint and assign targets
         #
-        constraint = self.pyFactory.createNode(typeName)
+        constraint = self.nodeManager.createNode(typeName)
         constraint.setConstraintObject(self, **kwargs)
         constraint.addTargets(targets)
 

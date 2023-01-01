@@ -270,7 +270,7 @@ class GeometryTarget(object):
         #
         if meshData.hasFn(om.MFn.kMesh):
 
-            mesh = self.blendShape.pyFactory(meshData)
+            mesh = self.blendShape.nodeManager(meshData)
             otherPlug = mesh.findPlug('worldMesh[%s]' % mesh.instanceNumber())
 
             mesh.connectPlugs(otherPlug, plug, force=True)

@@ -35,7 +35,7 @@ class MaxformMixin(transformmixin.TransformMixin):
 
         if not controller.isNull():
 
-            return self.pyFactory(controller)
+            return self.nodeManager(controller)
 
         else:
 

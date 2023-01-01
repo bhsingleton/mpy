@@ -70,7 +70,7 @@ class PoleVectorConstraintMixin(constraintmixin.ConstraintMixin):
 
         # Connect input attributes
         #
-        startJoint = self.pyFactory(constraintObject.getAttr('startJoint'))
+        startJoint = self.nodeManager(constraintObject.getAttr('startJoint'))
         startJoint.connectPlugs('translateX', self['constraintRotatePivotX'])
         startJoint.connectPlugs('translateY', self['constraintRotatePivotY'])
         startJoint.connectPlugs('translateZ', self['constraintRotatePivotZ'])

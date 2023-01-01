@@ -52,7 +52,7 @@ class ControllerMixin(dependencymixin.DependencyMixin):
 
         if uuid.valid():
 
-            self.pyFactory.getNodeByUuid(uuid, referenceNode=self.getAssociatedReferenceNode())
+            self.nodeManager.getNodeByUuid(uuid, referenceNode=self.getAssociatedReferenceNode())
 
         else:
 
@@ -85,7 +85,7 @@ class ControllerMixin(dependencymixin.DependencyMixin):
         name = self.controllerObject().displayName()
         mirrorName = namingutils.mirrorName(name)
 
-        return self.pyFactory.getNodeByName(mirrorName)
+        return self.nodeManager.getNodeByName(mirrorName)
 
     def setSibling(self, sibling):
         """

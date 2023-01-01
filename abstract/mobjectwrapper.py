@@ -21,8 +21,8 @@ class MObjectWrapper(with_metaclass(ABCMeta, object)):
     """
 
     # region Dunderscores
-    __slots__ = ('__weakref__', '__handle__', '__functionset__')
-    __functionsets__ = {}
+    __slots__ = ('__weakref__', '__handle__', '__function_set__')
+    __function_sets__ = {}
 
     def __init__(self, obj, **kwargs):
         """
@@ -32,16 +32,16 @@ class MObjectWrapper(with_metaclass(ABCMeta, object)):
         :rtype: None
         """
 
-        # Check if this class has already been initialized
+        # Check if instance has already been initialized
         #
-        if self.isInitialized():
+        if not self.isInitialized():
 
-            return
+            self.__handle__ = dagutils.getMObjectHandle(obj)
+            self.__function_set__ = self.findCompatibleFunctionSet(self.object())
 
-        # Declare class variable
+        # Call parent method
         #
-        self.__handle__ = dagutils.getMObjectHandle(obj)
-        self.__functionset__ = self.findCompatibleFunctionSet(self.object())
+        super(MObjectWrapper, self).__init__()
 
     def __hash__(self):
         """
@@ -129,7 +129,7 @@ class MObjectWrapper(with_metaclass(ABCMeta, object)):
 
         except AttributeError:
 
-            cls = super(MObjectWrapper, self).__getattribute__('__functionset__')
+            cls = super(MObjectWrapper, self).__getattribute__('__function_set__')
             func = super(MObjectWrapper, self).__getattribute__('object')
             functionSet = cls(func())
 
@@ -240,7 +240,7 @@ class MObjectWrapper(with_metaclass(ABCMeta, object)):
         :rtype: om.MFnDependencyNode
         """
 
-        return self.__functionset__.__call__(self.object())
+        return self.__function_set__.__call__(self.object())
 
     def weakReference(self):
         """
@@ -284,7 +284,7 @@ class MObjectWrapper(with_metaclass(ABCMeta, object)):
         # Check if this type has already been looked up
         #
         apiType = dependNode.apiType()
-        functionSet = cls.__functionsets__.get(apiType, None)
+        functionSet = cls.__function_sets__.get(apiType, None)
 
         if functionSet is not None:
 
@@ -295,7 +295,7 @@ class MObjectWrapper(with_metaclass(ABCMeta, object)):
         functionSets = [x for x in dagutils.iterFunctionSets() if x().hasObj(dependNode)]
         functionSets.sort(key=lambda x: len(inspect.getmro(x)))
 
-        cls.__functionsets__[apiType] = functionSets[-1]
+        cls.__function_sets__[apiType] = functionSets[-1]
 
-        return cls.__functionsets__[apiType]
+        return cls.__function_sets__[apiType]
     # endregion

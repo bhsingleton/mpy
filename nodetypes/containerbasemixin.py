@@ -91,11 +91,11 @@ class ContainerBaseMixin(dependencymixin.DependencyMixin):
         #
         if self.hasHyperLayout():
 
-            return self.pyFactory(self.hyperLayout)
+            return self.nodeManager(self.hyperLayout)
 
         else:
 
-            hyperLayout = self.pyFactory.createNode('hyperLayout')
+            hyperLayout = self.nodeManager.createNode('hyperLayout')
             self.hyperLayout = hyperLayout.object()
 
             return hyperLayout
@@ -299,7 +299,7 @@ class ContainerBaseMixin(dependencymixin.DependencyMixin):
 
         if publishedNodeInfo.hasPublishedNode():
 
-            return self.pyFactory(publishedNodeInfo.publishedNode())
+            return self.nodeManager(publishedNodeInfo.publishedNode())
 
         else:
 
@@ -319,7 +319,7 @@ class ContainerBaseMixin(dependencymixin.DependencyMixin):
 
         if publishedNodeInfo.hasPublishedNode():
 
-            return self.pyFactory(publishedNodeInfo.publishedJoint())
+            return self.nodeManager(publishedNodeInfo.publishedJoint())
 
         else:
 
@@ -411,7 +411,7 @@ class ContainerBaseMixin(dependencymixin.DependencyMixin):
 
             if node.hasFn(om.MFn.kContainerBase) and partialName == 'publishedNode':
 
-                return self.pyFactory(node)
+                return self.nodeManager(node)
 
             else:
 
@@ -472,7 +472,7 @@ class ContainerBaseMixin(dependencymixin.DependencyMixin):
         #
         for publishedNodeInfo in self.iterPublishedNodeInfo(skipEmptyElements=True):
 
-            yield self.pyFactory(publishedNodeInfo.publishedNode())
+            yield self.nodeManager(publishedNodeInfo.publishedNode())
 
     def publishedJoints(self):
         """
@@ -494,7 +494,7 @@ class ContainerBaseMixin(dependencymixin.DependencyMixin):
         #
         for publishedNodeInfo in self.iterPublishedNodeInfo(skipEmptyElements=True):
 
-            yield self.pyFactory(publishedNodeInfo.publishedJoint())
+            yield self.nodeManager(publishedNodeInfo.publishedJoint())
 
     def getPublishedNodeInfo(self, index):
         """
