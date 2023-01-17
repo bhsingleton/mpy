@@ -10,12 +10,8 @@ log.setLevel(logging.INFO)
 
 class BoneGometryMixin(locatormixin.LocatorMixin):
     """
-    Overload of LocatorMixin that interfaces with bone geometry shapes.
+    Overload of `LocatorMixin` that interfaces with bone geometry nodes.
     """
-
-    # region Dunderscores
-    __plugin__ = 'boneGeometry'
-    # endregion
 
     # region Attributes
     width = mpyattribute.MPyAttribute('width')
@@ -35,4 +31,8 @@ class BoneGometryMixin(locatormixin.LocatorMixin):
     backFinStartTaper = mpyattribute.MPyAttribute('backFinStartTaper')
     backFinEndTaper = mpyattribute.MPyAttribute('backFinEndTaper')
     objectMatrix = mpyattribute.MPyAttribute('objectMatrix')
+    # endregion
+
+    # region Dunderscores
+    __plugin__ = 'boneGeometry'
     # endregion

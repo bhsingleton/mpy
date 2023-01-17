@@ -9,11 +9,11 @@ log.setLevel(logging.INFO)
 
 class DeformerMixin(dependencymixin.DependencyMixin):
     """
-    Overload of DependencyMixin used to interface with deformer nodes inside the scene file.
+    Overload of `DependencyMixin` that interfaces with deformer nodes.
     """
 
     # region Dunderscores
-    __apitype__ = om.MFn.kGeometryFilt
+    __api_type__ = om.MFn.kGeometryFilt
 
     def __len__(self):
         """

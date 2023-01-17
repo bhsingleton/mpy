@@ -11,11 +11,11 @@ log.setLevel(logging.INFO)
 
 class NurbsCurveMixin(shapemixin.ShapeMixin):
     """
-    Overload of `ShapeMixin` used to interface with curve nodes inside the scene file.
+    Overload of `ShapeMixin` that interfaces with nurbs curve nodes.
     """
 
     # region Dunderscores
-    __apitype__ = (om.MFn.kNurbsCurve, om.MFn.kBezierCurve)
+    __api_type__ = (om.MFn.kNurbsCurve, om.MFn.kBezierCurve)
     # endregion
 
     # region Attributes

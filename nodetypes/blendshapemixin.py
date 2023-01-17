@@ -9,11 +9,11 @@ log.setLevel(logging.INFO)
 
 class BlendShapeMixin(deformermixin.DeformerMixin):
     """
-    Overload of DeformerMixin class used to interface with blendshape nodes.
+    Overload of `DeformerMixin` that interfaces with blendshape deformers.
     """
 
     # region Dunderscores
-    __apitype__ = (om.MFn.kBlendShape, om.MFn.kPluginBlendShape)
+    __api_type__ = (om.MFn.kBlendShape, om.MFn.kPluginBlendShape)
     # endregion
 
     # region Methods
@@ -270,7 +270,7 @@ class GeometryTarget(object):
         #
         if meshData.hasFn(om.MFn.kMesh):
 
-            mesh = self.blendShape.nodeManager(meshData)
+            mesh = self.blendShape.scene(meshData)
             otherPlug = mesh.findPlug('worldMesh[%s]' % mesh.instanceNumber())
 
             mesh.connectPlugs(otherPlug, plug, force=True)

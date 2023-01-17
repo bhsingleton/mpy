@@ -1,7 +1,7 @@
-import math
-
 from maya import cmds as mc
 from maya.api import OpenMaya as om
+from dcc.naming import namingutils
+from dcc.python import stringutils
 from dcc.maya.libs import shapeutils, transformutils
 from . import dagmixin
 from .. import mpyattribute
@@ -14,7 +14,7 @@ log.setLevel(logging.INFO)
 
 class TransformMixin(dagmixin.DagMixin):
     """
-    Overload of DagMixin class used to interface with transform nodes.
+    Overload of `DagMixin` that interfaces with transform nodes.
     """
 
     # region Attributes
@@ -32,7 +32,7 @@ class TransformMixin(dagmixin.DagMixin):
     # endregion
 
     # region Dunderscores
-    __apitype__ = (om.MFn.kTransform, om.MFn.kPluginTransformNode)
+    __api_type__ = (om.MFn.kTransform, om.MFn.kPluginTransformNode)
     # endregion
 
     # region Methods
@@ -70,17 +70,15 @@ class TransformMixin(dagmixin.DagMixin):
             matrix = worldMatrix * self.exclusiveMatrixInverse()
             self.setMatrix(matrix, skipScale=True)
 
-    def translation(self, space=om.MSpace.kTransform, context=om.MDGContext.kNormal):
+    def translation(self, space=om.MSpace.kTransform):
         """
         Returns the transform's translation component.
-        A custom MDGContext can be supplied to sample the translation at a different time.
 
         :type space: int
-        :type context: om.MDGContext
         :rtype: om.MVector
         """
 
-        return transformutils.getTranslation(self.dagPath(), space=space, context=context)
+        return transformutils.getTranslation(self.dagPath(), space=space)
 
     def setTranslation(self, translation, space=om.MSpace.kTransform):
         """
@@ -113,26 +111,23 @@ class TransformMixin(dagmixin.DagMixin):
 
         transformutils.translateTo(self.dagPath(), position)
 
-    def rotateOrder(self, context=om.MDGContext.kNormal):
+    def rotateOrder(self):
         """
         Returns the transform's rotation order.
 
-        :type context: om.MDGContext
         :rtype: int
         """
 
-        return transformutils.getRotationOrder(self.dagPath(), context=context)
+        return transformutils.getRotationOrder(self.dagPath())
 
-    def eulerRotation(self, context=om.MDGContext.kNormal):
+    def eulerRotation(self):
         """
         Returns the transform's rotation component.
-        A custom MDGContext can be supplied to sample the rotation at a different time.
 
-        :type context: om.MDGContext
         :rtype: om.MEulerRotation
         """
 
-        return transformutils.getEulerRotation(self.dagPath(), context=context)
+        return transformutils.getEulerRotation(self.dagPath())
 
     def setEulerRotation(self, eulerRotation):
         """
@@ -164,15 +159,42 @@ class TransformMixin(dagmixin.DagMixin):
 
         transformutils.rotateTo(self.dagPath(), eulerRotation)
 
-    def scale(self, context=om.MDGContext.kNormal):
+    def preEulerRotation(self):
+        """
+        Returns the transform's pre-euler rotation component.
+
+        :rtype: om.MEulerRotation
+        """
+
+        return om.MEulerRotation()
+
+    def setPreEulerRotation(self, eulerRotation):
+        """
+        Updates the transform's pre-euler rotation component.
+
+        :type eulerRotation: om.MEulerRotation
+        :rtype: None
+        """
+
+        pass
+
+    def resetPreEulerRotation(self):
+        """
+        Resets the transform's pre-euler rotation component back to zero.
+
+        :rtype: None
+        """
+
+        self.setPreEulerRotation(om.MEulerRotation())
+
+    def scale(self):
         """
         Returns the transform's scale component.
 
-        :type context: om.MDGContext
         :rtype: List[float, float, float]
         """
 
-        return transformutils.getScale(self.dagPath(), context=context)
+        return transformutils.getScale(self.dagPath())
 
     def setScale(self, scale):
         """
@@ -249,14 +271,33 @@ class TransformMixin(dagmixin.DagMixin):
 
     def resetMatrix(self):
         """
-        Resets all the transform components.
+        Resets all the transform components back to zero.
 
         :rtype: None
         """
 
         self.resetTranslation()
+        self.resetPreEulerRotation()
         self.resetEulerRotation()
         self.resetScale()
+
+    def parentMatrix(self):
+        """
+        Returns the parent matrix for this transform.
+
+        :rtype: om.MMatrix
+        """
+
+        return transformutils.getParentMatrix(self.dagPath())
+
+    def parentInverseMatrix(self):
+        """
+        Returns the parent inverse-matrix for this transform.
+
+        :rtype: om.MMatrix
+        """
+
+        return self.parentMatrix().inverse()
 
     def worldMatrix(self):
         """
@@ -265,7 +306,7 @@ class TransformMixin(dagmixin.DagMixin):
         :rtype: om.MMatrix
         """
 
-        return self.getAttr('worldMatrix[%s]' % self.instanceNumber())
+        return transformutils.getWorldMatrix(self.dagPath())
 
     def worldInverseMatrix(self):
         """
@@ -320,47 +361,7 @@ class TransformMixin(dagmixin.DagMixin):
 
         transformutils.copyTransform(self.dagPath(), transform.dagPath())
 
-    def mirrorTransform(self):
-        """
-        Mirrors the transform components to this controller's sibling.
-
-        :rtype: None
-        """
-
-        # Check if this is a controller
-        #
-        if not self.isController():
-
-            return
-
-        # Get controller sibling
-        #
-        controllerTag = self.controllerTag()
-        sibling = controllerTag.sibling()
-
-        if sibling is None:
-
-            return
-
-        # Mirror translation
-        #
-        translation = self.translation()
-        translation.x *= (-1.0 * controllerTag.mirrorTranslateX)
-        translation.y *= (-1.0 * controllerTag.mirrorTranslateY)
-        translation.z *= (-1.0 * controllerTag.mirrorTranslateZ)
-
-        transformutils.setTranslation(sibling.dagPath(), translation)
-
-        # Mirror rotation
-        #
-        eulerRotation = self.eulerRotation()
-        eulerRotation.x *= (-1.0 * controllerTag.mirrorRotateX)
-        eulerRotation.y *= (-1.0 * controllerTag.mirrorRotateY)
-        eulerRotation.z *= (-1.0 * controllerTag.mirrorRotateZ)
-
-        transformutils.setEulerRotation(sibling.dagPath(), eulerRotation)
-
-    def freezeTransform(self, includeTranslate=True, includeRotate=True, includeScale=True):
+    def freezeTransform(self, includeTranslate=True, includeRotate=True, includeScale=False):
         """
         Pushes the transform's local matrix into the parent offset matrix.
 
@@ -395,7 +396,7 @@ class TransformMixin(dagmixin.DagMixin):
         :rtype: list[om.MObject]
         """
 
-        filePath = self.nodeManager.getShapeTemplate(shape)
+        filePath = self.scene.getShapeTemplate(shape)
         return shapeutils.applyShapeTemplate(filePath, parent=self.object(), **kwargs)
 
     def addLocator(self, *args, **kwargs):
@@ -410,7 +411,7 @@ class TransformMixin(dagmixin.DagMixin):
         # Create point helper shape
         #
         name = '{name}Shape'.format(name=self.name())
-        locator = self.nodeManager.createNode('locator', name=name, parent=self)
+        locator = self.scene.createNode('locator', name=name, parent=self)
 
         # Check if local position was supplied
         #
@@ -447,7 +448,7 @@ class TransformMixin(dagmixin.DagMixin):
         # Create point helper shape
         #
         name = '{name}Shape'.format(name=self.name())
-        pointHelper = self.nodeManager.createNode('pointHelper', name=name, parent=self)
+        pointHelper = self.scene.createNode('pointHelper', name=name, parent=self)
 
         # Check if any shapes were supplied
         #
@@ -459,8 +460,7 @@ class TransformMixin(dagmixin.DagMixin):
             #
             for attribute in pointHelper.iterAttr(category='Drawable'):
 
-                plug = om.MPlug(pointHelper.object(), attribute)
-                plug.setBool(False)
+                pointHelper[attribute].setBool(False)
 
             # Iterate through shape names
             #
@@ -545,7 +545,7 @@ class TransformMixin(dagmixin.DagMixin):
     def addGlobalScaleAttribute(self):
         """
         Adds a global scale attribute to this transform.
-        Once done all of the scale attributes will be hidden.
+        Once done all the scale attributes will be hidden.
 
         :rtype: None
         """
@@ -594,7 +594,7 @@ class TransformMixin(dagmixin.DagMixin):
         Returns the controller tag for this transform node.
         This method will raise a type error if multiple tags are found!
 
-        :rtype: mpynode.nodetypes.controllermixin.ControllerMixin
+        :rtype: mpy.nodetypes.controllermixin.ControllerMixin
         """
 
         # Collect all controller tags
@@ -619,7 +619,7 @@ class TransformMixin(dagmixin.DagMixin):
 
             if node.hasFn(om.MFn.kControllerTag) and plugName == 'controllerObject':
 
-                return self.nodeManager(node)
+                return self.scene(node)
 
             else:
 
@@ -632,7 +632,7 @@ class TransformMixin(dagmixin.DagMixin):
         Tags this transform node as a controller.
         If this transform is already tagged then that controller will be returned.
 
-        :rtype: mpynode.nodetypes.controllermixin.ControllerMixin
+        :rtype: mpy.nodetypes.controllermixin.ControllerMixin
         """
 
         # Check for redundancy
@@ -645,12 +645,8 @@ class TransformMixin(dagmixin.DagMixin):
 
         # Create new controller tag
         #
-        controllerTag = self.nodeManager.createNode('controller', name='{nodeName}_tag'.format(nodeName=self.name()))
-
+        controllerTag = self.scene.createNode('controller', name='{nodeName}_tag'.format(nodeName=self.name()))
         controllerTag.controllerObject = self.object()
-        controllerTag.side = kwargs.get('side', 2)
-        controllerTag.type = kwargs.get('type', 0)
-        controllerTag.otherType = kwargs.get('otherType', '')
 
         # Check if parent was supplied
         #
@@ -669,6 +665,125 @@ class TransformMixin(dagmixin.DagMixin):
             controllerTag.children = [child.object() for child in children]
 
         return controllerTag
+
+    def findOppositeTransform(self):
+        """
+        Finds the transform opposite to this one.
+        If no opposite is found then this transform is returned instead!
+
+        :rtype: TransformMixin
+        """
+
+        name = self.name(includeNamespace=True)
+        mirrorName = namingutils.mirrorName(name)
+
+        if mc.objExists(mirrorName):
+
+            return self.scene(mirrorName)
+
+        else:
+
+            return self
+
+    def detectMirroring(self):
+        """
+        Detects the mirror settings for this transform.
+        Each transform component uses the keyword pattern: mirrorTranslateX, etc
+
+        :rtype: bool
+        """
+
+        # Compare parent matrices
+        #
+        matrix = self.parentMatrix()
+        xAxis, yAxis, zAxis, pos = transformutils.breakMatrix(matrix, normalize=True)
+        mirrorXAxis, mirrorYAxis, mirrorZAxis = list(map(transformutils.mirrorVector, (xAxis, yAxis, zAxis)))
+
+        otherTransform = self.findOppositeTransform()
+        otherMatrix = otherTransform.parentMatrix()
+        otherXAxis, otherYAxis, otherZAxis, otherPos = transformutils.breakMatrix(otherMatrix, normalize=True)
+
+        mirrorTranslateX = (mirrorXAxis * otherXAxis) < 0.0
+        mirrorTranslateY = (mirrorYAxis * otherYAxis) < 0.0
+        mirrorTranslateZ = (mirrorZAxis * otherZAxis) < 0.0
+
+        # Compose mirror settings and update user properties
+        #
+        settings = {
+            'mirrorTranslateX': mirrorTranslateX,
+            'mirrorTranslateY': mirrorTranslateY,
+            'mirrorTranslateZ': mirrorTranslateZ,
+            'mirrorRotateX': not mirrorTranslateX,
+            'mirrorRotateY': not mirrorTranslateY,
+            'mirrorRotateZ': not mirrorTranslateZ,
+        }
+
+        log.info('Detecting "%s" > "%s" mirror settings: %s' % (self.name(), otherTransform.name(), settings))
+        self.userProperties.update(settings)
+
+        return True
+
+    def mirrorTransform(self, pull=False):
+        """
+        Mirrors this transform to the opposite node.
+
+        :type pull: bool
+        :rtype: None
+        """
+
+        # Get opposite transform
+        #
+        otherTransform = self.findOppositeTransform()
+
+        if pull:
+
+            # Iterate through channel-box plugs
+            #
+            for plug in otherTransform.iterPlugs(channelBox=True):
+
+                # Get mirror flag for plug
+                #
+                plugName = plug.partialName(useLongNames=True)
+                mirrorFlag = 'mirror{name}'.format(name=stringutils.pascalize(plugName))
+
+                mirrorEnabled = self.userProperties.get(mirrorFlag, False)
+
+                # Inverse value and update other node
+                #
+                value = otherTransform.getAttr(plug)
+                value *= -1.0 if mirrorEnabled else 1.0
+
+                self.setAttr(plugName, value)
+
+        else:
+
+            # Iterate through channel-box plugs
+            #
+            for plug in self.iterPlugs(channelBox=True):
+
+                # Get mirror flag for plug
+                #
+                plugName = plug.partialName(useLongNames=True)
+                mirrorFlag = 'mirror{name}'.format(name=stringutils.pascalize(plugName))
+
+                mirrorEnabled = self.userProperties.get(mirrorFlag, False)
+
+                # Inverse value and update other node
+                #
+                value = self.getAttr(plug)
+                value *= -1.0 if mirrorEnabled else 1.0
+
+                otherTransform.setAttr(plugName, value)
+
+    def mirrorAnimation(self, pull=False):
+        """
+        Mirrors this transform's animation to the opposite node.
+
+        :type pull: bool
+        :rtype: None
+        """
+
+        pass
 
     def constraintCount(self):
         """
@@ -693,7 +808,7 @@ class TransformMixin(dagmixin.DagMixin):
         Retrieves a list of constraints that are driving this transform.
 
         :type apiType: int
-        :rtype: list[mpynode.nodetypes.constraintmixin.ConstraintMixin]
+        :rtype: List[mpy.nodetypes.constraintmixin.ConstraintMixin]
         """
 
         return self.dependsOn(apiType=apiType)
@@ -701,17 +816,17 @@ class TransformMixin(dagmixin.DagMixin):
     def addConstraint(self, typeName, targets, **kwargs):
         """
         Adds a constraint node to this transform.
-        Any constrained attributes can be skipped by supplying them as keyword arguments: skipTranslateX
+        Any constrained attributes can be skipped by supplying them as keyword arguments: skipTranslateX, etc
 
         :type typeName: str
-        :type targets: list[TransformMixin]
+        :type targets: List[TransformMixin]
         :key maintainOffset: bool
-        :rtype: mpynode.nodetypes.constraintmixin.ConstraintMixin
+        :rtype: mpy.nodetypes.constraintmixin.ConstraintMixin
         """
 
         # Create constraint and assign targets
         #
-        constraint = self.nodeManager.createNode(typeName)
+        constraint = self.scene.createNode(typeName)
         constraint.setConstraintObject(self, **kwargs)
         constraint.addTargets(targets)
 

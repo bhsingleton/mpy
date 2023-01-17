@@ -14,14 +14,14 @@ log.setLevel(logging.INFO)
 class MPyNode(with_metaclass(ABCMeta, mobjectwrapper.MObjectWrapper)):
     """
     Overload of MObjectWrapper used as the base class for all Maya node interfaces.
-    This class supports a range of constructor arguments that are outlined under the __accepts__ attribute.
-    All derived classes should overload the __apitype__ attribute, that way they can be registered by MPyFactory!
+    This class supports a range of constructor arguments that are outlined under the `__accepts__` dunderscore.
+    All derived classes should overload the `__api_type__` dunderscore, that way they can be registered by the `MPyFactory` class!
     """
 
     # region Dunderscores
     __accepts__ = (str, om.MObjectHandle, om.MObject, om.MDagPath)
-    __apitype__ = om.MFn.kBase
-    __pyfactory__ = None
+    __api_type__ = om.MFn.kBase
+    __scene__ = None
     __instances__ = {}
 
     def __new__(cls, obj, **kwargs):
@@ -64,7 +64,7 @@ class MPyNode(with_metaclass(ABCMeta, mobjectwrapper.MObjectWrapper)):
 
     # region Properties
     @classproperty
-    def nodeManager(cls):
+    def scene(cls):
         """
         Returns the node factory class.
         It's a bit hacky but this way we can bypass cyclical import errors.
@@ -74,12 +74,12 @@ class MPyNode(with_metaclass(ABCMeta, mobjectwrapper.MObjectWrapper)):
 
         # Check if factory exists
         #
-        if cls.__pyfactory__ is None:
+        if cls.__scene__ is None:
 
             from . import mpyfactory
-            cls.__pyfactory__ = mpyfactory.MPyFactory.getInstance(asWeakReference=True)
+            cls.__scene__ = mpyfactory.MPyFactory.getInstance(asWeakReference=True)
 
-        return cls.__pyfactory__()
+        return cls.__scene__()
     # endregion
 
     # region Methods
@@ -100,7 +100,7 @@ class MPyNode(with_metaclass(ABCMeta, mobjectwrapper.MObjectWrapper)):
 
         # Check api type
         #
-        apiType = cls.__apitype__
+        apiType = cls.__api_type__
 
         if isinstance(apiType, int):
 
@@ -156,7 +156,7 @@ class MPyNode(with_metaclass(ABCMeta, mobjectwrapper.MObjectWrapper)):
             # Be sure to replace the base class with the correct type!
             #
             instance = super(MPyNode, cls).__new__(cls)
-            instance.__class__ = cls.nodeManager.getClass(dependNode)
+            instance.__class__ = cls.scene.getClass(dependNode)
 
             cls.__instances__[hashCode] = instance
             return instance
@@ -173,7 +173,7 @@ class MPyNode(with_metaclass(ABCMeta, mobjectwrapper.MObjectWrapper)):
         :rtype: MPyNode
         """
 
-        return cls.nodeManager.createNode(typeName, name=name, parent=parent)
+        return cls.scene.createNode(typeName, name=name, parent=parent)
 
     def hasExtension(self):
         """
@@ -182,7 +182,7 @@ class MPyNode(with_metaclass(ABCMeta, mobjectwrapper.MObjectWrapper)):
         :rtype: bool
         """
 
-        return self.nodeManager.isExtension(self.object())
+        return self.scene.isExtension(self.object())
 
     def addExtension(self, extensionClass):
         """
@@ -200,7 +200,7 @@ class MPyNode(with_metaclass(ABCMeta, mobjectwrapper.MObjectWrapper)):
 
         # Reinitialize instance
         #
-        self.__class__ = self.nodeManager.createExtensionClass(self.__class__, extensionClass)
+        self.__class__ = self.scene.createExtensionClass(self.__class__, extensionClass)
         self.__init__(self.object())
 
     def removeExtension(self):
@@ -225,7 +225,7 @@ class MPyNode(with_metaclass(ABCMeta, mobjectwrapper.MObjectWrapper)):
 
         # Update class
         #
-        self.__class__ = self.nodeManager.getClass(self.object())
+        self.__class__ = self.scene.getClass(self.object())
 
     def delete(self):
         """

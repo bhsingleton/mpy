@@ -11,11 +11,11 @@ log.setLevel(logging.INFO)
 
 class PointConstraintMixin(constraintmixin.ConstraintMixin):
     """
-    Overload of ConstraintMixin that interfaces with point constraints.
+    Overload of `ConstraintMixin` that interfaces with point constraints.
     """
 
     # region Dunderscores
-    __apitype__ = om.MFn.kPointConstraint
+    __api_type__ = om.MFn.kPointConstraint
 
     __targets__ = {
         'targetTranslateX': 'translateX',

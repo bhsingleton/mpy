@@ -12,11 +12,11 @@ log.setLevel(logging.INFO)
 
 class ReferenceMixin(dependencymixin.DependencyMixin):
     """
-    Overload of DependencyMixin used to interface with reference nodes.
+    Overload of `DependencyMixin` that interfaces with reference nodes.
     """
 
     # region Dunderscores
-    __apitype__ = om.MFn.kReference
+    __api_type__ = om.MFn.kReference
 
     def __contains__(self, item):
         """
@@ -91,7 +91,7 @@ class ReferenceMixin(dependencymixin.DependencyMixin):
 
             # Initialize node interface
             #
-            return self.nodeManager(found)
+            return self.scene(found)
 
         elif isinstance(found, list):
 
@@ -106,7 +106,7 @@ class ReferenceMixin(dependencymixin.DependencyMixin):
 
             elif numNodes == 1:
 
-                return self.nodeManager(nodes[0])
+                return self.scene(nodes[0])
 
             else:
 
@@ -146,7 +146,7 @@ class ReferenceMixin(dependencymixin.DependencyMixin):
         :rtype: Reference
         """
 
-        return self.nodeManager(self.functionSet().parentReference())
+        return self.scene(self.functionSet().parentReference())
 
     def reload(self):
         """

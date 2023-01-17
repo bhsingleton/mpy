@@ -11,11 +11,11 @@ log.setLevel(logging.INFO)
 
 class DisplayLayerMixin(dependencymixin.DependencyMixin):
     """
-    Overload of DependencyMixin that interfaces with display layers.
+    Overload of `DependencyMixin` that interfaces with display layers.
     """
 
     # region Dunderscores
-    __apitype__ = om.MFn.kDisplayLayer
+    __api_type__ = om.MFn.kDisplayLayer
 
     def __contains__(self, item):
         """

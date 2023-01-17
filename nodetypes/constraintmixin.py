@@ -16,11 +16,11 @@ log.setLevel(logging.INFO)
 
 class ConstraintMixin(transformmixin.TransformMixin):
     """
-    Overload of `TransformMixin` used to interface with constraint nodes.
+    Overload of `TransformMixin` that interfaces with constraint nodes.
     """
 
     # region Dunderscores
-    __apitype__ = (om.MFn.kConstraint, om.MFn.kPluginConstraintNode)
+    __api_type__ = (om.MFn.kConstraint, om.MFn.kPluginConstraintNode)
     __targets__ = {}  # destination-source pairs
     __inputs__ = {}  # destination-source pairs
     __outputs__ = {}  # source-destination pairs
@@ -189,7 +189,7 @@ class ConstraintMixin(transformmixin.TransformMixin):
 
         # Iterate through required target attributes
         #
-        target = self.nodeManager(target)
+        target = self.scene(target)
         index = self.nextAvailableTargetIndex()
 
         connections = kwargs.get('connections', self.__targets__)
@@ -533,7 +533,7 @@ class ConstraintTarget(object):
 
         if not source.isNull:
 
-            return self.constraint.nodeManager(source.node())
+            return self.constraint.scene(source.node())
 
         else:
 

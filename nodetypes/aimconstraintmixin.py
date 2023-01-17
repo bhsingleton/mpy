@@ -13,11 +13,11 @@ log.setLevel(logging.INFO)
 
 class AimConstraintMixin(constraintmixin.ConstraintMixin):
     """
-    Overload of ConstraintMixin that interfaces with orient constraints.
+    Overload of `ConstraintMixin` that interfaces with orient constraints.
     """
 
     # region Dunderscores
-    __apitype__ = om.MFn.kAimConstraint
+    __api_type__ = om.MFn.kAimConstraint
 
     __targets__ = {
         'targetTranslateX': 'translateX',
@@ -97,7 +97,7 @@ class AimConstraintMixin(constraintmixin.ConstraintMixin):
 
         if not source.isNull():
 
-            return self.nodeManager(source.node())
+            return self.scene(source.node())
 
         else:
 

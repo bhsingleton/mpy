@@ -18,7 +18,7 @@ log.setLevel(logging.INFO)
 
 class MeshComponent(collections_abc.MutableSequence):
     """
-    Overload of MutableSequence used to manipulate single indexed components.
+    Overload of `MutableSequence` used to manipulate single indexed components.
     For performance reasons this class will initialize with a fixed dictionary size.
     Any values appended on will update index keys with a positive boolean for faster lookup speeds.
     Please be aware that mesh iterators cannot be created outside the scope of the function they are operating within!
@@ -1169,7 +1169,7 @@ class MeshComponent(collections_abc.MutableSequence):
 
 class MeshVertexComponent(MeshComponent):
     """
-    Overload of MeshComponent that interfaces with mesh vertex components.
+    Overload of `MeshComponent` that interfaces with mesh vertex components.
     """
 
     # region Dunderscores
@@ -1287,7 +1287,7 @@ class MeshVertexComponent(MeshComponent):
 
 class MeshEdgeComponent(MeshComponent):
     """
-    Overload of MeshComponent that interfaces with mesh edge components.
+    Overload of `MeshComponent` that interfaces with mesh edge components.
     """
 
     # region Dunderscores
@@ -1415,7 +1415,7 @@ class MeshEdgeComponent(MeshComponent):
 
 class MeshPolygonComponent(MeshComponent):
     """
-    Overload of MeshComponent that interfaces with mesh polygon components.
+    Overload of `MeshComponent` that interfaces with mesh polygon components.
     """
 
     # region Dunderscores
@@ -1539,11 +1539,11 @@ class MeshPolygonComponent(MeshComponent):
 
 class MeshMixin(shapemixin.ShapeMixin):
     """
-    Overload of ShapeMixin used to interface with mesh nodes.
+    Overload of `ShapeMixin` that interfaces with mesh nodes.
     """
 
     # region Dunderscores
-    __apitype__ = om.MFn.kMesh
+    __api_type__ = om.MFn.kMesh
 
     __components__ = {
         om.MFn.kMeshVertComponent: MeshVertexComponent,

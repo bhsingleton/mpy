@@ -12,12 +12,8 @@ log.setLevel(logging.INFO)
 
 class JointMixin(transformmixin.TransformMixin):
     """
-    Overload of TransformMixin class used to interface with joint nodes.
+    Overload of `TransformMixin` that interfaces with joint nodes.
     """
-
-    # region Dunderscores
-    __apitype__ = om.MFn.kJoint
-    # endregion
 
     # region Attributes
     drawStyle = mpyattribute.MPyAttribute('drawStyle')
@@ -37,47 +33,36 @@ class JointMixin(transformmixin.TransformMixin):
     drawLabel = mpyattribute.MPyAttribute('drawLabel')
     # endregion
 
+    # region Dunderscores
+    __api_type__ = om.MFn.kJoint
+    # endregion
+
     # region Methods
-    def jointOrient(self):
+    def preEulerRotation(self):
         """
-        Returns the joint orient component.
+        Returns the transform's pre-euler rotation component.
 
         :rtype: om.MEulerRotation
         """
 
         return transformutils.getJointOrient(self.dagPath())
 
-    def setJointOrient(self, jointOrient):
+    def setPreEulerRotation(self, eulerRotation):
         """
-        Updates the joint orient component.
+        Updates the transform's pre-euler rotation component.
 
-        :type jointOrient: om.MEulerRotation
+        :type eulerRotation: om.MEulerRotation
         :rtype: None
         """
 
-        transformutils.setJointOrient(self.dagPath(), jointOrient)
+        transformutils.setJointOrient(self.dagPath(), eulerRotation)
 
-    def resetJointOrient(self):
+    def resetPreEulerRotation(self):
         """
-        Resets the joint orient component.
+        Resets the transform's pre-euler rotation component.
 
         :rtype: None
         """
 
         transformutils.resetJointOrient(self.dagPath())
-
-    def resetTransform(self):
-        """
-        Resets all of the transform components including joint orient.
-
-        :rtype: None
-        """
-
-        # Call parent method
-        #
-        super(JointMixin, self).resetTransform()
-
-        # Reset joint orient
-        #
-        self.resetJointOrient()
     # endregion

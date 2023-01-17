@@ -12,11 +12,11 @@ log.setLevel(logging.INFO)
 
 class ScaleConstraintMixin(constraintmixin.ConstraintMixin):
     """
-    Overload of ConstraintMixin that interfaces with orient constraints.
+    Overload of `ConstraintMixin` that interfaces with scale constraints.
     """
 
     # region Dunderscores
-    __apitype__ = om.MFn.kScaleConstraint
+    __api_type__ = om.MFn.kScaleConstraint
 
     __targets__ = {
         'targetScaleX': 'scaleX',

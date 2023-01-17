@@ -12,11 +12,11 @@ log.setLevel(logging.INFO)
 
 class ParentConstraintMixin(constraintmixin.ConstraintMixin):
     """
-    Overload of ConstraintMixin that interfaces with orient constraints.
+    Overload of `ConstraintMixin` that interfaces with parent constraints.
     """
 
     # region Dunderscores
-    __apitype__ = om.MFn.kParentConstraint
+    __api_type__ = om.MFn.kParentConstraint
 
     __targets__ = {
         'targetTranslateX': 'translateX',

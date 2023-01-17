@@ -13,11 +13,11 @@ log.setLevel(logging.INFO)
 
 class LocatorMixin(shapemixin.ShapeMixin):
     """
-    Overload of ShapeMixin used to interface with locators inside the scene file.
+    Overload of `ShapeMixin` that interfaces with locator nodes.
     """
 
     # region Dunderscores
-    __apitype__ = (om.MFn.kLocator, om.MFn.kPluginLocatorNode)
+    __api_type__ = (om.MFn.kLocator, om.MFn.kPluginLocatorNode)
     # endregion
 
     # region Attributes

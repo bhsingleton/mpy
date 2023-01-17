@@ -10,11 +10,11 @@ log.setLevel(logging.INFO)
 
 class PoleVectorConstraintMixin(constraintmixin.ConstraintMixin):
     """
-    Overload of ConstraintMixin that interfaces with point constraints.
+    Overload of `ConstraintMixin` that interfaces with point constraints.
     """
 
     # region Dunderscores
-    __apitype__ = om.MFn.kPoleVectorConstraint
+    __api_type__ = om.MFn.kPoleVectorConstraint
 
     __targets__ = {
         'targetTranslateX': 'translateX',
@@ -70,7 +70,7 @@ class PoleVectorConstraintMixin(constraintmixin.ConstraintMixin):
 
         # Connect input attributes
         #
-        startJoint = self.nodeManager(constraintObject.getAttr('startJoint'))
+        startJoint = self.scene(constraintObject.getAttr('startJoint'))
         startJoint.connectPlugs('translateX', self['constraintRotatePivotX'])
         startJoint.connectPlugs('translateY', self['constraintRotatePivotY'])
         startJoint.connectPlugs('translateZ', self['constraintRotatePivotZ'])

@@ -11,11 +11,11 @@ log.setLevel(logging.INFO)
 
 class ShapeMixin(dagmixin.DagMixin):
     """
-    Overload of `DagMixin` used to interface with shape nodes inside the scene file.
+    Overload of `DagMixin` that interfaces with shape nodes.
     """
 
     # region Dunderscores
-    __apitype__ = om.MFn.kShape
+    __api_type__ = om.MFn.kShape
     # endregion
 
     # region Attributes
@@ -35,7 +35,7 @@ class ShapeMixin(dagmixin.DagMixin):
         try:
 
             results = mc.deformer(self.fullPathName(), type=typeName)
-            return self.nodeManager.getNodeByName(results[-1])
+            return self.scene.getNodeByName(results[-1])
 
         except RuntimeError as exception:
 

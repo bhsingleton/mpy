@@ -11,17 +11,17 @@ log.setLevel(logging.INFO)
 
 class AbstractListMixin(dependencymixin.DependencyMixin):
     """
-    Overload of `DependencyMixin` that interfaces with `abstractList` nodes.
+    Overload of `DependencyMixin` that interfaces with list nodes.
     """
-
-    # region Dunderscores
-    __plugin__ = 'abstractList'
-    __value_attribute__ = None  # Used to initialize ListElement instances!
-    # endregion
 
     # region Attributes
     active = mpyattribute.MPyAttribute('active')
     average = mpyattribute.MPyAttribute('average')
+    # endregion
+
+    # region Dunderscores
+    __plugin__ = 'abstractList'
+    __value_attribute__ = None  # Used to initialize ListElement instances!
     # endregion
 
     # region Methods

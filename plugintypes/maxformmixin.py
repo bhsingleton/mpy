@@ -1,4 +1,7 @@
+import math
+
 from maya.api import OpenMaya as om
+from dcc.maya.libs import transformutils
 from .. import mpyattribute
 from ..nodetypes import transformmixin
 
@@ -10,18 +13,38 @@ log.setLevel(logging.INFO)
 
 class MaxformMixin(transformmixin.TransformMixin):
     """
-    Overload of TransformMixin that interfaces with expose transforms.
+    Overload of `TransformMixin` that interfaces with 3ds Max transforms.
     """
+
+    # region Attributes
+    preRotate = mpyattribute.MPyAttribute('preRotate')
+    preRotateX = mpyattribute.MPyAttribute('preRotateX')
+    preRotateY = mpyattribute.MPyAttribute('preRotateY')
+    preRotateZ = mpyattribute.MPyAttribute('preRotateZ')
+    transform = mpyattribute.MPyAttribute('transform')
+    translationPart = mpyattribute.MPyAttribute('translationPart')
+    rotationPart = mpyattribute.MPyAttribute('rotationPart')
+    scalePart = mpyattribute.MPyAttribute('scalePart')
+    # endregion
 
     # region Dunderscores
     __plugin__ = 'maxform'
     # endregion
 
-    # region Attributes
-    transform = mpyattribute.MPyAttribute('transform')
-    # endregion
-
     # region Methods
+    def preEulerRotation(self):
+        """
+        Returns the transform's pre-rotation component.
+
+        :rtype: om.MEulerRotation
+        """
+
+        xAngle = self.getAttr('preRotateX', convertUnits=False).asRadians()
+        yAngle = self.getAttr('preRotateY', convertUnits=False).asRadians()
+        zAngle = self.getAttr('preRotateZ', convertUnits=False).asRadians()
+
+        return om.MEulerRotation(xAngle, yAngle, zAngle)
+
     def getTMController(self):
         """
         Returns the transform controller for this node.
@@ -35,9 +58,64 @@ class MaxformMixin(transformmixin.TransformMixin):
 
         if not controller.isNull():
 
-            return self.nodeManager(controller)
+            return self.scene(controller)
 
         else:
 
             return None
+
+    def detectMirroring(self):
+        """
+        Detects the mirror settings for this transform.
+        Unlike the parent method, this overload takes the pre-rotation into consideration.
+
+        :rtype: bool
+        """
+
+        # Compare parent matrices for translate settings
+        # In 3ds Max translation values are still in parent space!
+        #
+        matrix = self.parentMatrix()
+        xAxis, yAxis, zAxis, pos = transformutils.breakMatrix(matrix, normalize=True)
+        mirrorXAxis, mirrorYAxis, mirrorZAxis = list(map(transformutils.mirrorVector, (xAxis, yAxis, zAxis)))
+
+        otherTransform = self.findOppositeTransform()
+        otherMatrix = otherTransform.parentMatrix()
+        otherXAxis, otherYAxis, otherZAxis, otherPos = transformutils.breakMatrix(otherMatrix, normalize=True)
+
+        mirrorTranslateX = (mirrorXAxis * otherXAxis) < 0.0
+        mirrorTranslateY = (mirrorYAxis * otherYAxis) < 0.0
+        mirrorTranslateZ = (mirrorZAxis * otherZAxis) < 0.0
+
+        # Compare parent matrices, again, but this time with pre-rotations for rotate settings
+        # In 3ds Max rotation values are in pre-rotation space!
+        #
+        preEulerRotation = self.preEulerRotation()
+        matrix = preEulerRotation.asMatrix() * self.parentMatrix()
+        xAxis, yAxis, zAxis, pos = transformutils.breakMatrix(matrix, normalize=True)
+        mirrorXAxis, mirrorYAxis, mirrorZAxis = list(map(transformutils.mirrorVector, (xAxis, yAxis, zAxis)))
+
+        otherPreEulerRotation = otherTransform.preEulerRotation()
+        otherMatrix = otherPreEulerRotation.asMatrix() * otherTransform.parentMatrix()
+        otherXAxis, otherYAxis, otherZAxis, otherPos = transformutils.breakMatrix(otherMatrix, normalize=True)
+
+        mirrorRotateX = (mirrorXAxis * otherXAxis) > 0.0
+        mirrorRotateY = (mirrorYAxis * otherYAxis) > 0.0
+        mirrorRotateZ = (mirrorZAxis * otherZAxis) > 0.0
+
+        # Compose mirror settings and update user properties
+        #
+        settings = {
+            'mirrorTranslateX': mirrorTranslateX,
+            'mirrorTranslateY': mirrorTranslateY,
+            'mirrorTranslateZ': mirrorTranslateZ,
+            'mirrorRotateX': mirrorRotateX,
+            'mirrorRotateY': mirrorRotateY,
+            'mirrorRotateZ': mirrorRotateZ,
+        }
+
+        log.info('Detecting "%s" > "%s" mirror settings: %s' % (self.name(), otherTransform.name(), settings))
+        self.userProperties.update(settings)
+
+        return True
     # endregion

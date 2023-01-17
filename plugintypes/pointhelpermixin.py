@@ -10,7 +10,7 @@ log.setLevel(logging.INFO)
 
 class PointHelperMixin(locatormixin.LocatorMixin):
     """
-    Overload of LocatorMixin that interfaces with bone geometry shapes.
+    Overload of `LocatorMixin` that interfaces with point helper nodes.
     """
 
     # region Dunderscores

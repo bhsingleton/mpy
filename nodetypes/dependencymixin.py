@@ -17,11 +17,18 @@ log.setLevel(logging.INFO)
 
 class DependencyMixin(mpynode.MPyNode):
     """
-    Overload of `MPyNode` used to interface with dependency graph nodes.
+    Overload of `MPyNode` that interfaces with dependency graph nodes.
     """
 
+    # region Attributes
+    caching = mpyattribute.MPyAttribute('caching')
+    frozen = mpyattribute.MPyAttribute('frozen')
+    isHistoricallyInteresting = mpyattribute.MPyAttribute('isHistoricallyInteresting')
+    nodeState = mpyattribute.MPyAttribute('nodeState')
+    # endregion
+
     # region Dunderscores
-    __apitype__ = om.MFn.kDependencyNode
+    __api_type__ = om.MFn.kDependencyNode
 
     def __init__(self, obj, **kwargs):
         """
@@ -87,13 +94,6 @@ class DependencyMixin(mpynode.MPyNode):
         """
 
         return self.__class__, (self.name(),)
-    # endregion
-
-    # region Attributes
-    caching = mpyattribute.MPyAttribute('caching')
-    frozen = mpyattribute.MPyAttribute('frozen')
-    isHistoricallyInteresting = mpyattribute.MPyAttribute('isHistoricallyInteresting')
-    nodeState = mpyattribute.MPyAttribute('nodeState')
     # endregion
 
     # region Properties
@@ -303,7 +303,7 @@ class DependencyMixin(mpynode.MPyNode):
         :rtype: DependencyMixin
         """
 
-        return self.nodeManager(list(dagutils.iterNodes(apiType=om.MFn.kTime))[0])
+        return self.scene(list(dagutils.iterNodes(apiType=om.MFn.kTime))[0])
 
     def currentTime(self):
         """
@@ -336,7 +336,7 @@ class DependencyMixin(mpynode.MPyNode):
         #
         if self.isFromReferencedFile:
 
-            return self.nodeManager(dagutils.getAssociatedReferenceNode(self.object()))
+            return self.scene(dagutils.getAssociatedReferenceNode(self.object()))
 
         else:
 
@@ -443,61 +443,55 @@ class DependencyMixin(mpynode.MPyNode):
 
             # Check if node has attribute
             #
-            if self.hasAttr(attribute):
+            if not self.hasAttr(attribute):
 
-                return self.removeAttr(self.attribute(attribute))
-
-            else:
-
+                log.warning('Cannot locate attribute: %s' % attribute)
                 return
+
+            # Remove attribute from node
+            #
+            self.removeAttr(self.attribute(attribute))
 
         elif isinstance(attribute, om.MObject):
 
             # Check if this is a valid attribute
             #
-            if attribute.hasFn(om.MFn.kAttribute):
+            if not attribute.hasFn(om.MFn.kAttribute):
 
-                self.functionSet().removeAttribute(attribute)
+                raise TypeError('removeAttr() expects a valid attribute (%s given)!' % attribute.apiTypeStr)
 
-            else:
-
-                return
+            # Remove attribute from node
+            #
+            self.functionSet().removeAttribute(attribute)
 
         else:
 
             raise TypeError('removeAttr() expects either a str or MObject (%s given)!' % type(attribute).__name__)
 
-    def getAttr(self, plug, context=None, convertUnits=True):
+    def getAttr(self, plug, convertUnits=True):
         """
         Returns the value from the supplied plug.
 
         :type plug: Union[str, om.MObject, om.MPlug]
-        :type context: om.MDGContext
         :type convertUnits: bool
         :rtype: Any
         """
-
-        # Check if context was supplied
-        #
-        if context is None:
-
-            context = om.MDGContext.kNormal
 
         # Check plug type
         #
         if isinstance(plug, om.MPlug):
 
-            return plugmutators.getValue(plug, context=context, convertUnits=convertUnits)
+            return plugmutators.getValue(plug, convertUnits=convertUnits)
 
         elif isinstance(plug, string_types):
 
             plug = self.findPlug(plug)
-            return self.getAttr(plug, context=context, convertUnits=convertUnits)
+            return self.getAttr(plug, convertUnits=convertUnits)
 
         elif isinstance(plug, om.MObject):
 
             plug = om.MPlug(self.object(), plug)
-            return self.getAttr(plug, context=context, convertUnits=convertUnits)
+            return self.getAttr(plug, convertUnits=convertUnits)
 
         else:
 
@@ -541,118 +535,17 @@ class DependencyMixin(mpynode.MPyNode):
 
         elif isinstance(plug, string_types):
 
-            return self.setAttr(self.findPlug(plug), value, force=force)
+            plug = self.findPlug(plug)
+            return self.setAttr(plug, value, force=force)
 
         elif isinstance(plug, om.MObject):
 
-            return self.setAttr(om.MPlug(self.object(), plug), value, force=force)
+            plug = om.MPlug(self.object(), plug)
+            return self.setAttr(plug, value, force=force)
 
         else:
 
             raise TypeError('setAttr() expects a plug (%s given)!' % type(plug).__name__)
-
-    def getAliases(self):
-        """
-        Returns a dictionary of all the attribute aliases belonging to this node.
-        The keys represent the alias name and the values represent the original name.
-
-        :rtype: Dict[str, str]
-        """
-
-        return plugmutators.getAliases(self.object())
-
-    def setAlias(self, alias, plug, replace=False):
-        """
-        Updates the alias for the supplied plug.
-
-        :type alias: str
-        :type plug: om.MPlug
-        :type replace: bool
-        :rtype: bool
-        """
-
-        # Check if alias should be replaced
-        #
-        if replace:
-
-            self.removeAlias(self.plugsAlias(plug))
-
-        # Create new plug alias
-        #
-        return self.functionSet().setAlias(alias, plug.partialName(useLongNames=True), plug, add=True)
-
-    def setAliases(self, plug, aliases):
-        """
-        Updates the values for the supplied array plug while assigning aliases to each element.
-
-        :type plug: Union[str, om.MPlug]
-        :type aliases: Dict[str, object]
-        :rtype: None
-        """
-
-        # Check plug type
-        #
-        if isinstance(plug, string_types):
-
-            plug = self.findPlug(plug)
-
-        return plugmutators.setAliases(plug, aliases)
-
-    def removePlugAlias(self, plug):
-        """
-        Removes the alias from the supplied plug.
-
-        :type plug: Union[str, om.MPlug]
-        :rtype: bool
-        """
-
-        # Check plug type
-        #
-        if isinstance(plug, string_types):
-
-            plug = self.findPlug(plug)
-
-        # Check if plug has alias before removing
-        #
-        alias = self.plugsAlias(plug)
-        hasAlias = len(alias) > 0
-
-        if hasAlias:
-
-            return self.functionSet().setAlias(alias, plug.partialName(useLongNames=True), plug, add=False)
-
-        else:
-
-            return False
-
-    def removeAlias(self, alias):
-        """
-        Removes the alias from this dependency node.
-
-        :type alias: str
-        :rtype: bool
-        """
-
-        # Check for redundancy
-        #
-        numChars = len(alias)
-
-        if numChars == 0:
-
-            return
-
-        # Check if alias is in use
-        #
-        aliases = self.getAliases()
-        plugName = aliases.get(alias, None)
-
-        if plugName is not None:
-
-            return self.removePlugAlias(plugName)
-
-        else:
-
-            return False
 
     def hideAttr(self, *attributes):
         """
@@ -724,6 +617,45 @@ class DependencyMixin(mpynode.MPyNode):
 
         pass
 
+    def getAliases(self):
+        """
+        Returns a dictionary of aliases from this node.
+        The keys represent the aliases whereas the values represent the original name.
+
+        :rtype: Dict[str, str]
+        """
+
+        return plugutils.getAliases(self.object())
+
+    def setAlias(self, plug, alias):
+        """
+        Updates the alias for the supplied plug.
+
+        :type plug: om.MPlug
+        :type alias: str
+        :rtype: bool
+        """
+
+        return plugutils.setAlias(plug, alias)
+
+    def removeAlias(self, plug):
+        """
+        Removes the alias from the supplied plug.
+
+        :type plug: Union[str, om.MPlug]
+        :rtype: bool
+        """
+
+        # Check plug type
+        #
+        if isinstance(plug, string_types):
+
+            plug = self.findPlug(plug)
+
+        # Remove any aliases from plug
+        #
+        return plugutils.removeAlias(plug)
+
     def findConnectedMessage(self, dependNode, attribute):
         """
         Locates the connected destination plug for the given dependency node.
@@ -766,15 +698,21 @@ class DependencyMixin(mpynode.MPyNode):
 
             raise TypeError('findPlug() expects either a str or MObject (%s given)!' % type(name).__name__)
 
-    def isPlugConstrained(self, plug):
+    def iterPlugs(self, channelBox=False):
         """
-        Evaluates if the supplied plug is constrained.
+        Returns a generator that yields plugs from this node.
 
-        :type plug: om.MPlug
-        :rtype: bool
+        :type channelBox: bool
+        :rtype: Iterator[om.MPlug]
         """
 
-        return plugutils.isPlugConstrained(plug)
+        if channelBox:
+
+            return plugutils.iterChannelBoxPlugs(self.object())
+
+        else:
+
+            return plugutils.iterTopLevelPlugs(self.object())
 
     def connectPlugs(self, source, destination, force=False):
         """
@@ -918,7 +856,7 @@ class DependencyMixin(mpynode.MPyNode):
         :rtype: List[DependencyMixin]
         """
 
-        return [self.nodeManager(dependency) for dependency in dagutils.iterDependencies(self.object(), apiType, typeName=typeName, direction=om.MItDependencyGraph.kUpstream)]
+        return [self.scene(dependency) for dependency in dagutils.iterDependencies(self.object(), apiType, typeName=typeName, direction=om.MItDependencyGraph.kUpstream)]
 
     def dependents(self, apiType=om.MFn.kDependencyNode, typeName=''):
         """
@@ -929,6 +867,5 @@ class DependencyMixin(mpynode.MPyNode):
         :return: List[DependencyMixin]
         """
 
-        return [self.nodeManager(dependency) for dependency in dagutils.iterDependencies(self.object(), apiType, typeName=typeName, direction=om.MItDependencyGraph.kDownstream)]
-
+        return [self.scene(dependency) for dependency in dagutils.iterDependencies(self.object(), apiType, typeName=typeName, direction=om.MItDependencyGraph.kDownstream)]
     # endregion

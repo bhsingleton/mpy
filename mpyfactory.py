@@ -7,7 +7,7 @@ from six import string_types
 from dcc.abstract import proxyfactory
 from dcc.python import stringutils, importutils
 from dcc.naming import namingutils
-from dcc.maya.libs import dagutils
+from dcc.maya.libs import dagutils, sceneutils
 from . import mpynode, nodetypes, plugintypes
 
 import logging
@@ -54,6 +54,48 @@ class MPyFactory(proxyfactory.ProxyFactory):
         return mpynode.MPyNode(dependNode)
     # endregion
 
+    # region Properties
+    @property
+    def filename(self):
+        """
+        Getter method that returns the current scene name.
+
+        :rtype: str
+        """
+
+        return sceneutils.currentFilename()
+
+    @property
+    def filePath(self):
+        """
+        Getter method that returns the current scene path.
+
+        :rtype: str
+        """
+
+        return sceneutils.currentFilePath()
+
+    @property
+    def directory(self):
+        """
+        Getter method that returns the current scene directory.
+
+        :rtype: str
+        """
+
+        return sceneutils.currentDirectory()
+
+    @property
+    def projectPath(self):
+        """
+        Getter method that returns the current project directory.
+
+        :rtype: str
+        """
+
+        return sceneutils.currentProjectDirectory()
+    # endregion
+
     # region Methods
     def packages(self):
         """
@@ -71,7 +113,7 @@ class MPyFactory(proxyfactory.ProxyFactory):
         :rtype: str
         """
 
-        return '__apitype__'
+        return '__api_type__'
 
     def classFilter(self):
         """
@@ -371,11 +413,7 @@ class MPyFactory(proxyfactory.ProxyFactory):
         :rtype: Iterator[mpynode.MPyNode]
         """
 
-        # Iterate through dependency nodes
-        #
-        for dependNode in dagutils.iterNodes(apiType=apiType):
-
-            yield mpynode.MPyNode(dependNode)
+        return map(mpynode.MPyNode, dagutils.iterNodes(apiType=apiType))
 
     def getNodesByApiType(self, apiType):
         """
@@ -395,11 +433,7 @@ class MPyFactory(proxyfactory.ProxyFactory):
         :rtype: Iterator[mpynode.MPyNode]
         """
 
-        # Iterate through dependency nodes
-        #
-        for nodeName in mc.ls(type=typeName, long=True):
-
-            yield mpynode.MPyNode(nodeName)
+        return map(mpynode.MPyNode, dagutils.iterNodes(typeName=typeName))
 
     def getNodesByTypeName(self, typeName):
         """
@@ -410,6 +444,28 @@ class MPyFactory(proxyfactory.ProxyFactory):
         """
 
         return list(self.iterNodesByTypeName(typeName))
+
+    def iterNodesByPattern(self, *patterns, apiType=om.MFn.kDependencyNode):
+        """
+        Returns a generator that yields nodes based on the supplied name patterns.
+
+        :type patterns: Union[str, Tuple[str]]
+        :type apiType: int
+        :rtype: Iterator[mpynode.MPyNode]
+        """
+
+        return map(mpynode.MPyNode, dagutils.iterNodesByPattern(*patterns, apiType=apiType))
+
+    def getNodesByPattern(self, *patterns, apiType=om.MFn.kDependencyNode):
+        """
+        Returns a list of nodes based on the supplied name patterns.
+
+        :type patterns: Union[str, Tuple[str]]
+        :type apiType: int
+        :rtype: List[mpynode.MPyNode]
+        """
+
+        return list(self.iterNodesByPattern(*patterns, apiType=apiType))
 
     def iterExtensions(self):
         """

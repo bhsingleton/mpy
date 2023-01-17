@@ -10,11 +10,11 @@ log.setLevel(logging.INFO)
 
 class HyperLayoutMixin(dependencymixin.DependencyMixin):
     """
-    Overload of DependencyMixin that interfaces with containers.
+    Overload of `DependencyMixin` that interfaces with hyper layouts.
     """
 
     # region Dunderscores
-    __apitype__ = om.MFn.kHyperLayout
+    __api_type__ = om.MFn.kHyperLayout
 
     def __contains__(self, item):
         """
@@ -30,7 +30,7 @@ class HyperLayoutMixin(dependencymixin.DependencyMixin):
     # region Methods
     def hasMember(self, dependNode):
         """
-        Checks if the supplied dependency node belongs to this hyper layout.
+        Evaluates if the supplied dependency node belongs to this hyper layout.
 
         :type dependNode: om.MObject
         :rtype: bool
@@ -42,7 +42,7 @@ class HyperLayoutMixin(dependencymixin.DependencyMixin):
         """
         Returns a list of members belonging to this hyper layout.
 
-        :rtype: list[mpynode.MPyNode]
+        :rtype: List[mpy.mpynode.MPyNode]
         """
 
         return list(self.iterMembers())
@@ -70,7 +70,7 @@ class HyperLayoutMixin(dependencymixin.DependencyMixin):
 
     def getNextAvailableMemberIndex(self):
         """
-        Locates the next available published node slot.
+        Returns the next available member index.
 
         :rtype: int
         """
@@ -79,9 +79,9 @@ class HyperLayoutMixin(dependencymixin.DependencyMixin):
 
     def iterMembers(self):
         """
-        Generator method used to iterate through all of members belonging to this hyper layout.
+        Returns a generator that yields members from this layout.
 
-        :rtype: iter
+        :rtype: Iterator[mpy.mpynode.MPyNode]
         """
 
         # Iterate through hyper positions
@@ -92,7 +92,7 @@ class HyperLayoutMixin(dependencymixin.DependencyMixin):
             #
             if hyperPosition.hasDependNode():
 
-                yield self(hyperPosition.dependNode())
+                yield self.scene(hyperPosition.dependNode())
 
             else:
 
@@ -129,7 +129,7 @@ class HyperLayoutMixin(dependencymixin.DependencyMixin):
         """
         Adds a list of dependency nodes to this hyper layout.
 
-        :type dependNodes: list[om.MObject]
+        :type dependNodes: List[om.MObject]
         :rtype: None
         """
 
@@ -179,7 +179,7 @@ class HyperLayoutMixin(dependencymixin.DependencyMixin):
 
     def deleteMembers(self):
         """
-        Deletes all of the members belonging to this hyper layout.
+        Deletes all the members derived from this hyper layout.
 
         :rtype: None
         """
@@ -203,16 +203,16 @@ class HyperLayoutMixin(dependencymixin.DependencyMixin):
         """
         Returns a list of hyper positions for this hyper layout.
 
-        :rtype: list[HyperPosition]
+        :rtype: List[HyperPosition]
         """
 
         return list(self.iterHyperPositions())
 
     def iterHyperPositions(self):
         """
-        Generator method used to iterate through all of the existing hyper positions.
+        Returns a generator that yields hyper positions.
 
-        :rtype: iter
+        :rtype: Iterator[HyperPosition]
         """
 
         # Iterate through plug elements

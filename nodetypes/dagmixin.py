@@ -14,11 +14,22 @@ log.setLevel(logging.INFO)
 
 class DagMixin(containerbasemixin.ContainerBaseMixin):
     """
-    Overload of `ContainerBaseMixin` used to interface with DAG nodes inside the scene file.
+    Overload of `ContainerBaseMixin` that interfaces with DAG nodes.
     """
 
+    # region Attributes
+    visibility = mpyattribute.MPyAttribute('visibility')
+    template = mpyattribute.MPyAttribute('template')
+    ghosting = mpyattribute.MPyAttribute('ghosting')
+    useObjectColor = mpyattribute.MPyAttribute('useObjectColor')
+    objectColor = mpyattribute.MPyAttribute('objectColor')
+    objectColorRGB = mpyattribute.MPyAttribute('objectColorRGB')
+    wireColorRGB = mpyattribute.MPyAttribute('wireColorRGB')
+    hiddenInOutliner = mpyattribute.MPyAttribute('hiddenInOutliner')
+    # endregion
+
     # region Dunderscores
-    __apitype__ = om.MFn.kDagNode
+    __api_type__ = om.MFn.kDagNode
 
     def __str__(self):
         """
@@ -56,17 +67,6 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
         """
 
         return self.nodeClass(), (self.fullPathName(),)
-    # endregion
-
-    # region Attributes
-    visibility = mpyattribute.MPyAttribute('visibility')
-    template = mpyattribute.MPyAttribute('template')
-    ghosting = mpyattribute.MPyAttribute('ghosting')
-    useObjectColor = mpyattribute.MPyAttribute('useObjectColor')
-    objectColor = mpyattribute.MPyAttribute('objectColor')
-    objectColorRGB = mpyattribute.MPyAttribute('objectColorRGB')
-    wireColorRGB = mpyattribute.MPyAttribute('wireColorRGB')
-    hiddenInOutliner = mpyattribute.MPyAttribute('hiddenInOutliner')
     # endregion
 
     # region Methods
@@ -244,26 +244,7 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
         :rtype: DagMixin
         """
 
-        # Check if dag node has any parents
-        #
-        fnDagNode = self.functionSet()
-        parentCount = fnDagNode.parentCount()
-
-        if parentCount == 0:
-
-            return None
-
-        # Ensure parent isn't world
-        #
-        parent = fnDagNode.parent(self.instanceNumber())
-
-        if not parent.hasFn(om.MFn.kWorld):
-
-            return self.nodeManager(parent)
-
-        else:
-
-            return None
+        return self.scene(dagutils.getParent(self.object()))
 
     def hasParent(self):
         """
@@ -272,7 +253,7 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
         :rtype: bool
         """
 
-        return not self.functionSet().parent(self.instanceNumber()).hasFn(om.MFn.kWorld)
+        return not self.functionSet().parent(0).hasFn(om.MFn.kWorld)
 
     def setParent(self, parent):
         """
@@ -282,74 +263,43 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
         :rtype: None
         """
 
-        # Check for redundancy
+        # Redundancy check
         #
+        parent = self.scene(parent)
+
         if self.parent() == parent:
 
             return
 
-        # Evaluate parent type
-        #
-        if isinstance(parent, DagMixin):
-
-            parent = parent.object()
-
-        elif isinstance(parent, string_types):
-
-            parent = dagutils.getMObjectByName(parent)
-
-        elif parent is None:
-
-            parent = om.MObject.kNullObj
-
-        else:
-
-            pass
-
         # Execute dag modifier
         #
-        if isinstance(parent, om.MObject):
+        if parent.hasFn(om.MFn.kDagNode):
 
-            dagModifier = om.MDagModifier()
-            dagModifier.reparentNode(self.object(), parent)
-            dagModifier.doIt()
+            dagutils.parentNode(self.object(), parent.object())
 
         else:
 
-            raise TypeError('setParent() expects an MObject (%s given)!' % type(parent).__name__)
+            raise TypeError('setParent() expects a valid dag node (%s given)!' % parent.apiTypeStr)
 
-    def iterParents(self, apiType=om.MFn.kDagNode):
+    def iterAncestors(self, apiType=om.MFn.kDagNode):
         """
         Returns a generator that yields the parents from this node.
 
         :rtype: iter
         """
 
-        # Iterate through parents
-        #
-        current = self.parent()
+        for parent in dagutils.iterAncestors(self.object(), apiType=apiType):
 
-        while current is not None:
+            yield self.scene(parent)
 
-            # Check parent type
-            #
-            if current.hasFn(apiType):
-
-                yield current
-                current = current.parent()
-
-            else:
-
-                break
-
-    def parents(self):
+    def ancestors(self):
         """
         Returns a list of parents from this node.
 
         :rtype: List[DagMixin]
         """
 
-        return list(self.iterParents())
+        return list(self.iterAncestors())
 
     def topLevelParent(self):
         """
@@ -359,16 +309,16 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
         :rtype: DagMixin
         """
 
-        parents = list(self.iterParents())
-        numParents = len(parents)
+        ancestors = list(self.iterAncestors())
+        numAncestors = len(ancestors)
 
-        if numParents == 0:
+        if numAncestors == 0:
 
             return self
 
         else:
 
-            return parents[-1]
+            return ancestors[-1]
 
     def trace(self):
         """
@@ -377,11 +327,7 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
         :rtype: iter
         """
 
-        for parent in reversed(list(self.iterParents())):
-
-            yield parent
-
-        yield self
+        return map(self.scene.__call__, dagutils.traceHierarchy(self.object()))
 
     def child(self, index):
         """
@@ -391,7 +337,17 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
         :rtype: DagMixin
         """
 
-        return self.nodeManager(self.functionSet().child(index))
+        # Check if index is in range
+        #
+        childCount = self.childCount()
+
+        if 0 <= index < childCount:
+
+            return self.scene(self.functionSet().child(index))
+
+        else:
+
+            raise IndexError('child() index out of range!')
 
     def childCount(self):
         """
@@ -413,11 +369,11 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
 
         for child in dagutils.iterChildren(self.dagPath(), apiType=apiType):
 
-            yield self.nodeManager(child)
+            yield self.scene(child)
 
     def iterShapes(self):
         """
-        Returns a generator that yields shapes from this nodes.
+        Returns a generator that yields shapes from this node.
 
         :rtype: iter
         """
@@ -453,7 +409,7 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
         Returns a list of the children from this node.
 
         :type apiType: int
-        :rtype: list[DagMixin]
+        :rtype: List[DagMixin]
         """
 
         return list(self.iterChildren(apiType=apiType))

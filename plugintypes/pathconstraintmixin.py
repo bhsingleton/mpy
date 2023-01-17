@@ -11,7 +11,7 @@ log.setLevel(logging.INFO)
 
 class PathConstraintMixin(constraintmixin.ConstraintMixin):
     """
-    Overload of ConstraintMixin that interfaces with path constraints.
+    Overload of `ConstraintMixin` that interfaces with path constraints.
     """
 
     # region Dunderscores

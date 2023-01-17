@@ -20,11 +20,11 @@ log.setLevel(logging.INFO)
 
 class SkinMixin(deformermixin.DeformerMixin):
     """
-    Overload of DeformerMixin used to interface with skin cluster nodes.
+    Overload of `DeformerMixin` that interfaces with skin deformers.
     """
 
     # region Dunderscores
-    __apitype__ = (om.MFn.kSkinClusterFilter, om.MFn.kPluginSkinCluster)
+    __api_type__ = (om.MFn.kSkinClusterFilter, om.MFn.kPluginSkinCluster)
 
     def __getitem__(self, index):
         """

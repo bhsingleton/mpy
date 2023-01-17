@@ -13,11 +13,11 @@ log.setLevel(logging.INFO)
 
 class OrientConstraintMixin(constraintmixin.ConstraintMixin):
     """
-    Overload of ConstraintMixin that interfaces with orient constraints.
+    Overload of `ConstraintMixin` that interfaces with orient constraints.
     """
 
     # region Dunderscores
-    __apitype__ = om.MFn.kOrientConstraint
+    __api_type__ = om.MFn.kOrientConstraint
 
     __targets__ = {
         'targetRotateX': 'rotateX',

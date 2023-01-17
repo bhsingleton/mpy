@@ -15,22 +15,8 @@ log.setLevel(logging.INFO)
 
 class ContainerBaseMixin(dependencymixin.DependencyMixin):
     """
-    Overload of DependencyMixin class used to interface with container nodes.
+    Overload of `DependencyMixin` that interfaces with container nodes.
     """
-
-    # region Dunderscores
-    __apitype__ = om.MFn.kContainerBase
-
-    def __contains__(self, item):
-        """
-        Private method that evaluates if an item belongs to this container.
-
-        :type item: mpynode.nodetypes.dependencymixin.DependencyMixin
-        :rtype: bool
-        """
-
-        return self.hasMember(item) or self.hasPublishedNode(item)
-    # endregion
 
     # region Attributes
     hyperLayout = mpyattribute.MPyAttribute('hyperLayout')
@@ -47,6 +33,20 @@ class ContainerBaseMixin(dependencymixin.DependencyMixin):
     owner = mpyattribute.MPyAttribute('creator')
     creationDate = mpyattribute.MPyAttribute('creationDate')
     containerType = mpyattribute.MPyAttribute('containerType')
+    # endregion
+
+    # region Dunderscores
+    __api_type__ = om.MFn.kContainerBase
+
+    def __contains__(self, item):
+        """
+        Private method that evaluates if an item belongs to this container.
+
+        :type item: mpynode.nodetypes.dependencymixin.DependencyMixin
+        :rtype: bool
+        """
+
+        return self.hasMember(item) or self.hasPublishedNode(item)
     # endregion
 
     # region Methods
@@ -72,7 +72,7 @@ class ContainerBaseMixin(dependencymixin.DependencyMixin):
 
     def hasHyperLayout(self):
         """
-        Checks if this container has a hyper layout.
+        Evaluates if this container has a hyper layout.
 
         :rtype: bool
         """
@@ -84,18 +84,18 @@ class ContainerBaseMixin(dependencymixin.DependencyMixin):
         Returns a hyper layout for this container.
         If there is already a hyper layout attached to this container then that node is returned instead!
 
-        :rtype: mpynode.nodetypes.hyperlayoutmixin.HyperLayoutMixin
+        :rtype: mpy.nodetypes.hyperlayoutmixin.HyperLayoutMixin
         """
 
         # Check for redundancy
         #
         if self.hasHyperLayout():
 
-            return self.nodeManager(self.hyperLayout)
+            return self.scene(self.hyperLayout)
 
         else:
 
-            hyperLayout = self.nodeManager.createNode('hyperLayout')
+            hyperLayout = self.scene.createNode('hyperLayout')
             self.hyperLayout = hyperLayout.object()
 
             return hyperLayout
@@ -104,16 +104,16 @@ class ContainerBaseMixin(dependencymixin.DependencyMixin):
         """
         Returns a list of members belonging to this container.
 
-        :rtype: list[mpynode.nodetypes.dependencymixin.DependencyMixin]
+        :rtype: List[mpy.mpynode.MPyNode]
         """
 
         return self.getHyperLayout().members()
 
     def hasMember(self, member):
         """
-        Checks if the supplied dependency node belongs to this container
+        Evaluates if the supplied node belongs to this container
 
-        :type member: mpynode.nodetypes.dependencymixin.DependencyMixin
+        :type member: mpy.mpynode.MPyNode
         :rtype: bool
         """
 
@@ -123,7 +123,7 @@ class ContainerBaseMixin(dependencymixin.DependencyMixin):
         """
         Method used to add a new member to this container.
 
-        :type member: mpynode.nodetypes.dependencymixin.DependencyMixin
+        :type member: mpy.mpynode.MPyNode
         :rtype: bool
         """
 
@@ -133,7 +133,7 @@ class ContainerBaseMixin(dependencymixin.DependencyMixin):
         """
         Method used to add a list of nodes to this container.
 
-        :type members: list[mpynode.nodetypes.dependencymixin.DependencyMixin]
+        :type members: List[mpy.mpynode.MPyNode]
         :rtype: None
         """
 
@@ -145,7 +145,7 @@ class ContainerBaseMixin(dependencymixin.DependencyMixin):
         """
         Method used to remove a member from this container.
 
-        :type member: mpynode.nodetypes.dependencymixin.DependencyMixin
+        :type member: mpy.mpynode.MPyNode
         :rtype: None
         """
 
@@ -157,7 +157,7 @@ class ContainerBaseMixin(dependencymixin.DependencyMixin):
         """
         Method used to remove a list of members from this container.
 
-        :type members: list[mpynode.nodetypes.dependencymixin.DependencyMixin]
+        :type members: List[mpy.mpynode.MPyNode]
         :rtype: None
         """
 
@@ -169,7 +169,7 @@ class ContainerBaseMixin(dependencymixin.DependencyMixin):
         """
         Deletes all members connected to the hyper layout.
         This node must be locked before deleting associated members!
-        Otherwise Maya will delete any empty transforms following this operation!
+        Otherwise, Maya will delete any empty transforms following this operation!
 
         :rtype: None
         """
@@ -194,7 +194,7 @@ class ContainerBaseMixin(dependencymixin.DependencyMixin):
         """
         Publishes the supplied node to this container.
 
-        :type node: mpynode.nodetypes.dependencymixin.DependencyMixin
+        :type node: mpy.mpynode.MPyNode
         :type index: int
         :type alias: str
         :rtype: bool
@@ -230,7 +230,7 @@ class ContainerBaseMixin(dependencymixin.DependencyMixin):
         Publishes a sequence of nodes to this container.
         This method expects a sequence of tuples with alias and node pairs or a dictionary!
 
-        :type nodes: Union[list, dict]
+        :type nodes: Union[List[mpy.mpynode.MPyNode], List[Tuple[str, mpy.mpynode.MPyNode]], Dict[str, mpy.mpynode.MPyNode]]
         :rtype None
         """
 
@@ -268,7 +268,7 @@ class ContainerBaseMixin(dependencymixin.DependencyMixin):
         """
         Un-publishes the supplied node from this container.
 
-        :type node: mpynode.nodetypes.dependencymixin.DependencyMixin
+        :type node: mpy.mpynode.MPyNode
         :rtype: None
         """
 
@@ -290,7 +290,7 @@ class ContainerBaseMixin(dependencymixin.DependencyMixin):
         Returns a published node based on the supplied index.
 
         :type index: Union[int, str]
-        :rtype: mpynode.nodetypes.transformmixin.TransformMixin
+        :rtype: mpy.mpynode.MPyNode
         """
 
         # Get published node info
@@ -299,27 +299,7 @@ class ContainerBaseMixin(dependencymixin.DependencyMixin):
 
         if publishedNodeInfo.hasPublishedNode():
 
-            return self.nodeManager(publishedNodeInfo.publishedNode())
-
-        else:
-
-            return None
-
-    def getPublishedJoint(self, index):
-        """
-        Returns a published joint based on the supplied index.
-
-        :type index: Union[int, str]
-        :rtype: mpynode.nodetypes.jointmixin.JointMixin
-        """
-
-        # Get published node info
-        #
-        publishedNodeInfo = self.getPublishedNodeInfo(index)
-
-        if publishedNodeInfo.hasPublishedNode():
-
-            return self.nodeManager(publishedNodeInfo.publishedJoint())
+            return self.scene(publishedNodeInfo.publishedNode())
 
         else:
 
@@ -329,7 +309,7 @@ class ContainerBaseMixin(dependencymixin.DependencyMixin):
         """
         Returns a list of published nodes from this container.
 
-        :rtype: list[mpynode.nodetypes.transformmixin.TransformMixin]
+        :rtype: List[mpy.mpynode.MPyNode]
         """
 
         return list(self.iterPublishedNodes())
@@ -356,7 +336,7 @@ class ContainerBaseMixin(dependencymixin.DependencyMixin):
         """
         Checks if the given node has already been published to this container
 
-        :type publishedNode: mpynode.nodetypes.dependencymixin.DependencyMixin
+        :type publishedNode: mpy.mpynode.MPyNode
         :rtype: bool
         """
 
@@ -394,7 +374,7 @@ class ContainerBaseMixin(dependencymixin.DependencyMixin):
         Returns the container node this transform is associated with.
         If this transform has not been published then none is returned!
 
-        :rtype: mpynode.nodetypes.containermixin.ContainerMixin
+        :rtype: mpy.nodetypes.containermixin.ContainerMixin
         """
 
         # Iterate through destination plugs
@@ -411,7 +391,7 @@ class ContainerBaseMixin(dependencymixin.DependencyMixin):
 
             if node.hasFn(om.MFn.kContainerBase) and partialName == 'publishedNode':
 
-                return self.nodeManager(node)
+                return self.scene(node)
 
             else:
 
@@ -424,7 +404,7 @@ class ContainerBaseMixin(dependencymixin.DependencyMixin):
         Returns the logical plug index for the supplied dependency node.
         If the node has not been published then none will be returned!
 
-        :type publishedNode: mpynode.nodetypes.dependencymixin.DependencyMixin
+        :type publishedNode: mpy.mpynode.MPyNode
         :rtype: int
         """
 
@@ -445,7 +425,7 @@ class ContainerBaseMixin(dependencymixin.DependencyMixin):
         Returns the plug alias for the supplied dependency node.
         If the node has not been published then an empty string will be returned!
 
-        :type publishedNode: mpynode.nodetypes.dependencymixin.DependencyMixin
+        :type publishedNode: mpy.mpynode.MPyNode
         :rtype: str
         """
 
@@ -463,7 +443,7 @@ class ContainerBaseMixin(dependencymixin.DependencyMixin):
 
     def iterPublishedNodes(self):
         """
-        Generator method used to iterate through all of the published nodes.
+        Returns a generator that yields published nodes.
 
         :rtype: iter
         """
@@ -472,33 +452,11 @@ class ContainerBaseMixin(dependencymixin.DependencyMixin):
         #
         for publishedNodeInfo in self.iterPublishedNodeInfo(skipEmptyElements=True):
 
-            yield self.nodeManager(publishedNodeInfo.publishedNode())
-
-    def publishedJoints(self):
-        """
-        Returns a list of published joints from this container.
-
-        :rtype: list[mpynode.nodetypes.jointmixin.JointMixin]
-        """
-
-        return list(self.iterPublishedJoints())
-
-    def iterPublishedJoints(self):
-        """
-        Generator method used to iterate through all of the published joints.
-
-        :rtype: iter
-        """
-
-        # Iterate through published node info
-        #
-        for publishedNodeInfo in self.iterPublishedNodeInfo(skipEmptyElements=True):
-
-            yield self.nodeManager(publishedNodeInfo.publishedJoint())
+            yield self.scene(publishedNodeInfo.publishedNode())
 
     def getPublishedNodeInfo(self, index):
         """
-        Retrieves a published node info interface for the specified index.
+        Returns the published node info interface for the specified index.
 
         :type index: Union[int, str]
         :rtype: PublishedNodeInfo
@@ -516,7 +474,7 @@ class ContainerBaseMixin(dependencymixin.DependencyMixin):
 
     def iterPublishedNodeInfo(self, skipEmptyElements=False):
         """
-        Generator method used to iterate through all of the published node info slots.
+        Returns a generator that yields published node info.
         An optional flag can be supplied to ignore empty entries.
 
         :type skipEmptyElements: bool
@@ -569,7 +527,7 @@ class ContainerBaseMixin(dependencymixin.DependencyMixin):
 
     def getNextAvailablePublishedNodeIndex(self):
         """
-        Locates the next available published node slot.
+        Returns the next available published node index.
 
         :rtype: int
         """
@@ -624,6 +582,51 @@ class PublishedNodeInfo(object):
         """
 
         return self._index
+
+    @property
+    def publishedNodeType(self):
+        """
+        Getter method that returns the `publishedNodeType` flag.
+        This flag indicates which node types can be published to the node info.
+        By leaving this blank any node can be connected.
+
+        :rtype: str
+        """
+
+        return self.publishedNodeInfoChildPlug('publishedNodeType').asString()
+
+    @publishedNodeType.setter
+    def publishedNodeType(self, publishedNodeType):
+        """
+        Setter method that updates the `publishedNodeType` flag.
+
+        :rtype: str
+        """
+
+        self.publishedNodeInfoChildPlug('publishedNodeType').setString(publishedNodeType)
+
+    @property
+    def isHierarchicalNode(self):
+        """
+        Getter method used to that returns the `isHierarchicalNode` flag.
+        This flag indicates if this node is part of a hierarchy of published nodes.
+        By setting this to false the hierarchy will be flattened when black boxed.
+
+        :rtype: bool
+        """
+
+        return self.publishedNodeInfoChildPlug('isHierarchicalNode').asBool()
+
+    @isHierarchicalNode.setter
+    def isHierarchicalNode(self, isHierarchicalNode):
+        """
+        Setter method used to that updates the `isHierarchicalNode` flag.
+
+        :type isHierarchicalNode: bool
+        :rtype: None
+        """
+
+        self.publishedNodeInfoChildPlug('isHierarchicalNode').setBool(isHierarchicalNode)
     # endregion
 
     # region Methods
@@ -675,7 +678,7 @@ class PublishedNodeInfo(object):
         # Assign new alias to plug
         #
         plug = self.publishedNodeInfoPlug()
-        success = self.container.setAlias(alias, plug, replace=True)
+        success = self.container.setAlias(plug, alias)
 
         if not success:
 
@@ -719,77 +722,4 @@ class PublishedNodeInfo(object):
         """
 
         self.setPublishedNode(om.MObject.kNullObj)
-
-    def hasPublishedJoint(self):
-        """
-        Checks if the joint for this published node info is valid.
-
-        :rtype: bool
-        """
-
-        return not self.publishedNodeInfoChildPlug('publishedJoint').source().isNull
-
-    def publishedJoint(self):
-        """
-        Retrieves the published joint object from this node info.
-
-        :rtype: om.MObject
-        """
-
-        return self.container.getAttr('publishedNodeInfo[%s].publishedJoint' % self.index)
-
-    def setPublishedJoint(self, dependNode):
-        """
-        Updates the published joint associated with this node info.
-
-        :type dependNode: om.MObject
-        :rtype: None
-        """
-
-        self.container.setAttr('publishedNodeInfo[%s].publishedJoint' % self.index, dependNode)
-
-    @property
-    def publishedNodeType(self):
-        """
-        Getter method used to retrieve the published node type.
-        The published node type indicates which node types can be published to this node info.
-        By leaving this blank any node can be connected.
-
-        :rtype: str
-        """
-
-        return self.publishedNodeInfoChildPlug('publishedNodeType').asString()
-
-    @publishedNodeType.setter
-    def publishedNodeType(self, publishedNodeType):
-        """
-        Setter method used to updates the node type which can be published to this node info.
-
-        :rtype: str
-        """
-
-        self.publishedNodeInfoChildPlug('publishedNodeType').setString(publishedNodeType)
-
-    @property
-    def isHierarchicalNode(self):
-        """
-        Getter method used to retrieve the hierarchical flag for this node info.
-        This flag indicates if this node is part of a hierarchy of published nodes.
-        By setting this to false the hierarchy will be flatten when black boxed.
-
-        :rtype: bool
-        """
-
-        return self.publishedNodeInfoChildPlug('isHierarchicalNode').asBool()
-
-    @isHierarchicalNode.setter
-    def isHierarchicalNode(self, isHierarchicalNode):
-        """
-        Setter method used to update the hierarchy state of this published node.
-
-        :type isHierarchicalNode: bool
-        :rtype: None
-        """
-
-        self.publishedNodeInfoChildPlug('isHierarchicalNode').setBool(isHierarchicalNode)
     # endregion

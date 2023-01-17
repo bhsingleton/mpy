@@ -10,12 +10,8 @@ log.setLevel(logging.INFO)
 
 class ShakeMixin(dependencymixin.DependencyMixin):
     """
-    Overload of DependencyMixin that interfaces with shake nodes.
+    Overload of `DependencyMixin` that interfaces with shake nodes.
     """
-
-    # region Dunderscores
-    __plugin__ = 'shake'
-    # endregion
 
     # region Attributes
     envelope = mpyattribute.MPyAttribute('envelope')
@@ -33,4 +29,8 @@ class ShakeMixin(dependencymixin.DependencyMixin):
     positiveX = mpyattribute.MPyAttribute('positiveX')
     positiveY = mpyattribute.MPyAttribute('positiveY')
     positiveZ = mpyattribute.MPyAttribute('positiveZ')
+    # endregion
+
+    # region Dunderscores
+    __plugin__ = 'shake'
     # endregion

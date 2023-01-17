@@ -9,7 +9,7 @@ log.setLevel(logging.INFO)
 
 class AnimCurveMixin(dependencymixin.DependencyMixin):
     """
-    Overload of DependencyMixin class used to interface with animation curves.
+    Overload of `DependencyMixin` that interfaces with animation curves.
     """
 
-    __apitype__ = om.MFn.kAnimCurve
+    __api_type__ = om.MFn.kAnimCurve

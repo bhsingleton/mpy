@@ -10,7 +10,7 @@ log.setLevel(logging.INFO)
 
 class MaxformMixin(maxformmixin.MaxformMixin):
     """
-    Overload of TransformMixin that interfaces with expose transforms.
+    Overload of `MaxformMixin` that interfaces with expose transforms.
     """
 
     # region Dunderscores
@@ -61,7 +61,7 @@ class MaxformMixin(maxformmixin.MaxformMixin):
         #
         if not exposeNode.isNull():
 
-            return self.nodeManager(exposeNode)
+            return self.scene(exposeNode)
 
         else:
 
@@ -80,7 +80,7 @@ class MaxformMixin(maxformmixin.MaxformMixin):
         #
         if not localReferenceNode.isNull():
 
-            return self.nodeManager(localReferenceNode)
+            return self.scene(localReferenceNode)
 
         else:
 
