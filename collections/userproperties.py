@@ -5,6 +5,7 @@ from maya.api import OpenMaya as om
 from six.moves import collections_abc
 from dcc.python import stringutils
 from dcc.maya.libs import dagutils
+from dcc.maya.json import mdataparser
 
 import logging
 logging.basicConfig()
@@ -232,7 +233,7 @@ class UserProperties(collections_abc.MutableMapping):
         #
         try:
 
-            self.__properties__ = json.loads(buffer)
+            self.__properties__ = json.loads(buffer, cls=mdataparser.MDataDecoder)
             self.invalidate()
 
         except json.JSONDecodeError:
@@ -266,6 +267,6 @@ class UserProperties(collections_abc.MutableMapping):
         #
         self.ensureNotes()
 
-        notes = json.dumps(self.__properties__, indent=4)
+        notes = json.dumps(self.__properties__, indent=4, cls=mdataparser.MDataEncoder)
         mc.setAttr('%s.notes' % self.objectPath(), notes, type='string')
     # endregion
