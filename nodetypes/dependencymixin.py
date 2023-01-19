@@ -5,7 +5,7 @@ from maya.api import OpenMaya as om
 from Qt import QtGui
 from six import string_types
 from dcc.python import stringutils
-from dcc.maya.libs import attributeutils, plugutils, plugmutators, dagutils
+from dcc.maya.libs import dagutils, attributeutils, plugutils, plugmutators, animutils
 from .. import mpyattribute, mpynode
 from ..collections import userproperties
 
@@ -360,15 +360,24 @@ class DependencyMixin(mpynode.MPyNode):
 
         self.functionSet().isLocked = False
 
-    def uuid(self):
+    def uuid(self, asString=False):
         """
         Returns the UUID associated with this node.
         Please note that these values are unique to the reference they belong to and NOT the scene as a whole.
 
-        :rtype: om.MUuid
+        :type asString: bool
+        :rtype: Union[om.MUuid, str]
         """
 
-        return om.MUuid(self.functionSet().uuid())
+        uuid = self.functionSet().uuid()
+
+        if asString:
+
+            return uuid.asString()
+
+        else:
+
+            return uuid
 
     def setUuid(self, uuid):
         """
@@ -547,6 +556,35 @@ class DependencyMixin(mpynode.MPyNode):
 
             raise TypeError('setAttr() expects a plug (%s given)!' % type(plug).__name__)
 
+    def resetAttr(self, plug, force=False):
+        """
+        Updates the value for the supplied plug back to its default value.
+
+        :type plug: Union[str, om.MObject, om.MPlug]
+        :type force: bool
+        :rtype: None
+        """
+
+        # Check plug type
+        #
+        if isinstance(plug, om.MPlug):
+
+            return plugmutators.resetValue(plug, force=force)
+
+        elif isinstance(plug, string_types):
+
+            plug = self.findPlug(plug)
+            return self.resetAttr(plug, force=force)
+
+        elif isinstance(plug, om.MObject):
+
+            plug = om.MPlug(self.object(), plug)
+            return self.resetAttr(plug, force=force)
+
+        else:
+
+            raise TypeError('resetAttr() expects a plug (%s given)!' % type(plug).__name__)
+
     def hideAttr(self, *attributes):
         """
         Hides an attribute that belongs to this node.
@@ -559,14 +597,10 @@ class DependencyMixin(mpynode.MPyNode):
         #
         for attribute in attributes:
 
-            # Check attribute type
-            #
-            if isinstance(attribute, string_types):
-
-                attribute = self.attribute(attribute)
-
             # Verify attribute is valid
             #
+            attribute = self.attribute(attribute)
+
             if not attribute.hasFn(om.MFn.kAttribute):
 
                 continue
@@ -581,7 +615,7 @@ class DependencyMixin(mpynode.MPyNode):
         """
         Un-hides an attribute that belongs to this node.
 
-        :type attributes: Union[str, List[str]]
+        :type attributes: Union[str, List[str], om.MObject, om.MObjectArray]
         :rtype: None
         """
 
@@ -589,14 +623,10 @@ class DependencyMixin(mpynode.MPyNode):
         #
         for attribute in attributes:
 
-            # Check attribute type
-            #
-            if isinstance(attribute, string_types):
-
-                attribute = self.attribute(attribute)
-
             # Verify attribute is valid
             #
+            attribute = self.attribute(attribute)
+
             if not attribute.hasFn(om.MFn.kAttribute):
 
                 continue
@@ -607,15 +637,56 @@ class DependencyMixin(mpynode.MPyNode):
             fnAttribute.hidden = False
             fnAttribute.channelBox = True
 
-    def keyAttr(self, *attributes):
+    def keyAttr(self, plug, value, frame=None):
         """
-        Keys an attribute that belongs to this node.
+        Keys an attribute with the supplied value at the specified time.
+        If no time is specified then the current time is used instead!
 
-        :type attributes: Union[str, List[str]]
+        :type plug: om.MPlug
+        :type value: Any
+        :type frame: Union[int, None]
+        :rtype: mpy.nodetypes.animcurvemixin.AnimCurveMixin
+        """
+
+        # Ensure plug is keyed
+        #
+        plug = self.findPlug(plug)
+        animCurve = animutils.ensureKeyed(plug)
+
+        if animCurve is None:
+
+            return
+
+        # Modify anim curve
+        #
+        frame = frame if frame is not None else self.scene.time
+
+        animCurve = self.scene(animCurve)
+        animCurve.setValueAtFrame(value, frame)
+
+        return animCurve
+
+    def clearKeys(self):
+        """
+        Removes all animation curves connected to this node.
+
         :rtype: None
         """
 
-        pass
+        # Iterate through plugs
+        #
+        for plug in self.iterPlugs(channelBox=True):
+
+            # Check if plug is animated
+            #
+            if not plugutils.isAnimated(plug):
+
+                continue
+
+            # Delete anim curve
+            #
+            animCurve = plug.source().node()
+            dagutils.deleteNode(animCurve)
 
     def getAliases(self):
         """
@@ -656,35 +727,51 @@ class DependencyMixin(mpynode.MPyNode):
         #
         return plugutils.removeAlias(plug)
 
-    def findConnectedMessage(self, dependNode, attribute):
+    def attribute(self, name):
         """
-        Locates the connected destination plug for the given dependency node.
+        Returns an attribute based on the supplied name.
+        Unlike the api method, this implementation supports redundancy checks for plugs.
 
-        :type dependNode: om.MObject
-        :type attribute: Union[str, om.MObject]
-        :rtype: om.MPlug
+        :type name: Union[str, om.MObject, om.MPlug]
+        :rtype: om.MObject
         """
 
-        # Check attribute type
+        # Redundancy check
         #
-        if isinstance(attribute, string_types):
+        if isinstance(name, om.MObject):
 
-            attribute = self.attribute(attribute)
+            return name
 
-        # Find connected message
+        # Evaluate argument type
         #
-        return plugutils.findConnectedMessage(dependNode, attribute)
+        if isinstance(name, string_types):
+
+            return self.functionSet().attribute(name)
+
+        elif isinstance(name, om.MPlug):
+
+            return name.attribute()
+
+        else:
+
+            raise TypeError('findAttribute() expects either a str or MPlug (%s given)!' % type(name).__name__)
 
     def findPlug(self, name):
         """
-        Returns a plug based on the supplied string path.
+        Returns a plug based on the supplied plug path.
         Unlike the api method, this implementation supports both compound and indexed plugs.
 
-        :type name: Union[str, om.MObject]
+        :type name: Union[str, om.MObject, om.MPlug]
         :rtype: om.MPlug
         """
 
-        # Evaluate supplied argument
+        # Redundancy check
+        #
+        if isinstance(name, om.MPlug):
+
+            return name
+
+        # Evaluate argument type
         #
         if isinstance(name, string_types):
 
@@ -807,6 +894,24 @@ class DependencyMixin(mpynode.MPyNode):
         # Break connections on plug
         #
         plugutils.breakConnections(plug, source=source, destination=destination, recursive=recursive)
+
+    def findConnectedMessage(self, dependNode, attribute):
+        """
+        Locates the connected destination plug for the given dependency node.
+
+        :type dependNode: om.MObject
+        :type attribute: Union[str, om.MObject]
+        :rtype: om.MPlug
+        """
+
+        # Check attribute type
+        #
+        if isinstance(attribute, string_types):
+            attribute = self.attribute(attribute)
+
+        # Find connected message
+        #
+        return plugutils.findConnectedMessage(dependNode, attribute)
 
     def getNextAvailableConnection(self, plug, child=om.MObject.kNullObj):
         """
