@@ -361,6 +361,17 @@ class TransformMixin(dagmixin.DagMixin):
 
         transformutils.copyTransform(self.dagPath(), transform.dagPath())
 
+    def resetTransform(self):
+        """
+        Resets all the channel-box plugs back to their default value.
+
+        :rtype: None
+        """
+
+        for plug in self.iterPlugs(channelBox=True):
+
+            self.resetAttr(plug)
+
     def freezeTransform(self, includeTranslate=True, includeRotate=True, includeScale=False):
         """
         Pushes the transform's local matrix into the parent offset matrix.
