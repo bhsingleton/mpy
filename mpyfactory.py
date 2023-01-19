@@ -94,6 +94,57 @@ class MPyFactory(proxyfactory.ProxyFactory):
         """
 
         return sceneutils.currentProjectDirectory()
+
+    @property
+    def namespace(self):
+        """
+        Getter method that returns the current namespace.
+
+        :rtype: str
+        """
+
+        return sceneutils.currentNamespace()
+
+    @property
+    def time(self):
+        """
+        Getter method that returns the current time.
+
+        :rtype: int
+        """
+
+        return sceneutils.getTime()
+
+    @time.setter
+    def time(self, time):
+        """
+        Setter method that updates the current time.
+
+        :rtype: int
+        """
+
+        sceneutils.setTime(time)
+
+    @property
+    def animationRange(self):
+        """
+        Getter method that returns the current animation range.
+
+        :rtype: Tuple[int, int]
+        """
+
+        return sceneutils.getAnimationRange()
+
+    @animationRange.setter
+    def animationRange(self, animationRange):
+        """
+        Setter method that updates the current animation range.
+
+        :type animationRange: Tuple[int, int]
+        :rtype: None
+        """
+
+        sceneutils.setAnimationRange(*animationRange)
     # endregion
 
     # region Methods
@@ -295,6 +346,16 @@ class MPyFactory(proxyfactory.ProxyFactory):
         #
         self.__classes__[apiType] = cls
         return cls
+
+    def doesNodeExist(self, nodeName):
+        """
+        Evaluates if a node with the supplied name exists.
+
+        :type nodeName: str
+        :rtype: bool
+        """
+
+        return mc.objExists(nodeName)
 
     def getNodeByName(self, name):
         """
@@ -544,6 +605,29 @@ class MPyFactory(proxyfactory.ProxyFactory):
         """
 
         return list(self.iterSelection(apiType=apiType))
+
+    def setSelection(self, selection):
+        """
+        Updates the active selection.
+
+        :type selection: Union[om.MSelectionList, List[om.MObject]]
+        :rtype: None
+        """
+
+        # Evaluate selection list
+        #
+        if isinstance(selection, om.MSelectionList):
+
+            om.MGlobal.setActiveSelectionList(selection)
+
+        elif isinstance(selection, list):
+
+            selection = dagutils.createSelectionList(selection)
+            self.setSelection(selection)
+
+        else:
+
+            raise TypeError('setSelection() expects a selection list (%s given)!' % type(selection).__name__)
 
     def getShapeTemplate(self, name):
         """
