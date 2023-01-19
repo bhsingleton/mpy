@@ -1,3 +1,4 @@
+from maya import OpenMaya as legacy
 from maya.api import OpenMaya as om
 from dcc.maya.libs import plugmutators
 
@@ -32,7 +33,7 @@ class MPyContext(object):
         # Declare class variables
         #
         self.time = time
-        self.context = om.MDGContext(time)
+        self.context = legacy.MDGContext(time)
 
     def __enter__(self):
         """
@@ -53,7 +54,7 @@ class MPyContext(object):
         :rtype: None
         """
 
-        MPyAttribute.__context__ = om.MDGContext.kNormal
+        MPyAttribute.__context__ = legacy.MDGContext.current()
 
 
 class MPyAttribute(object):
@@ -71,7 +72,7 @@ class MPyAttribute(object):
         'fchange'
     )
 
-    __context__ = om.MDGContext.kNormal
+    __context__ = legacy.MDGContext.current()
 
     def __init__(self, name, fget=None, fset=None, fdel=None, **constructors):
         """
@@ -118,9 +119,15 @@ class MPyAttribute(object):
 
             return self
 
+        # Check if context is different
+        #
+        if not self.__context__.isNormal():
+
+            contextGuard = legacy.MDGContextGuard(self.__context__)
+
         # Retrieve plug value
         #
-        value = plugmutators.getValue(self.plug(instance), context=self.__context__)
+        value = plugmutators.getValue(self.plug(instance))
 
         if callable(self.fget):
 
