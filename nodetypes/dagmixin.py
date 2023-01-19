@@ -241,7 +241,7 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
         """
         Returns the parent of this node.
 
-        :rtype: DagMixin
+        :rtype: Union[DagMixin, None]
         """
 
         return self.scene(dagutils.getParent(self.object()))
@@ -285,12 +285,10 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
         """
         Returns a generator that yields the parents from this node.
 
-        :rtype: iter
+        :rtype: Iterator[DagMixin]
         """
 
-        for parent in dagutils.iterAncestors(self.object(), apiType=apiType):
-
-            yield self.scene(parent)
+        return map(self.scene, dagutils.iterAncestors(self.object(), apiType=apiType))
 
     def ancestors(self):
         """
@@ -324,10 +322,10 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
         """
         Returns a generator that yields the parents leading to this node.
 
-        :rtype: iter
+        :rtype: Iterator[DagMixin]
         """
 
-        return map(self.scene.__call__, dagutils.traceHierarchy(self.object()))
+        return map(self.scene, dagutils.traceHierarchy(self.object()))
 
     def child(self, index):
         """
@@ -364,18 +362,16 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
         An optional api type can be supplied to narrow down the children.
 
         :type apiType: int
-        :rtype: iter
+        :rtype: Iterator[DagMixin]
         """
 
-        for child in dagutils.iterChildren(self.dagPath(), apiType=apiType):
-
-            yield self.scene(child)
+        return map(self.scene, dagutils.iterChildren(self.dagPath(), apiType=apiType))
 
     def iterShapes(self):
         """
         Returns a generator that yields shapes from this node.
 
-        :rtype: iter
+        :rtype: Iterator[DagMixin]
         """
 
         return self.iterChildren(apiType=om.MFn.kShape)
@@ -386,7 +382,7 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
         An optional api type can be supplied to narrow down the descendants.
 
         :type apiType: int
-        :rtype: iter
+        :rtype: Iterator[DagMixin]
         """
 
         # Iterate through queue
