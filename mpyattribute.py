@@ -10,53 +10,6 @@ log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
 
 
-class MPyContext(object):
-    """
-    Execution hook that can be used with a 'with' statement in order to alter the MDGContext at runtime.
-    This allows PyAttribute objects to evaluate the DAG at a different time.
-    """
-
-    __slots__ = ('time', 'context')
-
-    def __init__(self, time):
-        """
-        Private method called after a new instance is created.
-
-        :type time: Union[int, float]
-        :rtype: None
-        """
-
-        # Call parent method
-        #
-        super(MPyContext, self).__init__()
-
-        # Declare class variables
-        #
-        self.time = time
-        self.context = legacy.MDGContext(time)
-
-    def __enter__(self):
-        """
-        Private method called before a block of code is executed.
-
-        :rtype: None
-        """
-
-        MPyAttribute.__context__ = self.context
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        """
-        Private method called after a block of code has been executed.
-
-        :type exc_type: Any
-        :type exc_val: Any
-        :type exc_tb: str
-        :rtype: None
-        """
-
-        MPyAttribute.__context__ = legacy.MDGContext.current()
-
-
 class MPyAttribute(object):
     """
     Base class used to represent Maya attributes as a python property.
@@ -72,16 +25,14 @@ class MPyAttribute(object):
         'fchange'
     )
 
-    __context__ = legacy.MDGContext.current()
-
     def __init__(self, name, fget=None, fset=None, fdel=None, **constructors):
         """
         Private method called after a new instance has been created.
 
         :type name: str
-        :type fget: function
-        :type fset: function
-        :type fdel: function
+        :type fget: Callable
+        :type fset: Callable
+        :type fdel: Callable
         :key readable: bool
         :key writable: bool
         :key storable: bool
@@ -98,7 +49,6 @@ class MPyAttribute(object):
         #
         self.name = name
         self.constructors = constructors
-
         self.fget = fget
         self.fset = fset
         self.fdel = fdel
@@ -113,19 +63,13 @@ class MPyAttribute(object):
         :rtype: Any
         """
 
-        # Check if instance is valid
+        # Check if instance was supplied
         #
         if instance is None:
 
             return self
 
-        # Check if context is different
-        #
-        if not self.__context__.isNormal():
-
-            contextGuard = legacy.MDGContextGuard(self.__context__)
-
-        # Retrieve plug value
+        # Get plug value
         #
         value = plugmutators.getValue(self.plug(instance))
 
