@@ -2,7 +2,7 @@ from maya import cmds as mc
 from maya.api import OpenMaya as om
 from dcc.naming import namingutils
 from dcc.python import stringutils
-from dcc.maya.libs import shapeutils, transformutils
+from dcc.maya.libs import plugutils, transformutils, shapeutils
 from . import dagmixin
 from .. import mpyattribute
 
@@ -250,7 +250,7 @@ class TransformMixin(dagmixin.DagMixin):
 
         return transformutils.getMatrix(self.dagPath(), asTransformationMatrix=asTransformationMatrix)
 
-    def setMatrix(self, matrix, skipTranslate=False, skipRotate=False, skipScale=False):
+    def setMatrix(self, matrix, skipTranslate=False, skipRotate=False, skipScale=True):
         """
         Updates the local transformation matrix for this transform.
 
@@ -324,17 +324,21 @@ class TransformMixin(dagmixin.DagMixin):
         :rtype: None
         """
 
-        self.keyAttrs(
-            [
-                'translateX', 'translateY', 'translateZ',
-                'rotateX', 'rotateY', 'rotateZ',
-                'scaleX', 'scaleY', 'scaleZ'
-            ]
-        )
+        # Iterate through transform attributes
+        #
+        for attribute in ('translate', 'rotate', 'scale'):
 
-    def alignToTransform(self, transform, startFrame=0, endFrame=1, step=1):
+            # Iterate through children
+            #
+            plug = self.findPlug(attribute)
+
+            for child in plugutils.iterChildren(plug, writable=True, keyable=True):
+
+                self.keyAttr(child)
+
+    def alignTransform(self, transform, startFrame=0, endFrame=1, step=1):
         """
-        Aligns the transform to the other transform over a period of time.
+        Aligns this transform to the other transform over a period of time.
 
         :type transform: TransformMixin
         :type startFrame: int
@@ -361,14 +365,52 @@ class TransformMixin(dagmixin.DagMixin):
 
         transformutils.copyTransform(self.dagPath(), transform.dagPath())
 
-    def resetTransform(self):
+    def cacheTransform(self, worldSpace=False):
+        """
+        Returns a dictionary of time-matrix items.
+
+        :type worldSpace: bool
+        :rtype: Dict[int, om.MMatrix]
+        """
+
+        # Collect time inputs
+        #
+        times = set()
+
+        for plug in self.iterPlugs(channelBox=True):
+
+            # Check if plug is animated
+            #
+            if not plugutils.isAnimated(plug):
+
+                continue
+
+            # Add curve inputs
+            #
+            animCurve = self.scene(plug.source().node())
+            times.update(set(animCurve.inputs()))
+
+        # Get matrices at times
+        #
+        instanceNumber = self.instanceNumber()
+        plugName = 'worldMatrix[{instanceNumber}]'.format(instanceNumber=instanceNumber) if worldSpace else 'matrix'
+
+        matrices = {}
+
+        for time in sorted(times):
+
+            matrices[time] = self.getAttr(plugName, time=time)
+
+        return matrices
+
+    def resetTransform(self, skipUserAttributes=False):
         """
         Resets all the channel-box plugs back to their default value.
 
         :rtype: None
         """
 
-        for plug in self.iterPlugs(channelBox=True):
+        for plug in self.iterPlugs(channelBox=True, static=skipUserAttributes):
 
             self.resetAttr(plug)
 
@@ -414,9 +456,9 @@ class TransformMixin(dagmixin.DagMixin):
         """
         Adds a locator shape to this transform.
 
-        :key localPosition: list[float, float, float]
-        :key localScale: list[float, float, float]
-        :rtype: mpynode.nodetypes.shapemixin.ShapeMixin
+        :key localPosition: Tuple[float, float, float]
+        :key localScale: Tuple[float, float, float]
+        :rtype: mpy.nodetypes.shapemixin.ShapeMixin
         """
 
         # Create point helper shape
@@ -450,10 +492,10 @@ class TransformMixin(dagmixin.DagMixin):
 
         :key size: float
         :key side: int
-        :key localPosition: list[float, float, float]
-        :key localRotate: list[float, float, float]
-        :key localScale: list[float, float, float]
-        :rtype: mpynode.nodetypes.shapemixin.ShapeMixin
+        :key localPosition: Tuple[float, float, float]
+        :key localRotate: Tuple[float, float, float]
+        :key localScale: Tuple[float, float, float]
+        :rtype: mpy.nodetypes.shapemixin.ShapeMixin
         """
 
         # Create point helper shape
@@ -525,8 +567,8 @@ class TransformMixin(dagmixin.DagMixin):
 
     def removeShapes(self):
         """
-        Removes all the shapes underneath this transform.
-        This method is undoable!
+        Removes all shapes underneath this transform.
+        This method is NOT undoable!
 
         :rtype: None
         """
@@ -543,7 +585,7 @@ class TransformMixin(dagmixin.DagMixin):
 
         :key side: int
         :key: colorIndex: int
-        :key: colorRGB: list[float, float, float]
+        :key: colorRGB: Tuple[float, float, float]
         :rtype: None
         """
 
@@ -677,25 +719,6 @@ class TransformMixin(dagmixin.DagMixin):
 
         return controllerTag
 
-    def findOppositeTransform(self):
-        """
-        Finds the transform opposite to this one.
-        If no opposite is found then this transform is returned instead!
-
-        :rtype: TransformMixin
-        """
-
-        name = self.name(includeNamespace=True)
-        mirrorName = namingutils.mirrorName(name)
-
-        if mc.objExists(mirrorName):
-
-            return self.scene(mirrorName)
-
-        else:
-
-            return self
-
     def detectMirroring(self):
         """
         Detects the mirror settings for this transform.
@@ -710,7 +733,7 @@ class TransformMixin(dagmixin.DagMixin):
         xAxis, yAxis, zAxis, pos = transformutils.breakMatrix(matrix, normalize=True)
         mirrorXAxis, mirrorYAxis, mirrorZAxis = list(map(transformutils.mirrorVector, (xAxis, yAxis, zAxis)))
 
-        otherTransform = self.findOppositeTransform()
+        otherTransform = self.getOppositeNode()
         otherMatrix = otherTransform.parentMatrix()
         otherXAxis, otherYAxis, otherZAxis, otherPos = transformutils.breakMatrix(otherMatrix, normalize=True)
 
@@ -734,67 +757,26 @@ class TransformMixin(dagmixin.DagMixin):
 
         return True
 
-    def mirrorTransform(self, pull=False):
+    def mirrorTransform(self, pull=False, includeKeys=False, animationRange=None):
         """
         Mirrors this transform to the opposite node.
 
         :type pull: bool
+        :type includeKeys: bool
+        :type animationRange: Union[Tuple[int, int], None]
         :rtype: None
         """
 
-        # Get opposite transform
+        # Iterate through channel-box plugs
         #
-        otherTransform = self.findOppositeTransform()
+        for plug in self.iterPlugs(channelBox=True):
 
-        if pull:
-
-            # Iterate through channel-box plugs
-            #
-            for plug in otherTransform.iterPlugs(channelBox=True):
-
-                # Get mirror flag for plug
-                #
-                plugName = plug.partialName(useLongNames=True)
-                mirrorFlag = 'mirror{name}'.format(name=stringutils.pascalize(plugName))
-
-                mirrorEnabled = self.userProperties.get(mirrorFlag, False)
-
-                # Inverse value and update other node
-                #
-                value = otherTransform.getAttr(plug)
-                value *= -1.0 if mirrorEnabled else 1.0
-
-                self.setAttr(plugName, value)
-
-        else:
-
-            # Iterate through channel-box plugs
-            #
-            for plug in self.iterPlugs(channelBox=True):
-
-                # Get mirror flag for plug
-                #
-                plugName = plug.partialName(useLongNames=True)
-                mirrorFlag = 'mirror{name}'.format(name=stringutils.pascalize(plugName))
-
-                mirrorEnabled = self.userProperties.get(mirrorFlag, False)
-
-                # Inverse value and update other node
-                #
-                value = self.getAttr(plug)
-                value *= -1.0 if mirrorEnabled else 1.0
-
-                otherTransform.setAttr(plugName, value)
-
-    def mirrorAnimation(self, pull=False):
-        """
-        Mirrors this transform's animation to the opposite node.
-
-        :type pull: bool
-        :rtype: None
-        """
-
-        pass
+            self.mirrorAttr(
+                plug,
+                pull=pull,
+                includeKeys=includeKeys,
+                animationRange=animationRange
+            )
 
     def constraintCount(self):
         """
