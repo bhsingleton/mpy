@@ -1,12 +1,14 @@
 import os
 
 from maya import cmds as mc
+from maya import OpenMaya as legacy
 from maya.api import OpenMaya as om
-from Qt import QtGui
 from six import string_types
+from Qt import QtGui
 from dcc.python import stringutils
+from dcc.naming import namingutils
 from dcc.maya.libs import dagutils, attributeutils, plugutils, plugmutators, animutils
-from .. import mpyattribute, mpynode
+from .. import mpyattribute, mpynode, mpycontext
 from ..collections import userproperties
 
 import logging
@@ -296,52 +298,6 @@ class DependencyMixin(mpynode.MPyNode):
 
         return om.MGlobal.getActiveSelectionList().hasItem(self.object())
 
-    def time(self):
-        """
-        Returns the global time node.
-
-        :rtype: DependencyMixin
-        """
-
-        return self.scene(list(dagutils.iterNodes(apiType=om.MFn.kTime))[0])
-
-    def currentTime(self):
-        """
-        Returns the current time.
-
-        :rtype: om.MTime
-        """
-
-        return self.time().getAttr('outTime')
-
-    def setCurrentTime(self, currentTime):
-        """
-        Updates the current time.
-
-        :type currentTime: Union[int, float, om.MTime]
-        :rtype: None
-        """
-
-        self.time().setAttr('outTime', currentTime)
-
-    def getAssociatedReferenceNode(self):
-        """
-        Returns the reference node associated with this node.
-        If this node is not referenced the none will be returned!
-
-        :rtype: mpynode.MPyNode
-        """
-
-        # Check if node is referenced
-        #
-        if self.isFromReferencedFile:
-
-            return self.scene(dagutils.getAssociatedReferenceNode(self.object()))
-
-        else:
-
-            return None
-
     def lock(self):
         """
         Method used to lock this node and prevent user changes.
@@ -388,6 +344,43 @@ class DependencyMixin(mpynode.MPyNode):
         """
 
         return self.functionSet().setUuid(uuid)
+
+    def getAssociatedReferenceNode(self):
+        """
+        Returns the reference node associated with this node.
+        If this node is not referenced the none will be returned!
+
+        :rtype: mpynode.MPyNode
+        """
+
+        # Check if node is referenced
+        #
+        if self.isFromReferencedFile:
+
+            return self.scene(dagutils.getAssociatedReferenceNode(self.object()))
+
+        else:
+
+            return None
+
+    def getOppositeNode(self):
+        """
+        Finds the node opposite to this one.
+        If no opposite is found then this node is returned instead!
+
+        :rtype: TransformMixin
+        """
+
+        name = self.name(includeNamespace=True)
+        mirrorName = namingutils.mirrorName(name)
+
+        if mc.objExists(mirrorName):
+
+            return self.scene(mirrorName)
+
+        else:
+
+            return self
 
     def iterAttr(self, **kwargs):
         """
@@ -442,69 +435,28 @@ class DependencyMixin(mpynode.MPyNode):
         """
         Removes an attribute from this node.
 
-        :type attribute: Union[str, om.MObject]
+        :type attribute: Union[str, om.MObject, om.MPlug]
         :rtype: None
         """
 
-        # Check value type
-        #
-        if isinstance(attribute, string_types):
+        attribute = self.attribute(attribute)
+        self.functionSet().removeAttribute(attribute)
 
-            # Check if node has attribute
-            #
-            if not self.hasAttr(attribute):
-
-                log.warning('Cannot locate attribute: %s' % attribute)
-                return
-
-            # Remove attribute from node
-            #
-            self.removeAttr(self.attribute(attribute))
-
-        elif isinstance(attribute, om.MObject):
-
-            # Check if this is a valid attribute
-            #
-            if not attribute.hasFn(om.MFn.kAttribute):
-
-                raise TypeError('removeAttr() expects a valid attribute (%s given)!' % attribute.apiTypeStr)
-
-            # Remove attribute from node
-            #
-            self.functionSet().removeAttribute(attribute)
-
-        else:
-
-            raise TypeError('removeAttr() expects either a str or MObject (%s given)!' % type(attribute).__name__)
-
-    def getAttr(self, plug, convertUnits=True):
+    def getAttr(self, plug, time=None, convertUnits=True):
         """
         Returns the value from the supplied plug.
 
         :type plug: Union[str, om.MObject, om.MPlug]
+        :type time:
         :type convertUnits: bool
         :rtype: Any
         """
 
-        # Check plug type
-        #
-        if isinstance(plug, om.MPlug):
+        plug = self.findPlug(plug)
+
+        with mpycontext.MPyContext(time):
 
             return plugmutators.getValue(plug, convertUnits=convertUnits)
-
-        elif isinstance(plug, string_types):
-
-            plug = self.findPlug(plug)
-            return self.getAttr(plug, convertUnits=convertUnits)
-
-        elif isinstance(plug, om.MObject):
-
-            plug = om.MPlug(self.object(), plug)
-            return self.getAttr(plug, convertUnits=convertUnits)
-
-        else:
-
-            raise TypeError('getAttr() expects a plug (%s given)!' % type(plug).__name__)
 
     def getAttrType(self, attribute):
         """
@@ -536,25 +488,8 @@ class DependencyMixin(mpynode.MPyNode):
         :rtype: None
         """
 
-        # Check plug type
-        #
-        if isinstance(plug, om.MPlug):
-
-            return plugmutators.setValue(plug, value, force=force)
-
-        elif isinstance(plug, string_types):
-
-            plug = self.findPlug(plug)
-            return self.setAttr(plug, value, force=force)
-
-        elif isinstance(plug, om.MObject):
-
-            plug = om.MPlug(self.object(), plug)
-            return self.setAttr(plug, value, force=force)
-
-        else:
-
-            raise TypeError('setAttr() expects a plug (%s given)!' % type(plug).__name__)
+        plug = self.findPlug(plug)
+        plugmutators.setValue(plug, value, force=force)
 
     def resetAttr(self, plug, force=False):
         """
@@ -565,110 +500,157 @@ class DependencyMixin(mpynode.MPyNode):
         :rtype: None
         """
 
-        # Check plug type
-        #
-        if isinstance(plug, om.MPlug):
+        plug = self.findPlug(plug)
+        plugmutators.resetValue(plug, force=force)
 
-            return plugmutators.resetValue(plug, force=force)
-
-        elif isinstance(plug, string_types):
-
-            plug = self.findPlug(plug)
-            return self.resetAttr(plug, force=force)
-
-        elif isinstance(plug, om.MObject):
-
-            plug = om.MPlug(self.object(), plug)
-            return self.resetAttr(plug, force=force)
-
-        else:
-
-            raise TypeError('resetAttr() expects a plug (%s given)!' % type(plug).__name__)
-
-    def hideAttr(self, *attributes):
+    def hideAttr(self, *plugs):
         """
         Hides an attribute that belongs to this node.
 
-        :type attributes: Union[str, List[str]]
+        :type plugs: Union[str, List[str], om.MPlug, List[om.MPlug]]
         :rtype: None
         """
 
-        # Iterate through attributes
-        #
-        for attribute in attributes:
+        for plug in plugs:
 
-            # Verify attribute is valid
-            #
-            attribute = self.attribute(attribute)
+            plug = self.findPlug(plug)
+            plug.isKeyable = False
+            plug.isChannelBox = False
 
-            if not attribute.hasFn(om.MFn.kAttribute):
-
-                continue
-
-            # Modify attribute
-            #
-            fnAttribute = om.MFnAttribute(attribute)
-            fnAttribute.hidden = True
-            fnAttribute.channelBox = False
-
-    def showAttr(self, *attributes):
+    def showAttr(self, *plugs, keyable=False):
         """
         Un-hides an attribute that belongs to this node.
 
-        :type attributes: Union[str, List[str], om.MObject, om.MObjectArray]
+        :type plugs: Union[str, List[str], om.MPlug, List[om.MPlug]]
+        :type keyable: bool
         :rtype: None
         """
 
-        # Iterate through attributes
-        #
-        for attribute in attributes:
+        for plug in plugs:
 
-            # Verify attribute is valid
-            #
-            attribute = self.attribute(attribute)
+            plug = self.findPlug(plug)
+            plug.isKeyable = keyable
+            plug.isChannelBox = True
 
-            if not attribute.hasFn(om.MFn.kAttribute):
-
-                continue
-
-            # Modify attribute
-            #
-            fnAttribute = om.MFnAttribute(attribute)
-            fnAttribute.hidden = False
-            fnAttribute.channelBox = True
-
-    def keyAttr(self, plug, value, frame=None):
+    def keyAttr(self, *args, time=None, ensure=False):
         """
-        Keys an attribute with the supplied value at the specified time.
+        Keys an attribute at the specified time.
+        If no value is supplied then the current value is used instead!
         If no time is specified then the current time is used instead!
 
-        :type plug: om.MPlug
-        :type value: Any
-        :type frame: Union[int, None]
+        :type args: Union[om.MPlug, Tuple[om.MPlug, Any]]
+        :type time: Union[int, float, om.MTime, None]
+        :type ensure: bool
         :rtype: mpy.nodetypes.animcurvemixin.AnimCurveMixin
         """
 
+        # Check number of arguments
+        #
+        plug, value = None, None
+        numArgs = len(args)
+
+        if numArgs == 1:
+
+            plug = self.findPlug(args[0])
+            value = plugmutators.getValue(plug)
+
+        elif numArgs == 2:
+
+            plug, value = self.findPlug(args[0]), args[1]
+
+        else:
+
+            raise TypeError('keyAttr() expects 1-2 arguments (%s given)!' % numArgs)
+
         # Ensure plug is keyed
         #
-        plug = self.findPlug(plug)
         animCurve = animutils.ensureKeyed(plug)
 
         if animCurve is None:
 
             return
 
-        # Modify anim curve
+        # Check if value should be updated
         #
-        frame = frame if frame is not None else self.scene.time
-
         animCurve = self.scene(animCurve)
-        animCurve.setValueAtFrame(value, frame)
 
-        return animCurve
+        if ensure:
+
+            return animCurve
+
+        else:
+
+            animCurve.setValue(value, time=time)
+            return animCurve
+
+    def mirrorAttr(self, plug, pull=False, includeKeys=False, animationRange=None):
+        """
+        Mirrors the supplied plug to the opposite node.
+        If no node is found opposite to this node then itself is used instead!
+
+        :type plug: om.MPlug
+        :type pull: bool
+        :type includeKeys: bool
+        :type animationRange: Union[Tuple[int, int], None]
+        :rtype: None
+        """
+
+        # Get mirror flag for plug
+        #
+        plugName = plug.partialName(useLongNames=True)
+        mirrorFlag = 'mirror{name}'.format(name=stringutils.titleize(plugName))
+
+        mirrorEnabled = self.userProperties.get(mirrorFlag, False)
+
+        # Inverse value and update other node
+        #
+        otherNode = self.getOppositeNode()
+        otherPlug = otherNode.findPlug(plugName)
+
+        log.debug('Mirroring "%s" > "%s"' % (plug.info, otherPlug.info))
+
+        if pull:
+
+            # Mirror the other value to this node
+            #
+            value = otherNode.getAttr(otherPlug)
+            value *= -1.0 if mirrorEnabled else 1.0
+
+            self.setAttr(plug, value)
+
+            # Check if keys should be included
+            #
+            if includeKeys and plugutils.isAnimated(otherPlug):
+
+                otherAnimCurve = self.scene(otherPlug.source().node())
+                keys = otherAnimCurve.mirrorKeys(animationRange=animationRange)
+
+                animCurve = self.keyAttr(plug, ensure=True)
+                animCurve.replaceKeys(keys)
+
+        else:
+
+            # Mirror this value to the other node
+            #
+            value = self.getAttr(plug)
+            value *= -1.0 if mirrorEnabled else 1.0
+
+            otherNode.setAttr(plugName, value)
+
+            # Check if keys should be included
+            #
+            if includeKeys and plugutils.isAnimated(plug):
+
+                animCurve = self.scene(plug.source().node())
+                keys = animCurve.mirrorKeys(animationRange=animationRange)
+
+                otherAnimCurve = otherNode.keyAttr(otherPlug, ensure=True)
+                otherAnimCurve.replaceKeys(keys)
 
     def clearKeys(self):
         """
-        Removes all animation curves connected to this node.
+        Deletes all animation curves connected to this node.
+        This operation is NOT undoable!
 
         :rtype: None
         """
@@ -785,21 +767,24 @@ class DependencyMixin(mpynode.MPyNode):
 
             raise TypeError('findPlug() expects either a str or MObject (%s given)!' % type(name).__name__)
 
-    def iterPlugs(self, channelBox=False):
+    def iterPlugs(self, static=False, dynamic=False, channelBox=False):
         """
         Returns a generator that yields plugs from this node.
+        Any additional flags that are enabled
 
+        :type static: bool
+        :type dynamic: bool
         :type channelBox: bool
         :rtype: Iterator[om.MPlug]
         """
 
         if channelBox:
 
-            return plugutils.iterChannelBoxPlugs(self.object())
+            return plugutils.iterChannelBoxPlugs(self.object(), static=static, dynamic=dynamic)
 
         else:
 
-            return plugutils.iterTopLevelPlugs(self.object())
+            return plugutils.iterTopLevelPlugs(self.object(), static=static, dynamic=dynamic)
 
     def connectPlugs(self, source, destination, force=False):
         """
