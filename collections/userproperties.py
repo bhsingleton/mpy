@@ -15,7 +15,7 @@ log.setLevel(logging.INFO)
 
 class UserProperties(collections_abc.MutableMapping):
     """
-    Overload of MutableMapping that interfaces with user properties.
+    Overload of `MutableMapping` that interfaces with user properties.
     """
 
     # region Dunderscores
@@ -156,15 +156,15 @@ class UserProperties(collections_abc.MutableMapping):
 
         return self.__properties__.items()
 
-    def update(self, items):
+    def update(self, obj):
         """
         Copies the supplied items to the internal properties.
 
-        :type items: dict
+        :type obj: dict
         :rtype: None
         """
 
-        self.__properties__.update(items)
+        self.__properties__.update(obj)
         self.invalidate()
 
     def ensureNotes(self):
