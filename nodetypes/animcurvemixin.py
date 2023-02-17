@@ -64,40 +64,131 @@ class AnimCurveMixin(dependencymixin.DependencyMixin):
 
         return [self.input(i).value for i in range(self.numKeys)]
 
-    def setValue(self, value, time=None):
+    def inputRange(self):
         """
-        Sets the supplied value at the specified time.
+        Returns the input range from this anim curve.
 
-        :type value: Any
-        :type time: Union[int, float, om.MTime, None]
-        :rtype: None
+        :rtype: Tuple[int, int]
         """
 
-        # Check if time is valid
-        #
-        if isinstance(time, (int, float)):
+        inputs = self.inputs()
+        numInputs = len(inputs)
 
-            time = om.MTime(time, unit=om.MTime.uiUnit())
+        if numInputs > 0:
 
-        elif time is None:
-
-            time = om.MTime(self.scene.time, unit=om.MTime.uiUnit())
+            return inputs[0], inputs[-1]
 
         else:
 
-            pass
+            return None, None
 
-        # Check if index exists for time
+    def remove(self, *args, **kwargs):
+        """
+        Removes the key at the specified index.
+
+        :type args: Union[int, om.MTime, Tuple[int, int]]
+        :key change: oma.MAnimCurveChange
+        :rtype: None
+        """
+
+        # Inspect arguments
         #
-        index = self.find(time)
+        numArgs = len(args)
 
-        if index is None:
+        if numArgs == 1:
 
-            index = self.insertKey(time)
+            # Evaluate argument type
+            #
+            arg = args[0]
 
-        # Update value at index
+            if isinstance(arg, int):
+
+                # Call parent method
+                #
+                self.functionSet().remove(arg, **kwargs)
+
+            elif isinstance(arg, om.MTime):
+
+                # Find index at time
+                #
+                index = self.find(arg)
+
+                if index is not None:
+
+                    self.remove(index)
+
+                else:
+
+                    log.warning('Cannot locate index at frame: %s!' % arg.value)
+
+            else:
+
+                raise TypeError('remove() expects either an int or MTime (%s given)!' % type(arg).__name__)
+
+        elif numArgs == 2:
+
+            # Remove indices within time range
+            #
+            startTime, endTime = args
+            indices = [i for (i, time) in enumerate(self.inputs()) if startTime <= time <= endTime]
+
+            for i in reversed(indices):
+
+                self.remove(i)
+
+        else:
+
+            raise TypeError('remove() expects 1 or 2 arguments (%s given)!' % numArgs)
+
+    def setValue(self, *args, **kwargs):
+        """
+        Sets the supplied value at either the specified index or time.
+        Be sure to enable `convertUnits` for values that are using UI units!
+
+        :type args: Union[Tuple[om.MTime, Any], Tuple[int, Any]]
+        :key change: om.MDGModifier
+        :key convertUnits: bool
+        :rtype: None
+        """
+
+        # Inspect arguments
         #
-        self.functionSet().setValue(index, value)
+        numArgs = len(args)
+
+        if numArgs == 1:
+
+            # Set value at current time
+            #
+            time = om.MTime(self.scene.time, unit=om.MTime.uiUnit())
+            value = args[0]
+
+            return self.setValue(time, value, **kwargs)
+
+        elif numArgs == 2:
+
+            # Inspect supplied arguments
+            #
+            index, value = args
+
+            if isinstance(index, om.MTime):
+
+                index = self.insertKey(index)
+
+            # Check if value requires converting to internal units
+            #
+            convertUnits = kwargs.pop('convertUnits', False)
+
+            if convertUnits:
+
+                value = animutils.uiToInternalUnit(value, self.animCurveType)
+
+            # Update value at index
+            #
+            self.functionSet().setValue(index, value, **kwargs)
+
+        else:
+
+            raise TypeError('setValue() expects 1-2 arguments (%s given)!' % numArgs)
 
     def getKeys(self, animationRange=None):
         """
@@ -108,9 +199,11 @@ class AnimCurveMixin(dependencymixin.DependencyMixin):
         :rtype: List[keyframe.Keyframe]
         """
 
+        # Check if an animation range was requested
+        #
         keys = animutils.cacheKeys(self.getAssociatedPlug())
 
-        if animationRange is not None:
+        if not stringutils.isNullOrEmpty(animationRange):
 
             startTime, endTime = animationRange
             return [key for key in keys if startTime <= key.time <= endTime]
@@ -119,12 +212,14 @@ class AnimCurveMixin(dependencymixin.DependencyMixin):
 
             return keys
 
-    def replaceKeys(self, keys, clear=False):
+    def replaceKeys(self, keys, animationRange=None, insertAt=None, clear=False):
         """
         Replaces the keys in this animation curve.
         An optional `clear` flag can be specified to remove all existing keys.
 
         :type keys: List[keyframe.Keyframe]
+        :type animationRange: Union[Tuple[int, int], None]
+        :type insertAt: Union[int, None]
         :type clear: bool
         :rtype: None
         """
@@ -137,34 +232,33 @@ class AnimCurveMixin(dependencymixin.DependencyMixin):
 
             return
 
-        # Check if keys should be cleared
+        # Check if an animation range was supplied
         #
-        if clear:
+        startTime, endTime = None, None
 
-            # Remove all keys
-            #
-            self.clearKeys()
+        if not stringutils.isNullOrEmpty(animationRange):
+
+            startTime, endTime = animationRange
 
         else:
 
-            # Remove inputs to make room for new keys
-            #
-            inputs = self.inputs()
             startTime, endTime = keys[0].time, keys[-1].time
 
-            indices = [i for (i, time) in enumerate(inputs) if startTime <= time <= endTime]
+        # Check if inputs should be cleared
+        #
+        if clear:
 
-            for i in reversed(indices):
-
-                self.remove(i)
+            self.remove(startTime, endTime)
 
         # Insert keys
         #
+        timeOffset = insertAt - startTime if isinstance(insertAt, (int, float)) else 0
+
         for key in keys:
 
             # Add key at time
             #
-            time = om.MTime(key.time, unit=om.MTime.uiUnit())
+            time = om.MTime(key.time + timeOffset, unit=om.MTime.uiUnit())
             i = self.addKey(time, key.value, tangentInType=key.inTangentType, tangentOutType=key.outTangentType)
 
             # Modify tangents
@@ -213,12 +307,7 @@ class AnimCurveMixin(dependencymixin.DependencyMixin):
 
             # Remove inputs to make room for new keys
             #
-            startTime, endTime = keys[0].time, keys[-1].time
-            indices = [i for (i, time) in enumerate(inputs) if startTime <= time <= endTime]
-
-            for i in reversed(indices):
-
-                self.remove(i)
+            self.remove(startTime, endTime)
 
         else:
 
@@ -315,12 +404,35 @@ class AnimCurveMixin(dependencymixin.DependencyMixin):
 
         return keys
 
-    def clearKeys(self):
+    def clearKeys(self, **kwargs):
         """
         Removes all keyframes from this curve.
+        Once all keys from an animation curve are removed the curve is deleted!
 
+        :key animationRange: Union[Tuple[int, int], None]
         :rtype: None
         """
 
-        animutils.clearKeys(self.object())
+        # Check if an animation range was supplied
+        # If not, then go ahead and delete the curve
+        #
+        animationRange = kwargs.get('animationRange', None)
+
+        if animationRange is None:
+
+            self.delete()
+            return
+
+        # Check if animation range is redundant
+        # If so, again, go ahead and delete the curve
+        #
+        inputRange = self.inputRange()
+
+        if animationRange[0] > inputRange[0] and animationRange[1] < inputRange[1]:
+
+            animutils.clearKeys(self.object(), animationRange=animationRange)
+
+        else:
+
+            self.delete()
     # endregion

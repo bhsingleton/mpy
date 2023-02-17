@@ -279,11 +279,10 @@ class DependencyMixin(mpynode.MPyNode):
         # Get active selection
         #
         selection = om.MGlobal.getActiveSelectionList()
-        item = self.object()
 
-        if selection.hasItem(item):
+        if self.isSelected():
 
-            selection.remove(item)
+            selection.remove(self.object())
 
         # Reset active selection
         #
@@ -544,7 +543,7 @@ class DependencyMixin(mpynode.MPyNode):
         :rtype: mpy.nodetypes.animcurvemixin.AnimCurveMixin
         """
 
-        # Check number of arguments
+        # Inspect supplied arguments
         #
         plug, value = None, None
         numArgs = len(args)
@@ -562,28 +561,41 @@ class DependencyMixin(mpynode.MPyNode):
 
             raise TypeError('keyAttr() expects 1-2 arguments (%s given)!' % numArgs)
 
-        # Ensure plug is keyed
+        # Check if plug is keyable
         #
-        animCurve = animutils.ensureKeyed(plug)
+        if not plug.isKeyable:
 
-        if animCurve is None:
+            raise TypeError('keyAttr() expects a keyable plug (%s given)!' % plug.info)
 
-            return
-
-        # Check if value should be updated
+        # Check if a valid time was supplied
         #
-        animCurve = self.scene(animCurve)
+        if isinstance(time, om.MTime):
 
-        if ensure:
+            pass
 
-            return animCurve
+        elif isinstance(time, (int, float)):
+
+            time = om.MTime(time, unit=om.MTime.uiUnit())
+
+        elif time is None:
+
+            time = om.MTime(self.scene.time, unit=om.MTime.uiUnit())
 
         else:
 
-            animCurve.setValue(value, time=time)
-            return animCurve
+            raise TypeError('keyAttr() expects a valid time (%s given)!' % type(time).__name__)
 
-    def mirrorAttr(self, plug, pull=False, includeKeys=False, animationRange=None):
+        # Check if value should be updated
+        #
+        animCurve = self.scene(animutils.ensureKeyed(plug))
+
+        if not ensure:
+
+            animCurve.setValue(time, value, convertUnits=True)
+
+        return animCurve
+
+    def mirrorAttr(self, plug, pull=False, includeKeys=False, animationRange=None, insertAt=None):
         """
         Mirrors the supplied plug to the opposite node.
         If no node is found opposite to this node then itself is used instead!
@@ -592,6 +604,7 @@ class DependencyMixin(mpynode.MPyNode):
         :type pull: bool
         :type includeKeys: bool
         :type animationRange: Union[Tuple[int, int], None]
+        :type insertAt: Union[int, None]
         :rtype: None
         """
 
@@ -626,7 +639,7 @@ class DependencyMixin(mpynode.MPyNode):
                 keys = otherAnimCurve.mirrorKeys(animationRange=animationRange)
 
                 animCurve = self.keyAttr(plug, ensure=True)
-                animCurve.replaceKeys(keys)
+                animCurve.replaceKeys(keys, animationRange=animationRange, insertAt=insertAt)
 
         else:
 
@@ -645,19 +658,22 @@ class DependencyMixin(mpynode.MPyNode):
                 keys = animCurve.mirrorKeys(animationRange=animationRange)
 
                 otherAnimCurve = otherNode.keyAttr(otherPlug, ensure=True)
-                otherAnimCurve.replaceKeys(keys)
+                otherAnimCurve.replaceKeys(keys, animationRange=animationRange, insertAt=insertAt)
 
-    def clearKeys(self):
+    def clearKeys(self, **kwargs):
         """
-        Deletes all animation curves connected to this node.
-        This operation is NOT undoable!
+        Removes all keyframes from this node.
+        Once all keys from an animation curve are removed the curve is deleted!
+        An optional animation range can be specified in case you only want to clear a section of keys.
 
+        :key animationRange: Union[Tuple[int, int], None]
+        :key skipUserAttributes: bool
         :rtype: None
         """
 
         # Iterate through plugs
         #
-        for plug in self.iterPlugs(channelBox=True):
+        for plug in self.iterPlugs(channelBox=True, **kwargs):
 
             # Check if plug is animated
             #
@@ -665,10 +681,10 @@ class DependencyMixin(mpynode.MPyNode):
 
                 continue
 
-            # Delete anim curve
+            # Clear inputs from animation curve
             #
-            animCurve = plug.source().node()
-            dagutils.deleteNode(animCurve)
+            animCurve = self.scene(plug.source().node())
+            animCurve.clearKeys(**kwargs)
 
     def getAliases(self):
         """
@@ -767,24 +783,53 @@ class DependencyMixin(mpynode.MPyNode):
 
             raise TypeError('findPlug() expects either a str or MObject (%s given)!' % type(name).__name__)
 
-    def iterPlugs(self, static=False, dynamic=False, channelBox=False):
+    def findAnimCurve(self, name, ensure=False):
         """
-        Returns a generator that yields plugs from this node.
-        Any additional flags that are enabled
+        Returns an anim curve associated with the supplied plug path.
 
-        :type static: bool
-        :type dynamic: bool
-        :type channelBox: bool
-        :rtype: Iterator[om.MPlug]
+        :type name: Union[str, om.MObject, om.MPlug]
+        :type ensure: bool
+        :rtype: mpy.nodetypes.animcurvemixin.AnimCurveMixin
         """
 
-        if channelBox:
+        # Check if plug is animated
+        #
+        plug = self.findPlug(name)
 
-            return plugutils.iterChannelBoxPlugs(self.object(), static=static, dynamic=dynamic)
+        if plugutils.isAnimated(plug):
+
+            return self.scene(plug.source().node())
+
+        elif ensure and plug.isKeyable:
+
+            return animutils.ensureKeyed(plug)
 
         else:
 
-            return plugutils.iterTopLevelPlugs(self.object(), static=static, dynamic=dynamic)
+            return None
+
+    def iterPlugs(self, **kwargs):
+        """
+        Returns a generator that yields plugs from this node.
+
+        :key readable: bool
+        :key writable: bool
+        :key nonDefault: bool
+        :key channelBox: bool
+        :key affectsWorldSpace: bool
+        :key skipUserAttributes: bool
+        :rtype: Iterator[om.MPlug]
+        """
+
+        channelBox = kwargs.get('channelBox', False)
+
+        if channelBox:
+
+            return plugutils.iterChannelBoxPlugs(self.object(), **kwargs)
+
+        else:
+
+            return plugutils.iterTopLevelPlugs(self.object(), **kwargs)
 
     def connectPlugs(self, source, destination, force=False):
         """
