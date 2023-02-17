@@ -170,6 +170,46 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
 
         return self.dagPath().exclusiveMatrixInverse()
 
+    def select(self, replace=False):
+        """
+        Method used to select this instance.
+
+        :type replace: bool
+        :rtype: None
+        """
+
+        # Check if selection should be replaced
+        #
+        selection = om.MSelectionList()
+
+        if not replace:
+
+            selection = om.MGlobal.getActiveSelectionList()
+
+        # Reset active selection
+        #
+        selection.add(self.dagPath())
+        om.MGlobal.setActiveSelectionList(selection)
+
+    def deselect(self):
+        """
+        Method used to deselect this instance.
+
+        :rtype: None
+        """
+
+        # Get active selection
+        #
+        selection = om.MGlobal.getActiveSelectionList()
+
+        if self.isSelected():
+
+            selection.remove(self.dagPath())
+
+        # Reset active selection
+        #
+        om.MGlobal.setActiveSelectionList(selection)
+
     def isSelected(self):
         """
         Evaluates whether this object is currently selected.
