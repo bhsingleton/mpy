@@ -9,6 +9,7 @@ from dcc.python import stringutils, importutils
 from dcc.naming import namingutils
 from dcc.maya.libs import dagutils, sceneutils
 from . import mpynode, nodetypes, plugintypes
+from .collections import fileproperties
 
 import logging
 logging.basicConfig()
@@ -22,7 +23,7 @@ class MPyFactory(proxyfactory.ProxyFactory):
     """
 
     # region Dunderscores
-    __slots__ = ('__plugins__', '__extensions__')
+    __slots__ = ('__plugins__', '__extensions__', '__properties__')
 
     def __init__(self, *args, **kwargs):
         """
@@ -37,6 +38,7 @@ class MPyFactory(proxyfactory.ProxyFactory):
 
             self.__plugins__ = dict(self.iterPackages(plugintypes, classAttr='__plugin__'))
             self.__extensions__ = {}
+            self.__properties__ = fileproperties.FileProperties()
 
         # Call parent method
         #
@@ -55,10 +57,20 @@ class MPyFactory(proxyfactory.ProxyFactory):
     # endregion
 
     # region Properties
+    @ property
+    def name(self):
+        """
+        Getter method that returns the current scene's name.
+
+        :rtype: str
+        """
+
+        return sceneutils.currentFilename(includeExtension=False)
+
     @property
     def filename(self):
         """
-        Getter method that returns the current scene name.
+        Getter method that returns the current scene's file name.
 
         :rtype: str
         """
@@ -68,7 +80,7 @@ class MPyFactory(proxyfactory.ProxyFactory):
     @property
     def filePath(self):
         """
-        Getter method that returns the current scene path.
+        Getter method that returns the current scene's file path.
 
         :rtype: str
         """
@@ -78,7 +90,7 @@ class MPyFactory(proxyfactory.ProxyFactory):
     @property
     def directory(self):
         """
-        Getter method that returns the current scene directory.
+        Getter method that returns the current scene's directory.
 
         :rtype: str
         """
@@ -126,6 +138,46 @@ class MPyFactory(proxyfactory.ProxyFactory):
         sceneutils.setTime(time)
 
     @property
+    def startTime(self):
+        """
+        Getter method that returns the current start-time.
+
+        :rtype: int
+        """
+
+        return sceneutils.getStartTime()
+
+    @startTime.setter
+    def startTime(self, time):
+        """
+        Setter method that updates the current start-time.
+
+        :rtype: int
+        """
+
+        sceneutils.setStartTime(time)
+
+    @property
+    def endTime(self):
+        """
+        Getter method that returns the current end-time.
+
+        :rtype: int
+        """
+
+        return sceneutils.getEndTime()
+
+    @endTime.setter
+    def endTime(self, time):
+        """
+        Setter method that updates the current end-time.
+
+        :rtype: int
+        """
+
+        sceneutils.setEndTime(time)
+
+    @property
     def animationRange(self):
         """
         Getter method that returns the current animation range.
@@ -145,6 +197,37 @@ class MPyFactory(proxyfactory.ProxyFactory):
         """
 
         sceneutils.setAnimationRange(*animationRange)
+
+    @property
+    def autoKey(self):
+        """
+        Getter method that returns the auto-key state.
+
+        :rtype: bool
+        """
+
+        return sceneutils.autoKey()
+
+    @autoKey.setter
+    def autoKey(self, state):
+        """
+        Setter method that updates the auto-key state.
+
+        :type state: bool
+        :rtype: None
+        """
+
+        sceneutils.setAutoKey(state)
+
+    @property
+    def properties(self):
+        """
+        Getter method that returns the scene properties.
+
+        :rtype: fileproperties.FileProperties
+        """
+
+        return self.__properties__
     # endregion
 
     # region Methods
@@ -170,7 +253,7 @@ class MPyFactory(proxyfactory.ProxyFactory):
         """
         Returns the base class used to filter out objects when searching for classes.
 
-        :rtype: class
+        :rtype: Callable
         """
 
         return mpynode.MPyNode
@@ -191,7 +274,7 @@ class MPyFactory(proxyfactory.ProxyFactory):
 
         elif self.isExtension(dependNode):
 
-            return self.getExtension(dependNode)
+            return self.getExtensionMixin(dependNode)
 
         else:
 
@@ -269,7 +352,7 @@ class MPyFactory(proxyfactory.ProxyFactory):
 
         return cls
 
-    def getExtension(self, dependNode):
+    def getExtensionMixin(self, dependNode):
         """
         Returns an extension class that is compatible with the given dependency node.
 
@@ -287,7 +370,7 @@ class MPyFactory(proxyfactory.ProxyFactory):
         #
         fnDependNode = om.MFnDependencyNode(dependNode)
 
-        className = fnDependNode.findPlug('__name__', False).asString()
+        className = fnDependNode.findPlug('__class__', False).asString()
         modulePath = fnDependNode.findPlug('__module__', False).asString()
 
         if stringutils.isNullOrEmpty(className) or stringutils.isNullOrEmpty(modulePath):
@@ -535,11 +618,11 @@ class MPyFactory(proxyfactory.ProxyFactory):
         :rtype: Iterator[mpynodeextension.MPyNodeExtension]
         """
 
-        nodeNames = mc.ls('*.__class__', long=True)
+        nodeNames = mc.ls('*.__class__', long=True, objectsOnly=True)
 
         if not stringutils.isNullOrEmpty(nodeNames):
 
-            yield map(mpynode.MPyNode, nodeNames)
+            yield from map(self, nodeNames)
 
         else:
 
@@ -642,26 +725,27 @@ class MPyFactory(proxyfactory.ProxyFactory):
 
         return os.path.join(directory, 'shapes', filename)
 
-    def createNode(self, typeName, name='', parent=None, **kwargs):
+    def createNode(self, typeName, name='', parent=None, skipSelect=True, **kwargs):
         """
         Creates a new scene node and wraps it in a MPyNode interface.
 
         :type typeName: str
         :type name: Union[str, dict]
         :type parent: Union[str, om.MObject, om.MDagPath, mpynode.MPyNode]
-        :key shared: bool
-        :key skipSelect: bool
+        :type skipSelect: bool
         :rtype: mpynode.MPyNode
         """
 
-        # Evaluate supplied name
+        # Check if name requires concatenating
         #
         if isinstance(name, dict):
 
             name = namingutils.concatenateName(**name)
 
-        # Check if a parent was supplied
+        # Check if a valid parent was supplied
         #
+        node = None
+
         if parent is None:
 
             # Create dependency node
@@ -671,11 +755,11 @@ class MPyFactory(proxyfactory.ProxyFactory):
 
             # Check if a valid name was supplied
             #
-            if not stringutils.isNullOrEmpty(name):
+            if isinstance(name, string_types) and not stringutils.isNullOrEmpty(name):
 
                 fnDependNode.setName(name)
 
-            return mpynode.MPyNode(dependNode)
+            node = mpynode.MPyNode(dependNode)
 
         else:
 
@@ -696,11 +780,19 @@ class MPyFactory(proxyfactory.ProxyFactory):
 
             # Check if a valid name was supplied
             #
-            if not stringutils.isNullOrEmpty(name):
+            if isinstance(name, string_types) and not stringutils.isNullOrEmpty(name):
 
                 fnDagNode.setName(name)
 
-            return mpynode.MPyNode(dagNode)
+            node = mpynode.MPyNode(dagNode)
+
+        # Check if node should be selected
+        #
+        if not skipSelect:
+
+            node.select(replace=True)
+
+        return node
 
     def createDisplayLayer(self, name, includeSelected=False, includeDescendants=False):
         """
