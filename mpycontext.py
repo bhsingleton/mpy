@@ -48,7 +48,7 @@ class MPyContext(object):
         #
         if not self.context.isNormal() or not self.context.isCurrent():
 
-            log.info(f'Creating context guard @ {self.time.value()}')
+            log.debug(f'Creating context guard @ {self.time.value()}')
             self.contextGuard = legacy.MDGContextGuard(self.context)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
