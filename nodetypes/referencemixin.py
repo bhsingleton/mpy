@@ -1,3 +1,5 @@
+import os
+
 from maya import cmds as mc
 from maya.api import OpenMaya as om
 from six import string_types
@@ -39,7 +41,16 @@ class ReferenceMixin(dependencymixin.DependencyMixin):
 
         return super(ReferenceMixin, self).functionSet()
 
-    def reference(self):
+    def isValid(self):
+        """
+        Evaluates whether this skeleton is valid.
+
+        :rtype: bool
+        """
+
+        return os.path.exists(self.filePath())
+
+    def getAssociatedReferenceNode(self):
         """
         Overloaded used to retrieve the reference this instance belongs to.
         This overload ignores the parent method since we know this is already a reference node.
@@ -68,13 +79,21 @@ class ReferenceMixin(dependencymixin.DependencyMixin):
 
         return self.functionSet().nodes()
 
+    def getNodeByName(self, name):
+        """
+        Returns a referenced node based on the supplied name.
+
+        :type name: str
+        :rtype: DependencyMixin
+        """
+        return self.scene('{namespace}:{name}'.format(namespace=self.namespace(), name=name))
+
     def getNodeByUuid(self, uuid):
         """
         Returns a referenced node based on the supplied UUID.
-        This overload ignores the parent method since we're only concerned about the referenced nodes.
 
         :type uuid: Union[str, om.MUuid]
-        :rtype: DependencyNode
+        :rtype: DependencyMixin
         """
 
         # Check if uuid requires initializing
@@ -89,11 +108,9 @@ class ReferenceMixin(dependencymixin.DependencyMixin):
 
         if isinstance(found, om.MObject):
 
-            # Initialize node interface
-            #
             return self.scene(found)
 
-        elif isinstance(found, list):
+        elif isinstance(found, (list, tuple)):
 
             # Collect nodes that belong to this reference
             #
@@ -116,10 +133,10 @@ class ReferenceMixin(dependencymixin.DependencyMixin):
 
             return None
 
-    def filePath(self, resolvedName=False, includePath=False, includeCopyNumber=False):
+    def filePath(self, resolvedName=True, includePath=True, includeCopyNumber=False):
         """
         Returns the file path  associated with this reference.
-        FIXME: Under the hood Maya is negating the includePath variable?
+        FIXME: Under the hood Maya is negating the `includePath` variable?
 
         :param resolvedName: Determines if the original user supplied value should be returned.
         :param includePath: Determines if the path to the file should be returned.
@@ -127,7 +144,7 @@ class ReferenceMixin(dependencymixin.DependencyMixin):
         :rtype: str
         """
 
-        return self.functionSet().fileName(resolvedName, includePath, includeCopyNumber)
+        return self.functionSet().fileName(resolvedName, not includePath, includeCopyNumber)
 
     def setFilePath(self, filePath):
         """
