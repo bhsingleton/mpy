@@ -2,10 +2,10 @@ import inspect
 import weakref
 
 from maya.api import OpenMaya as om
-from abc import ABCMeta
-from six import with_metaclass, string_types
+from six import string_types
 from dcc.maya.libs import dagutils
 from dcc.decorators.classproperty import classproperty
+from . import abcmetaextension
 
 import logging
 logging.basicConfig()
@@ -13,7 +13,7 @@ log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
 
 
-class MObjectWrapper(with_metaclass(ABCMeta, object)):
+class MObjectWrapper(object, metaclass=abcmetaextension.ABCMetaExtension):
     """
     Abstract base class used as a low-level wrapper for Maya scene objects.
     A lot of the architecture in this class is designed around dynamically looking up compatible function sets.
@@ -43,6 +43,15 @@ class MObjectWrapper(with_metaclass(ABCMeta, object)):
         #
         super(MObjectWrapper, self).__init__()
 
+    def __post_init__(self, *args, **kwargs):
+        """
+        Private method called after this instance has been initialized.
+
+        :rtype: None
+        """
+
+        pass
+    
     def __hash__(self):
         """
         Private method that returns a hashable value for this instance.

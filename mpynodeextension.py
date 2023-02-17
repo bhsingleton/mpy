@@ -1,9 +1,8 @@
 import inspect
 
-from abc import ABCMeta, abstractmethod
-from six import with_metaclass
 from dcc.maya.libs import attributeutils
 from . import mpynode, mpyattribute
+from .abstract import abcmetaextension
 
 import logging
 logging.basicConfig()
@@ -11,7 +10,7 @@ log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
 
 
-class MPyNodeExtension(with_metaclass(ABCMeta, mpynode.MPyNode)):
+class MPyNodeExtension(mpynode.MPyNode, metaclass=abcmetaextension.ABCMetaExtension):
     """
     Overload of `MPyNode` that serves as a base class for extension interfaces.
     """
@@ -22,20 +21,20 @@ class MPyNodeExtension(with_metaclass(ABCMeta, mpynode.MPyNode)):
     # endregion
 
     # region Methods
-    def __init__(self, obj, **kwargs):
+    def __post_init__(self, *args, **kwargs):
         """
-        Private method called after a new instance has been created.
+        Private method called after a new instance has been initialized.
 
-        :type obj: Union[str, om.MObject, om.MDagPath, om.MObjectHandle]
         :rtype: None
         """
 
         # Call parent method
         #
-        super(MPyNodeExtension, self).__init__(obj, **kwargs)
+        super(MPyNodeExtension, self).__post_init__(*args, **kwargs)
 
-        # Ensure user attributes exist
+        # Ensure extension attributes exist
         #
+        log.debug(f'Creating "{self.__class__.__name__}" extension attributes!')
         self.ensureUserAttributes()
     # endregion
 
@@ -65,7 +64,7 @@ class MPyNodeExtension(with_metaclass(ABCMeta, mpynode.MPyNode)):
         Returns a generator that yields parent classes.
         This generator starts from the top-level base class and works its way to this class!
 
-        :rtype: Iterator[class]
+        :rtype: Iterator[Callable]
         """
 
         return reversed(inspect.getmro(cls))
