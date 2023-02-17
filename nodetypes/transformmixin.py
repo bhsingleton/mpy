@@ -1,10 +1,11 @@
 from maya import cmds as mc
 from maya.api import OpenMaya as om
-from dcc.naming import namingutils
 from dcc.python import stringutils
-from dcc.maya.libs import plugutils, transformutils, shapeutils
+from dcc.generators.inclusiverange import inclusiveRange
+from dcc.maya.libs import plugutils, transformutils, shapeutils, animutils
+from dcc.maya.decorators.animate import animate
 from . import dagmixin
-from .. import mpyattribute
+from .. import mpyattribute, mpycontext
 
 import logging
 logging.basicConfig()
@@ -70,15 +71,18 @@ class TransformMixin(dagmixin.DagMixin):
             matrix = worldMatrix * self.exclusiveMatrixInverse()
             self.setMatrix(matrix, skipScale=True)
 
-    def translation(self, space=om.MSpace.kTransform):
+    def translation(self, space=om.MSpace.kTransform, time=None):
         """
         Returns the transform's translation component.
 
         :type space: int
+        :type time: Union[int, None]
         :rtype: om.MVector
         """
 
-        return transformutils.getTranslation(self.dagPath(), space=space)
+        with mpycontext.MPyContext(time=time):
+
+            return transformutils.getTranslation(self.dagPath(), space=space)
 
     def setTranslation(self, translation, space=om.MSpace.kTransform):
         """
@@ -120,14 +124,17 @@ class TransformMixin(dagmixin.DagMixin):
 
         return transformutils.getRotationOrder(self.dagPath())
 
-    def eulerRotation(self):
+    def eulerRotation(self, time=None):
         """
         Returns the transform's rotation component.
 
+        :type time: Union[int, None]
         :rtype: om.MEulerRotation
         """
 
-        return transformutils.getEulerRotation(self.dagPath())
+        with mpycontext.MPyContext(time=time):
+
+            return transformutils.getEulerRotation(self.dagPath())
 
     def setEulerRotation(self, eulerRotation):
         """
@@ -187,14 +194,17 @@ class TransformMixin(dagmixin.DagMixin):
 
         self.setPreEulerRotation(om.MEulerRotation())
 
-    def scale(self):
+    def scale(self, time=None):
         """
         Returns the transform's scale component.
 
+        :type time: Union[int, None]
         :rtype: List[float, float, float]
         """
 
-        return transformutils.getScale(self.dagPath())
+        with mpycontext.MPyContext(time=time):
+
+            return transformutils.getScale(self.dagPath())
 
     def setScale(self, scale):
         """
@@ -240,34 +250,31 @@ class TransformMixin(dagmixin.DagMixin):
 
         transformutils.resetPivots(self.dagPath())
 
-    def matrix(self, asTransformationMatrix=False):
+    def matrix(self, asTransformationMatrix=False, time=None):
         """
         Returns the local transformation matrix for this transform.
 
         :type asTransformationMatrix: bool
+        :type time: Union[int, None]
         :rtype: Union[om.MMatrix, om.MTransformationMatrix]
         """
 
-        return transformutils.getMatrix(self.dagPath(), asTransformationMatrix=asTransformationMatrix)
+        with mpycontext.MPyContext(time=time):
 
-    def setMatrix(self, matrix, skipTranslate=False, skipRotate=False, skipScale=True):
+            return transformutils.getMatrix(self.dagPath(), asTransformationMatrix=asTransformationMatrix)
+
+    def setMatrix(self, matrix, **kwargs):
         """
         Updates the local transformation matrix for this transform.
 
         :type matrix: om.MMatrix
-        :type skipTranslate: bool
-        :type skipRotate: bool
-        :type skipScale: bool
+        :key skipTranslate: bool
+        :key skipRotate: bool
+        :key skipScale: bool
         :rtype: None
         """
 
-        transformutils.applyTransformMatrix(
-            self.dagPath(),
-            matrix,
-            skipTranslate=skipTranslate,
-            skipRotate=skipRotate,
-            skipScale=skipScale
-        )
+        transformutils.applyTransformMatrix(self.dagPath(), matrix, **kwargs)
 
     def resetMatrix(self):
         """
@@ -281,127 +288,207 @@ class TransformMixin(dagmixin.DagMixin):
         self.resetEulerRotation()
         self.resetScale()
 
-    def parentMatrix(self):
+    def parentMatrix(self, time=None):
         """
         Returns the parent matrix for this transform.
 
+        :type time: Union[int, None]
         :rtype: om.MMatrix
         """
 
-        return transformutils.getParentMatrix(self.dagPath())
+        with mpycontext.MPyContext(time=time):
 
-    def parentInverseMatrix(self):
+            return transformutils.getParentMatrix(self.dagPath())
+
+    def parentInverseMatrix(self, time=None):
         """
         Returns the parent inverse-matrix for this transform.
 
+        :type time: Union[int, None]
         :rtype: om.MMatrix
         """
 
-        return self.parentMatrix().inverse()
+        return self.parentMatrix(time=time).inverse()
 
-    def worldMatrix(self):
+    def worldMatrix(self, time=None):
         """
         Returns the world matrix for this transform.
 
+        :type time: Union[int, None]
         :rtype: om.MMatrix
         """
 
-        return transformutils.getWorldMatrix(self.dagPath())
+        with mpycontext.MPyContext(time=time):
 
-    def worldInverseMatrix(self):
+            return transformutils.getWorldMatrix(self.dagPath())
+
+    def worldInverseMatrix(self, time=None):
         """
         Returns the world inverse-matrix for this transform.
 
+        :type time: Union[int, None]
         :rtype: om.MMatrix
         """
 
-        return self.worldMatrix().inverse()
+        return self.worldMatrix(time=time).inverse()
 
-    def keyTransform(self):
+    def keyTransform(self, ensure=False):
         """
         Keys just the transform component attributes.
 
+        :type ensure: bool
         :rtype: None
         """
 
         # Iterate through transform attributes
         #
-        for attribute in ('translate', 'rotate', 'scale'):
+        for plug in self.iterPlugs(channelBox=True, affectsWorldSpace=True, skipUserAttributes=True):
 
-            # Iterate through children
+            # Check if child is keyable
             #
-            plug = self.findPlug(attribute)
+            if plug.isKeyable and not plug.isLocked:
 
-            for child in plugutils.iterChildren(plug, writable=True, keyable=True):
+                self.keyAttr(plug, ensure=ensure)
 
-                self.keyAttr(child)
+            else:
 
-    def alignTransform(self, transform, startFrame=0, endFrame=1, step=1):
+                continue
+
+    @animate
+    def alignTransformTo(self, transform, **kwargs):
         """
         Aligns this transform to the other transform over a period of time.
 
         :type transform: TransformMixin
-        :type startFrame: int
-        :type endFrame: int
-        :type step: int
+        :key maintainOffset: bool
+        :key startTime: int
+        :key endTime: int
+        :key step: int
         :rtype: None
         """
+
+        # Get animation range
+        #
+        startTime = kwargs.pop('startTime', self.scene.time)
+        endTime = kwargs.pop('endTime', self.scene.time)
+        step = kwargs.pop('step', 1)
+
+        # Get offset matrices
+        #
+        maintainOffset = kwargs.pop('maintainOffset', False)
+        maintainTranslate = kwargs.pop('maintainTranslate', maintainOffset)
+        maintainRotate = kwargs.pop('maintainRotate', maintainOffset)
+        maintainScale = kwargs.pop('maintainScale', maintainOffset)
+
+        offsetMatrix = self.worldMatrix(time=startTime) * transform.worldInverseMatrix(time=startTime)
+        translateOffsetMatrix = transformutils.createTranslateMatrix(offsetMatrix) if maintainTranslate else om.MMatrix.kIdentity
+        rotateOffsetMatrix = transformutils.createRotationMatrix(offsetMatrix) if maintainRotate else om.MMatrix.kIdentity
+        scaleOffsetMatrix = transformutils.createScaleMatrix(offsetMatrix) if maintainScale else om.MMatrix.kIdentity
 
         # Iterate through time range
         #
-        for i in range(startFrame, endFrame + 1, step):
+        self.clearKeys(animationRange=(startTime, endTime), skipUserAttributes=True)
 
-            self.setCurrentTime(i)
-            self.copyTransform(transform)
-            self.keyTransform()
+        for time in inclusiveRange(startTime, endTime, step):
 
-    def copyTransform(self, transform):
-        """
-        Copies the transform components from the supplied node onto this one.
+            # Go to time
+            #
+            self.scene.time = time
 
-        :type transform: TransformMixin
-        :rtype: None
-        """
+            # Calculate target matrix and update transform
+            #
+            worldMatrix = transform.worldMatrix()
+            parentInverseMatrix = self.parentInverseMatrix()
+            localMatrix = ((scaleOffsetMatrix * rotateOffsetMatrix * translateOffsetMatrix) * worldMatrix) * parentInverseMatrix
 
-        transformutils.copyTransform(self.dagPath(), transform.dagPath())
+            self.setMatrix(localMatrix, **kwargs)
 
-    def cacheTransform(self, worldSpace=False):
+    def cacheTransformations(self, animationRange=None, step=1, worldSpace=False):
         """
         Returns a dictionary of time-matrix items.
+        If no range is specified then the matrices at each keyframe are returned instead!
 
+        :type animationRange: Union[Tuple[int, int], None]
+        :type step: Union[int, None]
         :type worldSpace: bool
         :rtype: Dict[int, om.MMatrix]
         """
 
-        # Collect time inputs
-        #
-        times = set()
-
-        for plug in self.iterPlugs(channelBox=True):
-
-            # Check if plug is animated
-            #
-            if not plugutils.isAnimated(plug):
-
-                continue
-
-            # Add curve inputs
-            #
-            animCurve = self.scene(plug.source().node())
-            times.update(set(animCurve.inputs()))
-
-        # Get matrices at times
+        # Check if an animation range was supplied
         #
         instanceNumber = self.instanceNumber()
         plugName = 'worldMatrix[{instanceNumber}]'.format(instanceNumber=instanceNumber) if worldSpace else 'matrix'
 
-        matrices = {}
+        if not stringutils.isNullOrEmpty(animationRange):
 
-        for time in sorted(times):
+            # Get matrices at times
+            #
+            startTime, endTime = animationRange
+            matrices = {}
 
-            matrices[time] = self.getAttr(plugName, time=time)
+            for time in inclusiveRange(startTime, endTime, step):
 
-        return matrices
+                matrices[time] = self.getAttr(plugName, time=time)
+
+            return matrices
+
+        else:
+
+            # Collect time inputs
+            #
+            times = set()
+
+            for plug in self.iterPlugs(channelBox=True):
+
+                # Check if plug is animated
+                #
+                if not plugutils.isAnimated(plug):
+
+                    continue
+
+                # Add curve inputs
+                #
+                animCurve = self.scene(plug.source().node())
+                times.update(set(animCurve.inputs()))
+
+            # Get matrices at times
+            #
+            matrices = {}
+
+            for time in sorted(times):
+
+                matrices[time] = self.getAttr(plugName, time=time)
+
+            return matrices
+
+    def syncTransformKeys(self):
+        """
+        Synchronizes the time inputs for all transform keys.
+
+        :rtype: Dict[str, List[keyframe.Keyframe]]
+        """
+
+        translateCache = animutils.synchronizeCompoundInputs(self.findPlug('translate'))
+        rotateCache = animutils.synchronizeCompoundInputs(self.findPlug('rotate'))
+        scaleCache = animutils.synchronizeCompoundInputs(self.findPlug('scale'))
+
+        cache = {}
+        cache.update(translateCache)
+        cache.update(rotateCache)
+        cache.update(scaleCache)
+
+        return cache
+
+    def copyTransform(self, other, **kwargs):
+        """
+        Copies the transform of the supplied node.
+
+        :type other: TransformMixin:
+        :rtype: None
+        """
+
+        matrix = other.worldMatrix() * self.parentInverseMatrix()
+        self.setMatrix(matrix, **kwargs)
 
     def resetTransform(self, skipUserAttributes=False):
         """
@@ -410,7 +497,7 @@ class TransformMixin(dagmixin.DagMixin):
         :rtype: None
         """
 
-        for plug in self.iterPlugs(channelBox=True, static=skipUserAttributes):
+        for plug in self.iterPlugs(channelBox=True, skipUserAttributes=skipUserAttributes):
 
             self.resetAttr(plug)
 
@@ -440,13 +527,245 @@ class TransformMixin(dagmixin.DagMixin):
 
         transformutils.unfreezeTransform(self.dagPath())
 
+    def detectMirroring(self):
+        """
+        Detects the mirror settings for this transform.
+        Each transform component uses the keyword pattern: mirrorTranslateX, etc
+
+        :rtype: bool
+        """
+
+        # Compare parent matrices
+        #
+        matrix = self.parentMatrix()
+        xAxis, yAxis, zAxis, pos = transformutils.breakMatrix(matrix, normalize=True)
+        mirrorXAxis, mirrorYAxis, mirrorZAxis = list(map(transformutils.mirrorVector, (xAxis, yAxis, zAxis)))
+
+        otherTransform = self.getOppositeNode()
+        otherMatrix = otherTransform.parentMatrix()
+        otherXAxis, otherYAxis, otherZAxis, otherPos = transformutils.breakMatrix(otherMatrix, normalize=True)
+
+        mirrorTranslateX = (mirrorXAxis * otherXAxis) < 0.0
+        mirrorTranslateY = (mirrorYAxis * otherYAxis) < 0.0
+        mirrorTranslateZ = (mirrorZAxis * otherZAxis) < 0.0
+
+        # Compose mirror settings and update user properties
+        #
+        settings = {
+            'mirrorTranslateX': mirrorTranslateX,
+            'mirrorTranslateY': mirrorTranslateY,
+            'mirrorTranslateZ': mirrorTranslateZ,
+            'mirrorRotateX': not mirrorTranslateX,
+            'mirrorRotateY': not mirrorTranslateY,
+            'mirrorRotateZ': not mirrorTranslateZ,
+        }
+
+        log.info('Detecting "%s" > "%s" mirror settings: %s' % (self.name(), otherTransform.name(), settings))
+        self.userProperties.update(settings)
+
+        return True
+
+    def mirrorTransform(self, pull=False, skipUserAttributes=False, includeKeys=False, animationRange=None, insertAt=None):
+        """
+        Mirrors this transform to the opposite node.
+
+        :type pull: bool
+        :type skipUserAttributes: bool
+        :type includeKeys: bool
+        :type animationRange: Union[Tuple[int, int], None]
+        :type insertAt: Union[int, None]
+        :rtype: None
+        """
+
+        # Iterate through channel-box plugs
+        #
+        for plug in self.iterPlugs(channelBox=True, skipUserAttributes=skipUserAttributes):
+
+            self.mirrorAttr(
+                plug,
+                pull=pull,
+                includeKeys=includeKeys,
+                animationRange=animationRange,
+                insertAt=insertAt
+            )
+
+    def isController(self):
+        """
+        Checks if this transform node has been tagged as a controller.
+
+        :rtype: bool
+        """
+
+        return self.controllerTag() is not None
+
+    def controllerTag(self):
+        """
+        Returns the controller tag for this transform node.
+        This method will raise a type error if multiple tags are found!
+
+        :rtype: mpy.nodetypes.controllermixin.ControllerMixin
+        """
+
+        # Collect all controller tags
+        #
+        plug = self.findPlug('message')
+
+        destinations = plug.destinations()
+        numDestinations = len(destinations)
+
+        if numDestinations == 0:
+
+            return None
+
+        # Iterate through destinations
+        #
+        for destination in destinations:
+
+            # Check if this is a controller node
+            #
+            node = destination.node()
+            plugName = destination.partialName(useLongNames=True)
+
+            if node.hasFn(om.MFn.kControllerTag) and plugName == 'controllerObject':
+
+                return self.scene(node)
+
+            else:
+
+                continue
+
+        return None
+
+    def tagAsController(self, **kwargs):
+        """
+        Tags this transform node as a controller.
+        If this transform is already tagged then that controller will be returned.
+
+        :rtype: mpy.nodetypes.controllermixin.ControllerMixin
+        """
+
+        # Check for redundancy
+        #
+        controllerTag = self.controllerTag()
+
+        if controllerTag is not None:
+
+            return controllerTag
+
+        # Create new controller tag
+        #
+        controllerTag = self.scene.createNode('controller', name='{nodeName}_tag'.format(nodeName=self.name()))
+        controllerTag.controllerObject = self.object()
+
+        # Check if parent was supplied
+        #
+        parent = kwargs.get('parent', None)
+
+        if parent is not None:
+
+            controllerTag.parent = parent.object()
+
+        # Check if child controller were supplied
+        #
+        children = kwargs.get('children', None)
+
+        if children is not None:
+
+            controllerTag.children = [child.object() for child in children]
+
+        return controllerTag
+
+    def addGlobalScale(self):
+        """
+        Adds a global scale attribute to this transform.
+        Once done all the scale attributes will be hidden.
+
+        :rtype: None
+        """
+
+        # Check if attribute already exists
+        #
+        if self.hasAttr('globalScale'):
+
+            return
+
+        # Create global scale attribute
+        #
+        self.addAttr(longName='globalScale', shortName='gs', attributeType='float', default=1.0)
+        self.connectPlugs('globalScale', 'scaleX')
+        self.connectPlugs('globalScale', 'scaleY')
+        self.connectPlugs('globalScale', 'scaleZ')
+
+        # Hide scale attributes
+        #
+        self.hideAttr('scaleX', 'scaleY', 'scaleZ')
+        self.showAttr('globalScale')
+
+    def prepareChannelBoxForAnimation(self):
+        """
+        Prepares the channel box for animation.
+        Right now this means hiding the visibility attribute and restoring the rotate-order for animators.
+
+        :rtype: None
+        """
+
+        self.hideAttr('visibility')
+        self.showAttr('rotateOrder')
+
+    def constraintCount(self):
+        """
+        Counts the number of constraints connected to this transform.
+
+        :rtype: int
+        """
+
+        return len(self.constraints())
+
+    def hasConstraints(self):
+        """
+        Checks if this transform has any constraints.
+
+        :rtype: bool
+        """
+
+        return self.constraintCount() > 0
+
+    def constraints(self, apiType=om.MFn.kConstraint):
+        """
+        Retrieves a list of constraints that are driving this transform.
+
+        :type apiType: int
+        :rtype: List[mpy.nodetypes.constraintmixin.ConstraintMixin]
+        """
+
+        return self.dependsOn(apiType=apiType)
+
+    def addConstraint(self, typeName, targets, **kwargs):
+        """
+        Adds a constraint node to this transform.
+        Any constrained attributes can be skipped by supplying them as keyword arguments: skipTranslateX, etc
+
+        :type typeName: str
+        :type targets: List[TransformMixin]
+        :key maintainOffset: bool
+        :rtype: mpy.nodetypes.constraintmixin.ConstraintMixin
+        """
+
+        # Create constraint and assign targets
+        #
+        constraint = self.scene.createNode(typeName)
+        constraint.setConstraintObject(self, **kwargs)
+        constraint.addTargets(targets)
+
+        return constraint
+
     def addShape(self, shape, **kwargs):
         """
         Adds the specified shape to this transform node.
         See the shapes directory for a list of accepts shapes.
 
         :type shape: str
-        :rtype: list[om.MObject]
+        :rtype: List[om.MObject]
         """
 
         filePath = self.scene.getShapeTemplate(shape)
@@ -457,6 +776,7 @@ class TransformMixin(dagmixin.DagMixin):
         Adds a locator shape to this transform.
 
         :key localPosition: Tuple[float, float, float]
+        :key localRotate: Tuple[float, float, float]
         :key localScale: Tuple[float, float, float]
         :rtype: mpy.nodetypes.shapemixin.ShapeMixin
         """
@@ -594,234 +914,4 @@ class TransformMixin(dagmixin.DagMixin):
         for shape in self.iterShapes():
 
             shapeutils.colorizeShape(shape.object(), **kwargs)
-
-    def addGlobalScaleAttribute(self):
-        """
-        Adds a global scale attribute to this transform.
-        Once done all the scale attributes will be hidden.
-
-        :rtype: None
-        """
-
-        # Check if attribute already exists
-        #
-        if self.hasAttr('globalScale'):
-
-            return
-
-        # Create global scale attribute
-        #
-        name = self.fullPathName()
-
-        mc.addAttr('%s.globalScale' % name, attributeType='float', defaultValue=1.0)
-        mc.connectAttr('%s.globalScale' % name, '%s.scaleX' % name)
-        mc.connectAttr('%s.globalScale' % name, '%s.scaleY' % name)
-        mc.connectAttr('%s.globalScale' % name, '%s.scaleZ' % name)
-
-        # Hide scale attributes
-        #
-        self.hideAttrs(['scaleX', 'scaleY', 'scaleZ'])
-
-    def prepareChannelBoxForAnimation(self):
-        """
-        Prepares the channel box for animation.
-        Right now this means hiding the visibility attribute and restoring the rotate order for animators.
-
-        :rtype: None
-        """
-
-        self.hideAttr('visibility')
-        self.showAttr('rotateOrder')
-
-    def isController(self):
-        """
-        Checks if this transform node has been tagged as a controller.
-
-        :rtype: bool
-        """
-
-        return self.controllerTag() is not None
-
-    def controllerTag(self):
-        """
-        Returns the controller tag for this transform node.
-        This method will raise a type error if multiple tags are found!
-
-        :rtype: mpy.nodetypes.controllermixin.ControllerMixin
-        """
-
-        # Collect all controller tags
-        #
-        plug = self.findPlug('message')
-
-        destinations = plug.destinations()
-        numDestinations = len(destinations)
-
-        if numDestinations == 0:
-
-            return None
-
-        # Iterate through destinations
-        #
-        for destination in destinations:
-
-            # Check if this is a controller node
-            #
-            node = destination.node()
-            plugName = destination.partialName(useLongNames=True)
-
-            if node.hasFn(om.MFn.kControllerTag) and plugName == 'controllerObject':
-
-                return self.scene(node)
-
-            else:
-
-                continue
-
-        return None
-
-    def tagAsController(self, **kwargs):
-        """
-        Tags this transform node as a controller.
-        If this transform is already tagged then that controller will be returned.
-
-        :rtype: mpy.nodetypes.controllermixin.ControllerMixin
-        """
-
-        # Check for redundancy
-        #
-        controllerTag = self.controllerTag()
-
-        if controllerTag is not None:
-
-            return controllerTag
-
-        # Create new controller tag
-        #
-        controllerTag = self.scene.createNode('controller', name='{nodeName}_tag'.format(nodeName=self.name()))
-        controllerTag.controllerObject = self.object()
-
-        # Check if parent was supplied
-        #
-        parent = kwargs.get('parent', None)
-
-        if parent is not None:
-
-            controllerTag.parent = parent.object()
-
-        # Check if child controller were supplied
-        #
-        children = kwargs.get('children', None)
-
-        if children is not None:
-
-            controllerTag.children = [child.object() for child in children]
-
-        return controllerTag
-
-    def detectMirroring(self):
-        """
-        Detects the mirror settings for this transform.
-        Each transform component uses the keyword pattern: mirrorTranslateX, etc
-
-        :rtype: bool
-        """
-
-        # Compare parent matrices
-        #
-        matrix = self.parentMatrix()
-        xAxis, yAxis, zAxis, pos = transformutils.breakMatrix(matrix, normalize=True)
-        mirrorXAxis, mirrorYAxis, mirrorZAxis = list(map(transformutils.mirrorVector, (xAxis, yAxis, zAxis)))
-
-        otherTransform = self.getOppositeNode()
-        otherMatrix = otherTransform.parentMatrix()
-        otherXAxis, otherYAxis, otherZAxis, otherPos = transformutils.breakMatrix(otherMatrix, normalize=True)
-
-        mirrorTranslateX = (mirrorXAxis * otherXAxis) < 0.0
-        mirrorTranslateY = (mirrorYAxis * otherYAxis) < 0.0
-        mirrorTranslateZ = (mirrorZAxis * otherZAxis) < 0.0
-
-        # Compose mirror settings and update user properties
-        #
-        settings = {
-            'mirrorTranslateX': mirrorTranslateX,
-            'mirrorTranslateY': mirrorTranslateY,
-            'mirrorTranslateZ': mirrorTranslateZ,
-            'mirrorRotateX': not mirrorTranslateX,
-            'mirrorRotateY': not mirrorTranslateY,
-            'mirrorRotateZ': not mirrorTranslateZ,
-        }
-
-        log.info('Detecting "%s" > "%s" mirror settings: %s' % (self.name(), otherTransform.name(), settings))
-        self.userProperties.update(settings)
-
-        return True
-
-    def mirrorTransform(self, pull=False, includeKeys=False, animationRange=None):
-        """
-        Mirrors this transform to the opposite node.
-
-        :type pull: bool
-        :type includeKeys: bool
-        :type animationRange: Union[Tuple[int, int], None]
-        :rtype: None
-        """
-
-        # Iterate through channel-box plugs
-        #
-        for plug in self.iterPlugs(channelBox=True):
-
-            self.mirrorAttr(
-                plug,
-                pull=pull,
-                includeKeys=includeKeys,
-                animationRange=animationRange
-            )
-
-    def constraintCount(self):
-        """
-        Counts the number of constraints connected to this transform.
-
-        :rtype: int
-        """
-
-        return len(self.constraints())
-
-    def hasConstraints(self):
-        """
-        Checks if this transform has any constraints.
-
-        :rtype: bool
-        """
-
-        return self.constraintCount() > 0
-
-    def constraints(self, apiType=om.MFn.kConstraint):
-        """
-        Retrieves a list of constraints that are driving this transform.
-
-        :type apiType: int
-        :rtype: List[mpy.nodetypes.constraintmixin.ConstraintMixin]
-        """
-
-        return self.dependsOn(apiType=apiType)
-
-    def addConstraint(self, typeName, targets, **kwargs):
-        """
-        Adds a constraint node to this transform.
-        Any constrained attributes can be skipped by supplying them as keyword arguments: skipTranslateX, etc
-
-        :type typeName: str
-        :type targets: List[TransformMixin]
-        :key maintainOffset: bool
-        :rtype: mpy.nodetypes.constraintmixin.ConstraintMixin
-        """
-
-        # Create constraint and assign targets
-        #
-        constraint = self.scene.createNode(typeName)
-        constraint.setConstraintObject(self, **kwargs)
-        constraint.addTargets(targets)
-
-        return constraint
     # endregion
