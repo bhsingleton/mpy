@@ -3,7 +3,7 @@ from abc import ABCMeta
 from six import with_metaclass
 from dcc.maya.libs import dagutils
 from dcc.decorators.classproperty import classproperty
-from .abstract import mobjectwrapper
+from .abstract import mobjectwrapper, abcmetaextension
 
 import logging
 logging.basicConfig()
@@ -11,7 +11,7 @@ log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
 
 
-class MPyNode(with_metaclass(ABCMeta, mobjectwrapper.MObjectWrapper)):
+class MPyNode(mobjectwrapper.MObjectWrapper, metaclass=abcmetaextension.ABCMetaExtension):
     """
     Overload of MObjectWrapper used as the base class for all Maya node interfaces.
     This class supports a range of constructor arguments that are outlined under the `__accepts__` dunderscore.
@@ -37,17 +37,8 @@ class MPyNode(with_metaclass(ABCMeta, mobjectwrapper.MObjectWrapper)):
         #
         if isinstance(obj, cls.__accepts__):  # Default
 
-            # Evaluate class type
-            # If MPyNode is being directly instantiated then we must replace the base class!
-            #
-            if cls is MPyNode:
-
-                handle = dagutils.getMObjectHandle(obj)
-                return cls.getInstance(handle)
-
-            else:
-
-                return super(MPyNode, cls).__new__(cls)
+            handle = dagutils.getMObjectHandle(obj)
+            return cls.getInstance(handle)
 
         elif isinstance(obj, MPyNode):  # Redundancy check
 
@@ -173,7 +164,7 @@ class MPyNode(with_metaclass(ABCMeta, mobjectwrapper.MObjectWrapper)):
         :rtype: MPyNode
         """
 
-        return cls.scene.createNode(typeName, name=name, parent=parent)
+        return cls.scene.createNode(typeName, name=name, parent=parent, skipSelect=skipSelect)
 
     def hasExtension(self):
         """
@@ -202,6 +193,7 @@ class MPyNode(with_metaclass(ABCMeta, mobjectwrapper.MObjectWrapper)):
         #
         self.__class__ = self.scene.createExtensionClass(self.__class__, extensionClass)
         self.__init__(self.object())
+        self.__post_init__()
 
     def removeExtension(self):
         """
