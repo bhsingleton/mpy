@@ -1,5 +1,3 @@
-import math
-
 from maya.api import OpenMaya as om
 from dcc.maya.libs import transformutils
 from .. import mpyattribute
@@ -44,6 +42,35 @@ class MaxformMixin(transformmixin.TransformMixin):
         zAngle = self.getAttr('preRotateZ', convertUnits=False).asRadians()
 
         return om.MEulerRotation(xAngle, yAngle, zAngle)
+
+    def freezeTransform(self, includeTranslate=True, includeRotate=True, includeScale=False):
+        """
+        Pushes the transform's local matrix into the associated list controllers.
+
+        :type includeTranslate: bool
+        :type includeRotate: bool
+        :type includeScale: bool
+        :rtype: None
+        """
+
+        # Check if translation should be frozen
+        #
+        prs = self.getTMController()
+        positionController = prs.getPositionController()
+
+        matrix = self.matrix(asTransformationMatrix=True)
+
+        if includeTranslate and positionController is not None:
+
+            positionController.setAttr('list[0].position', matrix.translation())
+
+        # Check if rotation should be frozen
+        #
+        rotationController = prs.getRotationController()
+
+        if includeRotate and rotationController is not None:
+
+            rotationController.setAttr('list[0].rotation', matrix.rotation(asQuaternion=False))
 
     def getTMController(self):
         """
