@@ -1,3 +1,5 @@
+import math
+
 from maya.api import OpenMaya as om
 from dcc.maya.libs import transformutils
 from .. import mpyattribute
@@ -9,23 +11,21 @@ log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
 
 
-class PathConstraintMixin(constraintmixin.ConstraintMixin):
+class LookAtConstraintMixin(constraintmixin.ConstraintMixin):
     """
-    Overload of `ConstraintMixin` that interfaces with path constraints.
+    Overload of `ConstraintMixin` that interfaces with look-at constraints.
     """
 
     # region Dunderscores
-    __plugin__ = 'pathConstraint'
+    __plugin__ = 'lookAtConstraint'
 
     __targets__ = {
-        'targetCurve': 'worldSpace'
+        'targetMatrix': 'matrix',
+        'targetParentMatrix': 'parentMatrix',
     }
 
     __inputs__ = {
         'constraintRotateOrder': 'rotateOrder',
-        'constraintJointOrientX': 'jointOrientX',
-        'constraintJointOrientY': 'jointOrientY',
-        'constraintJointOrientZ': 'jointOrientZ',
         'constraintParentInverseMatrix': 'parentInverseMatrix'
     }
 
@@ -40,18 +40,15 @@ class PathConstraintMixin(constraintmixin.ConstraintMixin):
     # endregion
 
     # region Attributes
-    percent = mpyattribute.MPyAttribute('percent')
-    useParameter = mpyattribute.MPyAttribute('useParameter')
-    forwardAxis = mpyattribute.MPyAttribute('forwardAxis')
-    forwardAxisFlip = mpyattribute.MPyAttribute('forwardAxisFlip')
-    twist = mpyattribute.MPyAttribute('twist')
-    upAxis = mpyattribute.MPyAttribute('upAxis')
-    upAxisFlip = mpyattribute.MPyAttribute('upAxisFlip')
-    worldUpType = mpyattribute.MPyAttribute('worldUpType')  # scene, object, objectRotation, vector, none
-    worldUpVector = mpyattribute.MPyAttribute('worldUpVector')
-    worldUpVectorX = mpyattribute.MPyAttribute('worldUpVectorX')
-    worldUpVectorY = mpyattribute.MPyAttribute('worldUpVectorY')
-    worldUpVectorZ = mpyattribute.MPyAttribute('worldUpVectorZ')
+    targetAxis = mpyattribute.MPyAttribute('targetAxis')
+    targetAxisFlip = mpyattribute.MPyAttribute('targetAxisFlip')
+    sourceUpAxis = mpyattribute.MPyAttribute('sourceUpAxis')
+    sourceUpAxisFlip = mpyattribute.MPyAttribute('sourceUpAxisFlip')
+    upNode = mpyattribute.MPyAttribute('upNode')
+    upNodeWorld = mpyattribute.MPyAttribute('upNodeWorld')
+    upNodeControl = mpyattribute.MPyAttribute('upNodeControl')
+    upNodeAxis = mpyattribute.MPyAttribute('upNodeAxis')
+    upNodeAxisFlip = mpyattribute.MPyAttribute('upNodeAxisFlip')
     relative = mpyattribute.MPyAttribute('relative')
     offsetTranslate = mpyattribute.MPyAttribute('offsetTranslate')
     offsetTranslateX = mpyattribute.MPyAttribute('offsetTranslateX')
@@ -79,5 +76,22 @@ class PathConstraintMixin(constraintmixin.ConstraintMixin):
         :rtype: None
         """
 
-        raise NotImplementedError()
+        # Temporarily disable offset
+        #
+        self.relative = False
+
+        # Calculate offset
+        #
+        constraintMatrix = self.getAttr('constraintMatrix')
+        restMatrix = self.restMatrix()
+
+        offsetMatrix = restMatrix * constraintMatrix.inverse()
+        offsetEulerRotation = transformutils.decomposeTransformMatrix(offsetMatrix)[1]
+
+        # Update and re-enable offset
+        #
+        self.offsetRotateX = math.degrees(offsetEulerRotation.x)
+        self.offsetRotateY = math.degrees(offsetEulerRotation.y)
+        self.offsetRotateZ = math.degrees(offsetEulerRotation.z)
+        self.relative = True
     # endregion

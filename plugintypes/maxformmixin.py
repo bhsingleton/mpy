@@ -106,7 +106,7 @@ class MaxformMixin(transformmixin.TransformMixin):
         xAxis, yAxis, zAxis, pos = transformutils.breakMatrix(matrix, normalize=True)
         mirrorXAxis, mirrorYAxis, mirrorZAxis = list(map(transformutils.mirrorVector, (xAxis, yAxis, zAxis)))
 
-        otherTransform = self.findOppositeTransform()
+        otherTransform = self.getOppositeNode()
         otherMatrix = otherTransform.parentMatrix()
         otherXAxis, otherYAxis, otherZAxis, otherPos = transformutils.breakMatrix(otherMatrix, normalize=True)
 

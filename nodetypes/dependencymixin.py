@@ -477,30 +477,32 @@ class DependencyMixin(mpynode.MPyNode):
 
         return self.attribute(attribute).apiTypeStr
 
-    def setAttr(self, plug, value, force=False):
+    def setAttr(self, plug, value, force=False, modifier=None):
         """
         Updates the value for the supplied plug.
 
         :type plug: Union[str, om.MObject, om.MPlug]
         :type value: object
         :type force: bool
+        :type modifier: Union[om.MDGModifier, None]
         :rtype: None
         """
 
         plug = self.findPlug(plug)
-        plugmutators.setValue(plug, value, force=force)
+        plugmutators.setValue(plug, value, force=force, modifier=modifier)
 
-    def resetAttr(self, plug, force=False):
+    def resetAttr(self, plug, force=False, modifier=None):
         """
         Updates the value for the supplied plug back to its default value.
 
         :type plug: Union[str, om.MObject, om.MPlug]
         :type force: bool
+        :type modifier: Union[om.MDGModifier, None]
         :rtype: None
         """
 
         plug = self.findPlug(plug)
-        plugmutators.resetValue(plug, force=force)
+        plugmutators.resetValue(plug, force=force, modifier=modifier)
 
     def hideAttr(self, *plugs):
         """

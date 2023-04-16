@@ -72,9 +72,9 @@ class ConstraintMixin(transformmixin.TransformMixin):
         if enableRestPosition:
 
             restMatrix = kwargs.get('restMatrix', constraintObject.matrix())
-
-            self.enableRestPosition = True
             self.setRestMatrix(restMatrix)
+
+            self.enableRestPosition = enableRestPosition
 
         # Connect input attributes
         #
@@ -329,8 +329,11 @@ class ConstraintMixin(transformmixin.TransformMixin):
 
         if self.hasAttr('restRotate'):
 
-            restRotate = self.getAttr('restRotate')
-            rotateMatrix = transformutils.createRotationMatrix(restRotate)
+            restAngles = list(map(math.radians, self.getAttr('restRotate')))
+            restOrder = self.getAttr('constraintRotateOrder')
+            restEulerRotation = om.MEulerRotation(restAngles, order=restOrder)
+
+            rotateMatrix = restEulerRotation.asMatrix()
 
         # Check if constraint has rest scale
         #

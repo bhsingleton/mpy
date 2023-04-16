@@ -1,5 +1,5 @@
 from maya.api import OpenMaya as om
-from six.moves import collections_abc
+from dcc.python import stringutils
 from .. import mpyattribute
 from ..nodetypes import dependencymixin
 
@@ -9,7 +9,7 @@ log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
 
 
-class AbstractListMixin(dependencymixin.DependencyMixin):
+class ListMixin(dependencymixin.DependencyMixin):
     """
     Overload of `DependencyMixin` that interfaces with list nodes.
     """
@@ -20,11 +20,29 @@ class AbstractListMixin(dependencymixin.DependencyMixin):
     # endregion
 
     # region Dunderscores
-    __plugin__ = 'abstractList'
-    __value_attribute__ = None  # Used to initialize ListElement instances!
+    __plugin__ = ('positionList', 'rotationList', 'scaleList')
     # endregion
 
     # region Methods
+    def getAssociatedTransform(self):
+        """
+        Returns the transform associated with this list node.
+
+        :rtype: transformmixin.TransformMixin
+        """
+
+        dependents = self.dependsOn(apiType=om.MFn.kPluginTransformNode, typeName='maxform')
+        numDependents = len(dependents)
+
+        if numDependents > 0:
+
+            return dependents[0]
+
+        else:
+
+            log.warning(f'Cannot locate associated transform for: {self}')
+            return None
+
     def numElements(self):
         """
         Evaluates the number of elements in this list.
@@ -47,56 +65,58 @@ class AbstractListMixin(dependencymixin.DependencyMixin):
 
             yield ListElement(self, index=i, attribute=self.__value_attribute__)
 
-    def getAssociatedTransform(self):
+    def insertElement(self, index, name, absolute, weight, value, source=None):
         """
-        Returns the transform associated with this list node.
+        Inserts a new element into this list.
 
-        :rtype: transformmixin.TransformMixin
+        :type index: int
+        :type name: str
+        :type absolute: bool
+        :type weight: float
+        :type value: Tuple[float, float, float]
+        :type source: Union[Tuple[om.MPlug, om.MPlug, om.MPlug], None]
+        :rtype: ListElement
         """
 
-        dependents = self.dependsOn(apiType=om.MFn.kPluginTransformNode, typeName='maxform')
-        numDependents = len(dependents)
+        # Make room for new element
+        #
+        numElements = self.numElements()
+        indices = list(range(index, numElements))
 
-        if numDependents > 0:
+        for index in reversed(indices):
 
-            return dependents[0]
+            self.moveElement(index, index + 1)
 
-        else:
+        # Insert new element
+        #
+        element = ListElement(self, index=index)
+        element.setName(name)
+        element.setAbsolute(absolute)
+        element.setWeight(weight)
+        element.setValue(value)
+        element.setSource(source)
 
-            return None
-    # endregion
+        return element
 
+    def moveElement(self, oldIndex, newIndex):
+        """
+        Moves the element at the old index to the new index.
 
-class PositionListMixin(AbstractListMixin):
-    """
-    Overload of `AbstractListMixin` that interfaces with `positionList` nodes.
-    """
+        :type oldIndex: int
+        :type newIndex: int
+        :rtype: ListElement
+        """
 
-    # region Dunderscores
-    __plugin__ = 'positionList'
-    __value_attribute__ = 'position'
-    # endregion
+        oldElement = ListElement(self, index=oldIndex)
 
+        newElement = ListElement(self, index=newIndex)
+        newElement.setName(oldElement.name())
+        newElement.setAbsolute(oldElement.absolute())
+        newElement.setWeight(oldElement.weight())
+        newElement.setValue(oldElement.value())
+        newElement.setSource(oldElement.source())
 
-class RotationListMixin(AbstractListMixin):
-    """
-    Overload of `AbstractListMixin` that interfaces with `rotationList` nodes.
-    """
-
-    # region Dunderscores
-    __plugin__ = 'rotationList'
-    __value_attribute__ = 'rotation'
-    # endregion
-
-
-class ScaleListMixin(AbstractListMixin):
-    """
-    Overload of `AbstractListMixin` that interfaces with `scaleList` nodes.
-    """
-
-    # region Dunderscores
-    __plugin__ = 'scaleList'
-    __value_attribute__ = 'scale'
+        return newElement
     # endregion
 
 
@@ -106,7 +126,8 @@ class ListElement(object):
     """
 
     # region Dunderscores
-    __slots__ = ('_list', '_index', '_attribute')
+    __slots__ = ('_list', '_index')
+    __attributes__ = {'positionList': 'position', 'rotationList': 'rotation', 'scaleList': 'scale'}
 
     def __init__(self, node, **kwargs):
         """
@@ -124,8 +145,6 @@ class ListElement(object):
         #
         self._list = node.weakReference()
         self._index = kwargs.get('index', 0)
-        self._attribute = kwargs.get('attribute', '')
-
     # endregion
 
     # region Properties
@@ -148,38 +167,9 @@ class ListElement(object):
         """
 
         return self._index
-
-    @property
-    def attribute(self):
-        """
-        Getter method that returns the attribute name for the list element's value.
-
-        :rtype: str
-        """
-
-        return self._attribute
     # endregion
 
     # region Methods
-    def listPlug(self):
-        """
-        Returns the plug element associated with this list element.
-
-        :rtype: om.MPlug
-        """
-
-        return self.list.findPlug('list[{index}]'.format(index=self.index))
-
-    def targetChildPlug(self, name):
-        """
-        Returns a child plug from the associated plug element.
-
-        :type name: str
-        :rtype: om.MPlug
-        """
-
-        return self.listPlug().child(self.list.attribute(name))
-
     def name(self):
         """
         Returns the name for this list element.
@@ -187,7 +177,7 @@ class ListElement(object):
         :rtype: str
         """
 
-        return self.targetChildPlug('name').asString()
+        return self.list.getAttr(f'list[{self.index}].name')
 
     def setName(self, name):
         """
@@ -197,7 +187,7 @@ class ListElement(object):
         :rtype: None
         """
 
-        self.targetChildPlug('name').setString(name)
+        self.list.setAttr(f'list[{self.index}].name', name)
 
     def absolute(self):
         """
@@ -206,7 +196,7 @@ class ListElement(object):
         :rtype: bool
         """
 
-        return self.targetChildPlug('absolute').asBool()
+        return self.list.getAttr(f'list[{self.index}].absolute')
 
     def setAbsolute(self, absolute):
         """
@@ -216,7 +206,7 @@ class ListElement(object):
         :rtype: None
         """
 
-        return self.targetChildPlug('absolute').setBool(absolute)
+        self.list.setAttr(f'list[{self.index}].absolute', absolute)
 
     def weight(self):
         """
@@ -225,7 +215,7 @@ class ListElement(object):
         :rtype: float
         """
 
-        return self.targetChildPlug('weight').asFloat()
+        return self.list.getAttr(f'list[{self.index}].weight')
 
     def setWeight(self, weight):
         """
@@ -235,24 +225,66 @@ class ListElement(object):
         :rtype: None
         """
 
-        return self.targetChildPlug('weight').setFloat(weight)
+        self.list.setAttr(f'list[{self.index}].weight', weight)
 
     def value(self):
         """
         Returns the value for this list element.
 
-        :rtype: List[float]
+        :rtype: Tuple[float, float, float]
         """
 
-        self.list.getAttr('list[{index}].{attribute}'.format(index=self.index, attribute=self.attribute))
+        return self.list.getAttr(f'list[{self.index}].{self.__attributes__[self.list.typeName]}')
 
     def setValue(self, value):
         """
         Updates the value for this list element.
 
-        :type value: List[float]
+        :type value: Tuple[float, float, float]
         :rtype: None
         """
 
-        self.list.setAttr('list[{index}].{attribute}'.format(index=self.index, attribute=self.attribute), value)
+        self.list.setAttr(f'list[{self.index}].{self.__attributes__[self.list.typeName]}', value)
+
+    def source(self):
+        """
+        Returns the source connections from the value plug.
+        If a child has no connection then a null plug will be returned instead.
+
+        :rtype: Tuple[om.MPlug, om.MPlug, om.MPlug]
+        """
+
+        plug = self.list[f'list[{self.index}].{self.__attributes__[self.list.typeName]}']
+        childCount = plug.numChildren()
+
+        return [plug.child(i).source() for i in range(childCount)]
+
+    def setSource(self, source):
+        """
+        Updates the source plugs from the value plug.
+
+        :rtype: Tuple[om.MPlug, om.MPlug, om.MPlug]
+        """
+
+        # Check if source is valid
+        #
+        if stringutils.isNullOrEmpty(source):
+
+            return
+
+        # Iterate through source plugs
+        #
+        plug = self.list[f'list[{self.index}].{self.__attributes__[self.list.typeName]}']
+
+        for (i, otherChild) in enumerate(source):
+
+            child = plug.child(i)
+
+            if not child.isNull and not otherChild.isNull:
+
+                self.list.connectPlugs(otherChild, child)
+
+            else:
+
+                self.list.breakConnections(child, source=True, destination=False)
     # endregion

@@ -9,23 +9,20 @@ log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
 
 
-class PathConstraintMixin(constraintmixin.ConstraintMixin):
+class AttachmentConstraintMixin(constraintmixin.ConstraintMixin):
     """
-    Overload of `ConstraintMixin` that interfaces with path constraints.
+    Overload of `ConstraintMixin` that interfaces with attachment constraints.
     """
 
     # region Dunderscores
-    __plugin__ = 'pathConstraint'
+    __plugin__ = 'attachmentConstraint'
 
     __targets__ = {
-        'targetCurve': 'worldSpace'
+        'targetMesh': 'worldMesh'
     }
 
     __inputs__ = {
         'constraintRotateOrder': 'rotateOrder',
-        'constraintJointOrientX': 'jointOrientX',
-        'constraintJointOrientY': 'jointOrientY',
-        'constraintJointOrientZ': 'jointOrientZ',
         'constraintParentInverseMatrix': 'parentInverseMatrix'
     }
 
@@ -40,18 +37,6 @@ class PathConstraintMixin(constraintmixin.ConstraintMixin):
     # endregion
 
     # region Attributes
-    percent = mpyattribute.MPyAttribute('percent')
-    useParameter = mpyattribute.MPyAttribute('useParameter')
-    forwardAxis = mpyattribute.MPyAttribute('forwardAxis')
-    forwardAxisFlip = mpyattribute.MPyAttribute('forwardAxisFlip')
-    twist = mpyattribute.MPyAttribute('twist')
-    upAxis = mpyattribute.MPyAttribute('upAxis')
-    upAxisFlip = mpyattribute.MPyAttribute('upAxisFlip')
-    worldUpType = mpyattribute.MPyAttribute('worldUpType')  # scene, object, objectRotation, vector, none
-    worldUpVector = mpyattribute.MPyAttribute('worldUpVector')
-    worldUpVectorX = mpyattribute.MPyAttribute('worldUpVectorX')
-    worldUpVectorY = mpyattribute.MPyAttribute('worldUpVectorY')
-    worldUpVectorZ = mpyattribute.MPyAttribute('worldUpVectorZ')
     relative = mpyattribute.MPyAttribute('relative')
     offsetTranslate = mpyattribute.MPyAttribute('offsetTranslate')
     offsetTranslateX = mpyattribute.MPyAttribute('offsetTranslateX')
