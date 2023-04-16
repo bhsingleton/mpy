@@ -16,6 +16,9 @@ class ABCMetaExtension(ABCMeta):
         """
 
         instance = super(ABCMetaExtension, cls).__call__(*args, **kwargs)
-        instance.__post_init__(*args, **kwargs)
+
+        if instance is not None:
+
+            instance.__post_init__(*args, **kwargs)
 
         return instance
