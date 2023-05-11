@@ -315,7 +315,7 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
         #
         if parent.hasFn(om.MFn.kDagNode):
 
-            dagutils.parentNode(self.object(), parent.object())
+            dagutils.reparentNode(self.object(), parent.object())
 
         else:
 
