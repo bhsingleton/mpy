@@ -15,10 +15,6 @@ class MaxformMixin(transformmixin.TransformMixin):
     """
 
     # region Attributes
-    preRotate = mpyattribute.MPyAttribute('preRotate')
-    preRotateX = mpyattribute.MPyAttribute('preRotateX')
-    preRotateY = mpyattribute.MPyAttribute('preRotateY')
-    preRotateZ = mpyattribute.MPyAttribute('preRotateZ')
     transform = mpyattribute.MPyAttribute('transform')
     translationPart = mpyattribute.MPyAttribute('translationPart')
     rotationPart = mpyattribute.MPyAttribute('rotationPart')
@@ -37,11 +33,10 @@ class MaxformMixin(transformmixin.TransformMixin):
         :rtype: om.MEulerRotation
         """
 
-        xAngle = self.getAttr('preRotateX', convertUnits=False).asRadians()
-        yAngle = self.getAttr('preRotateY', convertUnits=False).asRadians()
-        zAngle = self.getAttr('preRotateZ', convertUnits=False).asRadians()
+        transformData = self.findPlug('transform').asMObject()
+        transform = transformutils.getTransformData(transformData)
 
-        return om.MEulerRotation(xAngle, yAngle, zAngle)
+        return transform.rotationOrientation().asEulerRotation()
 
     def freezeTransform(self, includeTranslate=True, includeRotate=True, includeScale=False):
         """
