@@ -416,9 +416,6 @@ class TransformMixin(dagmixin.DagMixin):
 
         # Check if an animation range was supplied
         #
-        instanceNumber = self.instanceNumber()
-        plugName = 'worldMatrix[{instanceNumber}]'.format(instanceNumber=instanceNumber) if worldSpace else 'matrix'
-
         if not stringutils.isNullOrEmpty(animationRange):
 
             # Get matrices at times
@@ -428,7 +425,7 @@ class TransformMixin(dagmixin.DagMixin):
 
             for time in inclusiveRange(startTime, endTime, step):
 
-                matrices[time] = self.getAttr(plugName, time=time)
+                matrices[time] = self.worldMatrix(time=time) if worldSpace else self.matrix(time=time)
 
             return matrices
 
@@ -457,7 +454,7 @@ class TransformMixin(dagmixin.DagMixin):
 
             for time in sorted(times):
 
-                matrices[time] = self.getAttr(plugName, time=time)
+                matrices[time] = self.worldMatrix(time=time) if worldSpace else self.matrix(time=time)
 
             return matrices
 
@@ -712,24 +709,6 @@ class TransformMixin(dagmixin.DagMixin):
         self.hideAttr('visibility')
         self.showAttr('rotateOrder')
 
-    def constraintCount(self):
-        """
-        Counts the number of constraints connected to this transform.
-
-        :rtype: int
-        """
-
-        return len(self.constraints())
-
-    def hasConstraints(self):
-        """
-        Checks if this transform has any constraints.
-
-        :rtype: bool
-        """
-
-        return self.constraintCount() > 0
-
     def constraints(self, apiType=om.MFn.kConstraint):
         """
         Retrieves a list of constraints that are driving this transform.
@@ -739,6 +718,24 @@ class TransformMixin(dagmixin.DagMixin):
         """
 
         return self.dependsOn(apiType=apiType)
+
+    def constraintCount(self):
+        """
+        Counts the number of constraints connected to this transform.
+
+        :rtype: int
+        """
+
+        return len(self.constraints())
+
+    def isConstrained(self):
+        """
+        Evaluates if this transform has any constraints.
+
+        :rtype: bool
+        """
+
+        return self.constraintCount() > 0
 
     def addConstraint(self, typeName, targets, **kwargs):
         """
@@ -751,13 +748,55 @@ class TransformMixin(dagmixin.DagMixin):
         :rtype: mpy.nodetypes.constraintmixin.ConstraintMixin
         """
 
-        # Create constraint and assign targets
+        # Check if constraint already exists
+        #
+        constraint = self.findConstraint(typeName)
+
+        if constraint is not None:
+
+            return constraint
+
+        # Create constraint and add targets
         #
         constraint = self.scene.createNode(typeName)
         constraint.setConstraintObject(self, **kwargs)
-        constraint.addTargets(targets)
+        constraint.addTargets(targets, **kwargs)
 
         return constraint
+
+    def findConstraint(self, typeName):
+        """
+        Returns the constraint with the specified type name.
+        If no constraint exists then none is returned!
+
+        :type typeName: str
+        :rtype: mpy.nodetypes.constraintmixin.ConstraintMixin
+        """
+
+        found = [constraint for constraint in self.constraints() if constraint.typeName == typeName]
+        numFound = len(found)
+
+        if numFound == 0:
+
+            return None
+
+        elif numFound == 1:
+
+            return found[0]
+
+        else:
+
+            raise TypeError(f'findConstraint() expects only 1 constraint ({numFound} found)!')
+
+    def hasConstraint(self, typeName):
+        """
+        Evaluates if this transform has the specified constraint.
+
+        :type typeName: str
+        :rtype: bool
+        """
+
+        return self.findConstraint(typeName) is not None
 
     def addShape(self, shape, **kwargs):
         """

@@ -51,7 +51,7 @@ class ConstraintMixin(transformmixin.TransformMixin):
         :rtype: None
         """
 
-        # Check for redundancy
+        # Redundancy check
         #
         if constraintObject == self.constraintObject():
 
@@ -205,7 +205,7 @@ class ConstraintMixin(transformmixin.TransformMixin):
             # Find associated plugs
             #
             source = target.findPlug(sourceName)
-            destination = self.findPlug('target[%s].%s' % (index, destinationName))
+            destination = self.findPlug(f'target[{index}].{destinationName}')
 
             if source.isArray:
 
@@ -229,10 +229,10 @@ class ConstraintMixin(transformmixin.TransformMixin):
 
         # Connect target weight attributes
         #
-        source = om.MPlug(self.object(), attribute)
-        source.setFloat(weight)
+        source = self.findPlug(attribute)
+        self.setAttr(source, weight)
 
-        destination = self.findPlug('target[%s].targetWeight' % index)
+        destination = self.findPlug(f'target[{index}].targetWeight')
         self.connectPlugs(source, destination)
 
         # Check if offset should be maintained
