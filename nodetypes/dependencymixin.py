@@ -222,7 +222,7 @@ class DependencyMixin(mpynode.MPyNode):
         :rtype: str
         """
 
-        return self.functionSet().setName(newName)
+        return dagutils.renameNode(self.object(), newName)
 
     def namespace(self):
         """
@@ -477,32 +477,41 @@ class DependencyMixin(mpynode.MPyNode):
 
         return self.attribute(attribute).apiTypeStr
 
-    def setAttr(self, plug, value, force=False, modifier=None):
+    def setAttr(self, plug, value, force=False):
         """
         Updates the value for the supplied plug.
 
         :type plug: Union[str, om.MObject, om.MPlug]
         :type value: object
         :type force: bool
-        :type modifier: Union[om.MDGModifier, None]
         :rtype: None
         """
 
         plug = self.findPlug(plug)
-        plugmutators.setValue(plug, value, force=force, modifier=modifier)
+        plugmutators.setValue(plug, value, force=force)
 
-    def resetAttr(self, plug, force=False, modifier=None):
+    def dirtyAttr(self, plug):
+        """
+        Marks the supplied plug as dirty.
+
+        :type plug: Union[str, om.MObject, om.MPlug]
+        :rtype: None
+        """
+
+        plug = self.findPlug(plug)
+        mc.dgdirty(plug.info)
+
+    def resetAttr(self, plug, force=False):
         """
         Updates the value for the supplied plug back to its default value.
 
         :type plug: Union[str, om.MObject, om.MPlug]
         :type force: bool
-        :type modifier: Union[om.MDGModifier, None]
         :rtype: None
         """
 
         plug = self.findPlug(plug)
-        plugmutators.resetValue(plug, force=force, modifier=modifier)
+        plugmutators.resetValue(plug, force=force)
 
     def hideAttr(self, *plugs):
         """
@@ -610,18 +619,25 @@ class DependencyMixin(mpynode.MPyNode):
         :rtype: None
         """
 
+        # Check if other node has plug
+        #
+        otherNode = self.getOppositeNode()
+        attributeName = om.MFnAttribute(plug.attribute()).name
+
+        if not otherNode.hasAttr(attributeName):
+
+            return
+
         # Get mirror flag for plug
         #
-        plugName = plug.partialName(useLongNames=True)
-        mirrorFlag = 'mirror{name}'.format(name=stringutils.titleize(plugName))
+        plugName = plug.partialName(useLongNames=True, useFullAttributePath=True)
+        otherPlug = otherNode.findPlug(plugName)
 
+        mirrorFlag = 'mirror{name}'.format(name=stringutils.titleize(plugName))
         mirrorEnabled = self.userProperties.get(mirrorFlag, False)
 
         # Inverse value and update other node
         #
-        otherNode = self.getOppositeNode()
-        otherPlug = otherNode.findPlug(plugName)
-
         log.debug('Mirroring "%s" > "%s"' % (plug.info, otherPlug.info))
 
         if pull:
@@ -675,6 +691,8 @@ class DependencyMixin(mpynode.MPyNode):
 
         # Iterate through plugs
         #
+        animationRange = kwargs.get('animationRange', None)
+
         for plug in self.iterPlugs(channelBox=True, **kwargs):
 
             # Check if plug is animated
@@ -685,8 +703,8 @@ class DependencyMixin(mpynode.MPyNode):
 
             # Clear inputs from animation curve
             #
-            animCurve = self.scene(plug.source().node())
-            animCurve.clearKeys(**kwargs)
+            animCurve = self.findAnimCurve(plug)
+            animCurve.clearKeys(animationRange=animationRange)
 
     def getAliases(self):
         """
@@ -785,12 +803,12 @@ class DependencyMixin(mpynode.MPyNode):
 
             raise TypeError('findPlug() expects either a str or MObject (%s given)!' % type(name).__name__)
 
-    def findAnimCurve(self, name, ensure=False):
+    def findAnimCurve(self, name, create=False):
         """
         Returns an anim curve associated with the supplied plug path.
 
         :type name: Union[str, om.MObject, om.MPlug]
-        :type ensure: bool
+        :type create: bool
         :rtype: mpy.nodetypes.animcurvemixin.AnimCurveMixin
         """
 
@@ -798,13 +816,9 @@ class DependencyMixin(mpynode.MPyNode):
         #
         plug = self.findPlug(name)
 
-        if plugutils.isAnimated(plug):
+        if plug.isKeyable:
 
-            return self.scene(plug.source().node())
-
-        elif ensure and plug.isKeyable:
-
-            return animutils.ensureKeyed(plug)
+            return self.scene(animutils.findAnimCurve(plug, create=create))
 
         else:
 
