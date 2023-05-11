@@ -589,27 +589,29 @@ class MPyFactory(proxyfactory.ProxyFactory):
 
         return list(self.iterNodesByTypeName(typeName))
 
-    def iterNodesByPattern(self, *patterns, apiType=om.MFn.kDependencyNode):
+    def iterNodesByPattern(self, *patterns, apiType=om.MFn.kDependencyNode, exactType=False):
         """
         Returns a generator that yields nodes based on the supplied name patterns.
 
         :type patterns: Union[str, Tuple[str]]
         :type apiType: int
+        :type exactType: bool
         :rtype: Iterator[mpynode.MPyNode]
         """
 
-        return map(mpynode.MPyNode, dagutils.iterNodesByPattern(*patterns, apiType=apiType))
+        return map(mpynode.MPyNode, dagutils.iterNodesByPattern(*patterns, apiType=apiType, exactType=exactType))
 
-    def getNodesByPattern(self, *patterns, apiType=om.MFn.kDependencyNode):
+    def getNodesByPattern(self, *patterns, apiType=om.MFn.kDependencyNode, exactType=False):
         """
         Returns a list of nodes based on the supplied name patterns.
 
         :type patterns: Union[str, Tuple[str]]
         :type apiType: int
+        :type exactType: bool
         :rtype: List[mpynode.MPyNode]
         """
 
-        return list(self.iterNodesByPattern(*patterns, apiType=apiType))
+        return list(self.iterNodesByPattern(*patterns, apiType=apiType, exactType=exactType))
 
     def iterExtensions(self):
         """
@@ -742,57 +744,17 @@ class MPyFactory(proxyfactory.ProxyFactory):
 
             name = namingutils.concatenateName(**name)
 
-        # Check if a valid parent was supplied
+        # Try and create dependency node
         #
-        node = None
+        try:
 
-        if parent is None:
+            obj = dagutils.createNode(typeName, name=name, parent=parent, skipSelect=skipSelect)
+            return mpynode.MPyNode(obj)
 
-            # Create dependency node
-            #
-            fnDependNode = om.MFnDependencyNode()
-            dependNode = fnDependNode.create(typeName)
+        except RuntimeError as exeception:
 
-            # Check if a valid name was supplied
-            #
-            if isinstance(name, string_types) and not stringutils.isNullOrEmpty(name):
-
-                fnDependNode.setName(name)
-
-            node = mpynode.MPyNode(dependNode)
-
-        else:
-
-            # Ensure parent type is compatible
-            #
-            if isinstance(parent, mpynode.MPyNode):
-
-                parent = parent.object()
-
-            else:
-
-                parent = dagutils.getMObject(parent)
-
-            # Create dag node
-            #
-            fnDagNode = om.MFnDagNode()
-            dagNode = fnDagNode.create(typeName, parent=parent)
-
-            # Check if a valid name was supplied
-            #
-            if isinstance(name, string_types) and not stringutils.isNullOrEmpty(name):
-
-                fnDagNode.setName(name)
-
-            node = mpynode.MPyNode(dagNode)
-
-        # Check if node should be selected
-        #
-        if not skipSelect:
-
-            node.select(replace=True)
-
-        return node
+            log.error(exeception)
+            return None
 
     def createDisplayLayer(self, name, includeSelected=False, includeDescendants=False):
         """
@@ -810,7 +772,7 @@ class MPyFactory(proxyfactory.ProxyFactory):
 
             name = 'layer1'
 
-        # Try and display layer
+        # Try and create display layer
         #
         try:
 
