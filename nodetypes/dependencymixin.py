@@ -542,7 +542,7 @@ class DependencyMixin(mpynode.MPyNode):
             plug.isKeyable = keyable
             plug.isChannelBox = True
 
-    def keyAttr(self, *args, time=None, ensure=False):
+    def keyAttr(self, *args, time=None):
         """
         Keys an attribute at the specified time.
         If no value is supplied then the current value is used instead!
@@ -550,7 +550,6 @@ class DependencyMixin(mpynode.MPyNode):
 
         :type args: Union[om.MPlug, Tuple[om.MPlug, Any]]
         :type time: Union[int, float, om.MTime, None]
-        :type ensure: bool
         :rtype: mpy.nodetypes.animcurvemixin.AnimCurveMixin
         """
 
@@ -598,11 +597,8 @@ class DependencyMixin(mpynode.MPyNode):
 
         # Check if value should be updated
         #
-        animCurve = self.scene(animutils.ensureKeyed(plug))
-
-        if not ensure:
-
-            animCurve.setValue(time, value, convertUnits=True)
+        animCurve = self.findAnimCurve(plug, create=True)
+        animCurve.setValue(time, value, convertUnits=True)
 
         return animCurve
 
@@ -656,7 +652,7 @@ class DependencyMixin(mpynode.MPyNode):
                 otherAnimCurve = self.scene(otherPlug.source().node())
                 keys = otherAnimCurve.mirrorKeys(animationRange=animationRange)
 
-                animCurve = self.keyAttr(plug, ensure=True)
+                animCurve = self.findAnimCurve(plug, create=True)
                 animCurve.replaceKeys(keys, animationRange=animationRange, insertAt=insertAt)
 
         else:
@@ -675,7 +671,7 @@ class DependencyMixin(mpynode.MPyNode):
                 animCurve = self.scene(plug.source().node())
                 keys = animCurve.mirrorKeys(animationRange=animationRange)
 
-                otherAnimCurve = otherNode.keyAttr(otherPlug, ensure=True)
+                otherAnimCurve = otherNode.findAnimCurve(otherPlug, create=True)
                 otherAnimCurve.replaceKeys(keys, animationRange=animationRange, insertAt=insertAt)
 
     def clearKeys(self, **kwargs):
