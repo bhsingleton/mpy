@@ -744,6 +744,12 @@ class MPyFactory(proxyfactory.ProxyFactory):
 
             name = namingutils.concatenateName(**name)
 
+        # Check if parent requires casting
+        #
+        if isinstance(parent, mpynode.MPyNode):
+
+            parent = parent.object()
+
         # Try and create dependency node
         #
         try:
@@ -751,9 +757,9 @@ class MPyFactory(proxyfactory.ProxyFactory):
             obj = dagutils.createNode(typeName, name=name, parent=parent, skipSelect=skipSelect)
             return mpynode.MPyNode(obj)
 
-        except RuntimeError as exeception:
+        except RuntimeError as exception:
 
-            log.error(exeception)
+            log.error(exception)
             return None
 
     def createDisplayLayer(self, name, includeSelected=False, includeDescendants=False):
