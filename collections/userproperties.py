@@ -209,7 +209,19 @@ class UserProperties(collections_abc.MutableMapping):
         :rtype: str
         """
 
-        return mc.getAttr('%s.notes' % self.objectPath())
+        # Check if node is referenced
+        # If so, then be sure to remove any reference edits from the notes plug!
+        #
+        node = self.objectPath()
+        isReferenced = mc.referenceQuery(node, isNodeReferenced=True)
+
+        if isReferenced:
+
+            mc.referenceEdit(f'{node}.notes', failedEdits=True, successfulEdits=True, editCommand='setAttr', removeEdits=True)
+
+        # Get notes from node
+        #
+        return mc.getAttr(f'{node}.notes')
     
     def setBuffer(self, buffer):
         """
