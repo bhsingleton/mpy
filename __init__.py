@@ -1,16 +1,17 @@
 import os
 import sys
 
+from six import string_types
+
 import logging
 logging.basicConfig()
 log = logging.getLogger('mpy')
 log.setLevel(logging.INFO)
 
 
-def rollback(*paths):
+def removeSystemModules(*paths):
     """
-    Removes all modules, derived from the mpy package, from the system module.
-    This will force any future imported modules to recompile.
+    Removes all the sys modules derived from the supplied directories.
 
     :type paths: Union[str, List[str]]
     :rtype: None
@@ -28,15 +29,15 @@ def rollback(*paths):
         module = sys.modules[moduleName]
         filePath = getattr(module, '__file__', None)
 
-        if filePath is None:
+        if not isinstance(filePath, string_types):
 
             continue
 
         # Check if module is derived from any of the supplied paths
         #
-        filePath = os.path.abspath(os.path.normpath(filePath))
+        absolutePath = os.path.abspath(os.path.normpath(filePath))
 
-        if any([filePath.startswith(path) for path in paths]):
+        if any([absolutePath.startswith(path) for path in paths]):
 
             log.info('Rolling back module: %s' % module)
             del sys.modules[moduleName]
@@ -50,4 +51,4 @@ def restart():
     :rtype: None
     """
 
-    rollback(os.path.dirname(os.path.abspath(__file__)))
+    removeSystemModules(os.path.dirname(os.path.abspath(__file__)))
