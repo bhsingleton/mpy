@@ -5,7 +5,7 @@ from maya.api import OpenMaya as om
 from six import string_types
 from dcc.maya.libs import dagutils
 from dcc.decorators.classproperty import classproperty
-from . import abcmetaextension
+from . import mabcmeta
 
 import logging
 logging.basicConfig()
@@ -13,7 +13,7 @@ log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
 
 
-class MObjectWrapper(object, metaclass=abcmetaextension.ABCMetaExtension):
+class MObjectWrapper(object, metaclass=mabcmeta.MABCMeta):
     """
     Abstract base class used as a low-level wrapper for Maya scene objects.
     A lot of the architecture in this class is designed around dynamically looking up compatible function sets.
@@ -32,16 +32,14 @@ class MObjectWrapper(object, metaclass=abcmetaextension.ABCMetaExtension):
         :rtype: None
         """
 
-        # Check if instance has already been initialized
-        #
-        if not self.isInitialized():
-
-            self.__handle__ = dagutils.getMObjectHandle(obj)
-            self.__function_set__ = self.findCompatibleFunctionSet(self.object())
-
         # Call parent method
         #
         super(MObjectWrapper, self).__init__()
+
+        # Declare private variables
+        #
+        self.__handle__ = dagutils.getMObjectHandle(obj)
+        self.__function_set__ = self.findCompatibleFunctionSet(self.object())
 
     def __post_init__(self, *args, **kwargs):
         """

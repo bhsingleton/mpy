@@ -2,7 +2,7 @@ import inspect
 
 from dcc.maya.libs import attributeutils
 from . import mpynode, mpyattribute
-from .abstract import abcmetaextension
+from .abstract import mabcmeta
 
 import logging
 logging.basicConfig()
@@ -10,14 +10,14 @@ log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
 
 
-class MPyNodeExtension(mpynode.MPyNode, metaclass=abcmetaextension.ABCMetaExtension):
+class MPyNodeExtension(mpynode.MPyNode, metaclass=mabcmeta.MABCMeta):
     """
     Overload of `MPyNode` that serves as a base class for extension interfaces.
     """
 
     # region Attributes
-    className = mpyattribute.MPyAttribute('__class__', attributeType='str')
-    modulePath = mpyattribute.MPyAttribute('__module__', attributeType='str')
+    extensionName = mpyattribute.MPyAttribute('__class__', attributeType='str')
+    extensionPath = mpyattribute.MPyAttribute('__module__', attributeType='str')
     # endregion
 
     # region Methods
@@ -125,6 +125,6 @@ class MPyNodeExtension(mpynode.MPyNode, metaclass=abcmetaextension.ABCMetaExtens
 
         # Update extension pointers
         #
-        self.className = self.__class__.__bases__[-1].__name__
-        self.modulePath = self.__class__.__bases__[-1].__module__
+        self.extensionName = self.__class__.__bases__[-1].__name__
+        self.extensionPath = self.__class__.__bases__[-1].__module__
     # endregion

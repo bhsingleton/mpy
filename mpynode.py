@@ -1,9 +1,7 @@
 from maya.api import OpenMaya as om
-from abc import ABCMeta
-from six import with_metaclass
 from dcc.maya.libs import dagutils
 from dcc.decorators.classproperty import classproperty
-from .abstract import mobjectwrapper, abcmetaextension
+from .abstract import mabcmeta, mobjectwrapper
 
 import logging
 logging.basicConfig()
@@ -11,7 +9,7 @@ log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
 
 
-class MPyNode(mobjectwrapper.MObjectWrapper, metaclass=abcmetaextension.ABCMetaExtension):
+class MPyNode(mobjectwrapper.MObjectWrapper, metaclass=mabcmeta.MABCMeta):
     """
     Overload of MObjectWrapper used as the base class for all Maya node interfaces.
     This class supports a range of constructor arguments that are outlined under the `__accepts__` dunderscore.
@@ -19,10 +17,8 @@ class MPyNode(mobjectwrapper.MObjectWrapper, metaclass=abcmetaextension.ABCMetaE
     """
 
     # region Dunderscores
-    __accepts__ = (str, om.MObjectHandle, om.MObject, om.MDagPath)
     __api_type__ = om.MFn.kBase
     __scene__ = None
-    __instances__ = {}
 
     def __new__(cls, obj, **kwargs):
         """
@@ -33,24 +29,29 @@ class MPyNode(mobjectwrapper.MObjectWrapper, metaclass=abcmetaextension.ABCMetaE
         :rtype: MPyNode
         """
 
-        # Inspect object type
+        # Evaluate object type
         #
-        if isinstance(obj, cls.__accepts__):  # Default
+        if not isinstance(obj, cls.__accepts__):
 
-            handle = dagutils.getMObjectHandle(obj)
-            return cls.getInstance(handle)
+            raise TypeError('MPyNode() expects %s (%s given)!' % (cls.__accepts__, type(obj).__name__))
 
-        elif isinstance(obj, MPyNode):  # Redundancy check
+        # Check if supplied object is valid
+        #
+        handle = dagutils.getMObjectHandle(obj)
 
-            return obj
+        if handle.isAlive():
 
-        elif isinstance(obj, int):  # Hash lookup
+            # Create new instance
+            # Don't forget to replace the base class with the correct interface!
+            #
+            instance = super(MPyNode, cls).__new__(cls)
+            instance.__class__ = cls.scene.getClass(handle.object())
 
-            return cls.__instances__.get(obj, None)
+            return instance
 
         else:
 
-            raise TypeError('MPyNode() expects %s (%s given)!' % (cls.__accepts__, type(obj).__name__))
+            return None
     # endregion
 
     # region Properties
@@ -104,53 +105,6 @@ class MPyNode(mobjectwrapper.MObjectWrapper, metaclass=abcmetaextension.ABCMetaE
         else:
 
             raise TypeError('isCompatible() expects a valid type constant (%s given)!' % type(apiType).__name__)
-
-    @classmethod
-    def getInstance(cls, handle):
-        """
-        Returns an instance associated with the given object handle.
-
-        :type handle: om.MObjectHandle
-        :rtype: MPyNode
-        """
-
-        # Check if object handle is alive
-        #
-        if not handle.isAlive():
-
-            return None
-
-        # Check if value has already been initialized
-        #
-        dependNode = handle.object()
-        hashCode = handle.hashCode()
-
-        instance = cls.__instances__.get(hashCode, None)
-
-        if instance is not None:
-
-            # Check if instance is still alive
-            # If not then we need to reinitialize it!
-            #
-            if not instance.isAlive():
-
-                del cls.__instances__[hashCode]
-                return cls.getInstance(handle)
-
-            else:
-
-                return instance
-
-        else:
-
-            # Create new instance
-            # Be sure to replace the base class with the correct type!
-            #
-            instance = super(MPyNode, cls).__new__(cls)
-            instance.__class__ = cls.scene.getClass(dependNode)
-
-            cls.__instances__[hashCode] = instance
-            return instance
 
     @classmethod
     def create(cls, typeName, name='', parent=None, skipSelect=True):
