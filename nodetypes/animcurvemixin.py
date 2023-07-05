@@ -192,7 +192,7 @@ class AnimCurveMixin(dependencymixin.DependencyMixin):
 
         # Check if an animation range was requested
         #
-        keys = animutils.cacheKeys(self.getAssociatedPlug())
+        keys = animutils.copyKeys(self.getAssociatedPlug())
 
         if not stringutils.isNullOrEmpty(animationRange):
 
@@ -269,6 +269,37 @@ class AnimCurveMixin(dependencymixin.DependencyMixin):
             key.outTangent.y *= -1.0 if mirror else 1.0
 
         return keys
+
+    def invertKeys(self):
+        """
+        Inverts the values on this anim-curve.
+
+        :rtype: None
+        """
+
+        # Iterate through keys
+        #
+        for i in range(self.numKeys):
+
+            # Unlock tangents
+            #
+            self.setWeightsLocked(i, False)
+            self.setTangentsLocked(i, False)
+
+            # Modify keyframe
+            #
+            inTangentX, inTangentY = self.getTangentXY(i, True)
+            self.setTangent(i, inTangentX, -inTangentY, True, convertUnits=False)
+
+            value = self.value(i)
+            self.setValue(i, -value)
+
+            outTangentX, outTangentY = self.getTangentXY(i, False)
+            self.setTangent(i, outTangentX, -outTangentY, False, convertUnits=False)
+
+            # Re-lock tangents
+            #
+            self.setTangentsLocked(i, True)
 
     def clearKeys(self, animationRange=None):
         """
