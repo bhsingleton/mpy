@@ -78,6 +78,16 @@ class MPyFactory(proxyfactory.ProxyFactory):
         return sceneutils.currentFilename()
 
     @property
+    def directory(self):
+        """
+        Getter method that returns the current scene's directory.
+
+        :rtype: str
+        """
+
+        return sceneutils.currentDirectory()
+
+    @property
     def filePath(self):
         """
         Getter method that returns the current scene's file path.
@@ -87,15 +97,16 @@ class MPyFactory(proxyfactory.ProxyFactory):
 
         return sceneutils.currentFilePath()
 
-    @property
-    def directory(self):
+    @filePath.setter
+    def filePath(self, filePath):
         """
-        Getter method that returns the current scene's directory.
+        Setter method that updates the current scene's file path.
 
-        :rtype: str
+        :type filePath: str
+        :rtype: None
         """
 
-        return sceneutils.currentDirectory()
+        sceneutils.renameScene(filePath)
 
     @property
     def projectPath(self):
@@ -612,6 +623,36 @@ class MPyFactory(proxyfactory.ProxyFactory):
         """
 
         return list(self.iterNodesByPattern(*patterns, apiType=apiType, exactType=exactType))
+
+    def iterReferenceNodes(self, skipShared=True):
+        """
+        Returns a generator that yields reference nodes.
+
+        :type skipShared: bool
+        :rtype: Iterator[mpynode.MPyNode]
+        """
+
+        for node in self.iterNodesByApiType(om.MFn.kReference):
+
+            name = dagutils.getNodeName(node.object())
+
+            if name.endswith('sharedReferenceNode') and skipShared:
+
+                continue
+
+            else:
+
+                yield node
+
+    def getReferenceNodes(self, skipShared=True):
+        """
+        Returns a list of reference nodes.
+
+        :type skipShared: bool
+        :rtype: List[mpynode.MPyNode]
+        """
+
+        return list(self.iterReferenceNodes(skipShared=skipShared))
 
     def iterExtensions(self):
         """
