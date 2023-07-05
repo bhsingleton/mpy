@@ -146,15 +146,53 @@ class ReferenceMixin(dependencymixin.DependencyMixin):
 
         return self.functionSet().fileName(resolvedName, not includePath, includeCopyNumber)
 
-    def setFilePath(self, filePath):
+    def setFilePath(self, filePath, clearEdits=False):
         """
         Updates the file path associated with this reference.
 
         :type filePath: str
+        :type clearEdits: bool
         :rtype: None
         """
 
-        mc.file(filePath, loadReference=self.name())
+        # Check if reference is loaded
+        #
+        isLoaded = self.isLoaded()
+
+        if isLoaded:
+
+            # Check if edits should be removed
+            #
+            if clearEdits:
+
+                self.unload()
+                self.clearEdits()
+
+            # Update file path
+            #
+            mc.file(filePath, loadReference=self.absoluteName())
+
+        else:
+
+            # Check if edits should be removed
+            #
+            if clearEdits:
+
+                self.clearEdits()
+
+            # Update file path
+            #
+            mc.file(filePath, unloadReference=self.absoluteName())
+
+    def associatedNamespace(self, shortName=False):
+        """
+        Returns the namespace the referenced nodes derive from.
+
+        :type shortName: bool
+        :rtype: str
+        """
+
+        return self.functionSet().associatedNamespace(shortName)
 
     def parentReference(self):
         """
@@ -164,6 +202,43 @@ class ReferenceMixin(dependencymixin.DependencyMixin):
         """
 
         return self.scene(self.functionSet().parentReference())
+
+    def load(self):
+        """
+        Loads this reference into the current scene file.
+
+        :rtype: None
+        """
+
+        if not self.isLoaded():
+
+            mc.file(
+                self.filePath(),
+                loadReference=self.name(includeNamespace=True),
+                loadReferenceDepth='asPrefs'
+            )
+
+        else:
+
+            log.debug('Reference is already loaded...')
+
+    def unload(self):
+        """
+        Unloads this reference from the current scene file.
+
+        :rtype: None
+        """
+
+        if self.isLoaded():
+
+            mc.file(
+                self.filePath(),
+                unloadReference=self.name(includeNamespace=True)
+            )
+
+        else:
+
+            log.debug('Reference is already unloaded...')
 
     def reload(self):
         """
@@ -175,21 +250,45 @@ class ReferenceMixin(dependencymixin.DependencyMixin):
 
         mc.file(referenceNode=self.name(), loadReference=True)
 
-    def referenceEdits(self):
+    def getEdits(self, successfulEdits=True, failedEdits=False):
         """
         Returns a list of edits made to this reference.
 
+        :type successfulEdits: bool
+        :type failedEdits: bool
         :rtype: list[str]
         """
 
-        return mc.file(query=True, referenceNode=self.name(), editCommand=True)
+        return mc.referenceQuery(
+            self.absoluteName(),
+            editStrings=True,
+            successfulEdits=successfulEdits,
+            failedEdits=failedEdits
+        )
 
-    def cleanReference(self):
+    def clearEdits(self):
         """
         Removes all edits from this reference.
 
         :rtype: None
         """
-        
-        pass
+
+        # Check if reference is loaded
+        # If so, unload reference to avoid any crashes!
+        #
+        isLoaded = self.isLoaded()
+
+        if isLoaded:
+
+            self.unload()
+
+        # Remove all reference edits
+        #
+        mc.referenceEdit(self.absoluteName(), removeEdits=True)
+
+        # Check if reference should be reloaded
+        #
+        if isLoaded:
+
+            self.load()
     # endregion
