@@ -370,12 +370,19 @@ class DependencyMixin(mpynode.MPyNode):
         :rtype: TransformMixin
         """
 
-        name = self.name(includeNamespace=True)
+        # Check if mirror node is defined
+        # If not, then mirror the name of this node
+        #
+        name = self.userProperties.get('mirrorNode', self.name())
         mirrorName = namingutils.mirrorName(name)
 
-        if mc.objExists(mirrorName):
+        absoluteName = f'{self.namespace()}:{mirrorName}'
 
-            return self.scene(mirrorName)
+        # Check if opposite node exists
+        #
+        if mc.objExists(absoluteName):
+
+            return self.scene(absoluteName)
 
         else:
 
@@ -412,11 +419,28 @@ class DependencyMixin(mpynode.MPyNode):
         """
         Checks if this node has the supplied attribute.
 
-        :type attribute: str
+        :type attribute: Union[str, om.MObject, om.MPlug]
         :rtype: bool
         """
 
-        return self.functionSet().hasAttribute(attribute)
+        if isinstance(attribute, string_types):
+
+            return self.functionSet().hasAttribute(attribute)
+
+        elif isinstance(attribute, om.MObject):
+
+            functionSet = self.functionSet()
+            attributes = [functionSet.attribute(i) for i in range(functionSet.attributeCount())]
+
+            return attribute in attributes
+
+        elif isinstance(attribute, om.MPlug):
+
+            return self.hasAttr(attribute.attribute())
+
+        else:
+
+            return False
 
     def addAttr(self, *args, **kwargs):
         """
@@ -456,6 +480,27 @@ class DependencyMixin(mpynode.MPyNode):
         with mpycontext.MPyContext(time):
 
             return plugmutators.getValue(plug, convertUnits=convertUnits)
+
+    def tryGetAttr(self, plug, time=None, convertUnits=True, default=None):
+        """
+        Returns the value from the supplied plug.
+        If no plug exists then the default value is returned instead!
+
+        :type plug: Union[str, om.MObject, om.MPlug]
+        :type time:
+        :type convertUnits: bool
+        :type default: Any
+        :rtype: Any
+        """
+
+        if self.hasAttr(plug):
+
+            return self.getAttr(plug, time=time, convertUnits=convertUnits)
+
+        else:
+
+            log.warning(f'Cannot locate "{plug}" from {self.name()} node!')
+            return default
 
     def getAttrType(self, attribute):
         """
@@ -812,7 +857,7 @@ class DependencyMixin(mpynode.MPyNode):
         #
         plug = self.findPlug(name)
 
-        if plug.isKeyable:
+        if plugutils.isAnimatable(plug):
 
             return self.scene(animutils.findAnimCurve(plug, create=create))
 
@@ -949,6 +994,7 @@ class DependencyMixin(mpynode.MPyNode):
         # Check attribute type
         #
         if isinstance(attribute, string_types):
+
             attribute = self.attribute(attribute)
 
         # Find connected message
