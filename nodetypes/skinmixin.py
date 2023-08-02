@@ -121,7 +121,7 @@ class SkinMixin(deformermixin.DeformerMixin):
         """
         Returns a generator that yields the influence objects from this skin cluster.
 
-        :rtype: iter
+        :rtype: Iterator[int, om.MObject]
         """
 
         return skinutils.iterInfluences(self.object())
@@ -165,19 +165,31 @@ class SkinMixin(deformermixin.DeformerMixin):
         :rtype: om.MMatrix
         """
 
-        return self.getAttr('bindPreMatrix[%s]' % influenceId)
+        return self.getAttr(f'bindPreMatrix[{influenceId}]')
 
     def setPreBindMatrix(self, influenceId, preBindMatrix):
         """
         Updates the pre-bind matrix for the specified influence ID.
-        Be aware these matrices are the equivalent of a transform's worldInverseMatrix!
+        Be aware these matrices are the equivalent of a transform's world inverse-matrix!
 
         :type influenceId: int
         :type preBindMatrix: om.MMatrix
         :rtype: None
         """
 
-        self.setAttr('bindPreMatrix[%s]' % influenceId, preBindMatrix)
+        self.setAttr(f'bindPreMatrix[{influenceId}]', preBindMatrix)
+
+    def resetPreBindMatrices(self):
+        """
+        Resets the pre-bind matrices for all the associated influences.
+
+        :rtype: None
+        """
+
+        for (influenceId, influenceObject) in self.iterInfluences():
+
+            influence = self.scene(influenceObject)
+            self.setPreBindMatrix(influenceId, influence.worldInverseMatrix())
 
     def iterWeightList(self, *args):
         """
