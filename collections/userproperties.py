@@ -19,7 +19,7 @@ class UserProperties(collections_abc.MutableMapping):
     """
 
     # region Dunderscores
-    __slots__ = ('__handle__', '__properties__')
+    __slots__ = ('__handle__', '__buffer__', '__properties__')
 
     def __init__(self, obj, **kwargs):
         """
@@ -35,11 +35,8 @@ class UserProperties(collections_abc.MutableMapping):
         # Declare private variables
         #
         self.__handle__ = dagutils.getMObjectHandle(obj)
+        self.__buffer__ = ''
         self.__properties__ = {}
-
-        # Reload user properties
-        #
-        self.reload()
 
     def __getitem__(self, key):
         """
@@ -49,6 +46,7 @@ class UserProperties(collections_abc.MutableMapping):
         :rtype: Any
         """
 
+        self.reload()
         return self.__properties__[key]
 
     def __setitem__(self, key, value):
@@ -61,7 +59,7 @@ class UserProperties(collections_abc.MutableMapping):
         """
 
         self.__properties__[key] = value
-        self.invalidate()
+        self.pushBuffer()
 
     def __delitem__(self, key):
         """
@@ -72,7 +70,7 @@ class UserProperties(collections_abc.MutableMapping):
         """
 
         del self.__properties__[key]
-        self.invalidate()
+        self.pushBuffer()
 
     def __len__(self):
         """
@@ -81,6 +79,7 @@ class UserProperties(collections_abc.MutableMapping):
         :rtype: int
         """
 
+        self.reload()
         return len(self.__properties__)
 
     def __iter__(self):
@@ -90,6 +89,7 @@ class UserProperties(collections_abc.MutableMapping):
         :rtype: iter
         """
 
+        self.reload()
         return iter(self.__properties__)
     # endregion
 
@@ -103,7 +103,7 @@ class UserProperties(collections_abc.MutableMapping):
 
         return self.__handle__.object()
 
-    def objectName(self):
+    def name(self):
         """
         Returns the name of the associated dependency node.
 
@@ -112,7 +112,7 @@ class UserProperties(collections_abc.MutableMapping):
 
         return om.MFnDependencyNode(self.object()).name()
 
-    def objectPath(self):
+    def fullPathName(self):
         """
         Returns the full name of the associated dependency node.
 
@@ -136,6 +136,7 @@ class UserProperties(collections_abc.MutableMapping):
         :rtype: iter
         """
 
+        self.reload()
         return self.__properties__.keys()
 
     def values(self):
@@ -145,6 +146,7 @@ class UserProperties(collections_abc.MutableMapping):
         :rtype: iter
         """
 
+        self.reload()
         return self.__properties__.values()
 
     def items(self):
@@ -154,6 +156,7 @@ class UserProperties(collections_abc.MutableMapping):
         :rtype: iter
         """
 
+        self.reload()
         return self.__properties__.items()
 
     def update(self, obj):
@@ -165,7 +168,7 @@ class UserProperties(collections_abc.MutableMapping):
         """
 
         self.__properties__.update(obj)
-        self.invalidate()
+        self.pushBuffer()
 
     def ensureNotes(self):
         """
@@ -176,7 +179,7 @@ class UserProperties(collections_abc.MutableMapping):
 
         # Check if notes exist
         #
-        fullPathName = self.objectPath()
+        fullPathName = self.fullPathName()
 
         hasAttribute = mc.attributeQuery('notes', node=fullPathName, exists=True)
         isLocked = mc.lockNode(fullPathName, query=True, lock=True)[0]
@@ -197,7 +200,7 @@ class UserProperties(collections_abc.MutableMapping):
 
             return self.buffer()
 
-        except ValueError:
+        except AttributeError:
 
             return ''
 
@@ -209,19 +212,33 @@ class UserProperties(collections_abc.MutableMapping):
         :rtype: str
         """
 
+        # Check if attribute exists
+        #
+        fullPathName = self.fullPathName()
+        hasAttribute = mc.attributeQuery('notes', node=fullPathName, exists=True)
+
+        if not hasAttribute:
+
+            raise AttributeError(f'buffer() cannot find notes attribute!')
+
         # Check if node is referenced
         # If so, then be sure to remove any reference edits from the notes plug!
         #
-        node = self.objectPath()
-        isReferenced = mc.referenceQuery(node, isNodeReferenced=True)
+        isReferenced = mc.referenceQuery(fullPathName, isNodeReferenced=True)
 
         if isReferenced:
 
-            mc.referenceEdit(f'{node}.notes', failedEdits=True, successfulEdits=True, editCommand='setAttr', removeEdits=True)
+            mc.referenceEdit(
+                f'{fullPathName}.notes',
+                failedEdits=True,
+                successfulEdits=True,
+                editCommand='setAttr',
+                removeEdits=True
+            )
 
         # Get notes from node
         #
-        return mc.getAttr(f'{node}.notes')
+        return mc.getAttr(f'{fullPathName}.notes')
     
     def setBuffer(self, buffer):
         """
@@ -237,32 +254,24 @@ class UserProperties(collections_abc.MutableMapping):
 
             return
 
-        # Ensure ".notes" exist
+        # Ensure ".notes" attribute exists
         #
         self.ensureNotes()
 
         # Load properties from buffer
         #
+        self.__buffer__ = buffer
+
         try:
 
             self.__properties__ = json.loads(buffer, cls=mdataparser.MDataDecoder)
-            self.invalidate()
 
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as error:
 
+            log.debug(error)
             self.__properties__ = {}
-            self.invalidate()
 
-    def reload(self):
-        """
-        Reloads the user properties from the current buffer.
-
-        :rtype: None
-        """
-
-        self.setBuffer(self.tryGetBuffer())
-
-    def invalidate(self):
+    def pushBuffer(self):
         """
         Dumps the user properties into the notes plug.
 
@@ -275,10 +284,27 @@ class UserProperties(collections_abc.MutableMapping):
 
             return
 
-        # Update notes plug
+        # Ensure notes attribute exists
         #
         self.ensureNotes()
 
+        # Update notes attribute
+        #
+        fullPathName = self.fullPathName()
         notes = json.dumps(self.__properties__, indent=4, cls=mdataparser.MDataEncoder)
-        mc.setAttr('%s.notes' % self.objectPath(), notes, type='string')
+
+        mc.setAttr(f'{fullPathName}.notes', notes, type='string')
+
+    def reload(self):
+        """
+        Reloads the user properties from the current buffer.
+
+        :rtype: None
+        """
+
+        buffer = self.tryGetBuffer()
+
+        if buffer != self.__buffer__:
+
+            self.setBuffer(buffer)
     # endregion
