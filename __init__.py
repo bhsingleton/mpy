@@ -39,7 +39,7 @@ def removeSystemModules(*paths):
 
         if any([absolutePath.startswith(path) for path in paths]):
 
-            log.info('Rolling back module: %s' % module)
+            log.info('Rolling back module: {module}')
             del sys.modules[moduleName]
 
 
