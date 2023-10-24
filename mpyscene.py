@@ -1,5 +1,5 @@
-import inspect
 import os
+import inspect
 
 from maya import cmds as mc
 from maya.api import OpenMaya as om
@@ -8,8 +8,8 @@ from dcc.abstract import proxyfactory
 from dcc.python import stringutils, importutils
 from dcc.naming import namingutils
 from dcc.maya.libs import dagutils, sceneutils
-from . import mpynode, nodetypes, plugintypes
-from .collections import fileproperties
+from dcc.maya.collections import fileproperties
+from . import mpynode, builtins, plugins
 
 import logging
 logging.basicConfig()
@@ -17,9 +17,9 @@ log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
 
 
-class MPyFactory(proxyfactory.ProxyFactory):
+class MPyScene(proxyfactory.ProxyFactory):
     """
-    Overload of ProxyFactory that manages python interfaces for Maya scene nodes.
+    Overload of `ProxyFactory` that interfaces with Maya scenes.
     """
 
     # region Dunderscores
@@ -32,17 +32,15 @@ class MPyFactory(proxyfactory.ProxyFactory):
         :rtype: None
         """
 
-        # Check if instance has already been initialized
-        #
-        if not self.hasInstance():
-
-            self.__plugins__ = dict(self.iterPackages(plugintypes, classAttr='__plugin__'))
-            self.__extensions__ = {}
-            self.__properties__ = fileproperties.FileProperties()
-
         # Call parent method
         #
-        super(MPyFactory, self).__init__(*args, **kwargs)
+        super(MPyScene, self).__init__(*args, **kwargs)
+
+        # Declare private variables
+        #
+        self.__plugins__ = dict(self.iterPackages(plugins, classAttr='__plugin__'))
+        self.__extensions__ = {}
+        self.__properties__ = fileproperties.FileProperties()
 
     def __call__(self, dependNode):
         """
@@ -54,6 +52,23 @@ class MPyFactory(proxyfactory.ProxyFactory):
         """
 
         return mpynode.MPyNode(dependNode)
+
+    def __getattribute__(self, name):
+        """
+        Private method that performs attribute accesses for instances of this class.
+        If the attribute is related to a Maya command then that attribute is returned instead.
+
+        :type name: str
+        :return: Any
+        """
+
+        try:
+
+            return super(MPyScene, self).__getattribute__(name)
+
+        except AttributeError:
+
+            return getattr(mc, name)
     # endregion
 
     # region Properties
@@ -249,7 +264,7 @@ class MPyFactory(proxyfactory.ProxyFactory):
         :rtype: List[module]
         """
 
-        return [nodetypes]
+        return [builtins]
 
     def classAttr(self):
         """
@@ -406,7 +421,7 @@ class MPyFactory(proxyfactory.ProxyFactory):
         # Check if api type correlates with any keys
         #
         apiType = dependNode.apiType()
-        cls = super(MPyFactory, self).getClass(apiType)
+        cls = super(MPyScene, self).getClass(apiType)
 
         if cls is not None:
 
@@ -783,7 +798,7 @@ class MPyFactory(proxyfactory.ProxyFactory):
         #
         if isinstance(name, dict):
 
-            name = namingutils.concatenateName(**name)
+            name = namingutils.formatName(**name)
 
         # Check if parent requires casting
         #
@@ -795,8 +810,8 @@ class MPyFactory(proxyfactory.ProxyFactory):
         #
         try:
 
-            obj = dagutils.createNode(typeName, name=name, parent=parent, skipSelect=skipSelect)
-            return mpynode.MPyNode(obj)
+            node = dagutils.createNode(typeName, name=name, parent=parent, skipSelect=skipSelect)
+            return mpynode.MPyNode(node)
 
         except RuntimeError as exception:
 
@@ -824,7 +839,9 @@ class MPyFactory(proxyfactory.ProxyFactory):
         try:
 
             nodeName = mc.createDisplayLayer(name=name, empty=(not includeSelected), noRecurse=(not includeDescendants))
-            return mpynode.MPyNode(nodeName)
+            absoluteName = dagutils.absolutify(nodeName, namespace=self.namespace)
+
+            return mpynode.MPyNode(absoluteName)
 
         except RuntimeError as exception:
 
@@ -874,8 +891,10 @@ class MPyFactory(proxyfactory.ProxyFactory):
         #
         try:
 
-            shaderName = mc.shadingNode(typeName, name=name, parent=parent, **kwargs)
-            return mpynode.MPyNode(shaderName)
+            nodeName = mc.shadingNode(typeName, name=name, parent=parent, **kwargs)
+            absoluteName = dagutils.absolutify(nodeName, namespace=self.namespace)
+
+            return mpynode.MPyNode(absoluteName)
 
         except RuntimeError as exception:
 
@@ -912,8 +931,9 @@ class MPyFactory(proxyfactory.ProxyFactory):
             shaderName = mc.shadingNode(typeName, name=shaderName, asShader=True)
             shadingGroupName = mc.sets(name=shadingGroupName, empty=True, renderable=True, noSurfaceShader=True)
 
-            shader, shadingGroup = mpynode.MPyNode(shaderName), mpynode.MPyNode(shadingGroupName)
-            shader.connectPlugs('outColor', shadingGroup['surfaceShader'])
+            shader = mpynode.MPyNode(dagutils.absolutify(shaderName, namespace=self.namespace))
+            shadingGroup = mpynode.MPyNode(dagutils.absolutify(shadingGroupName, namespace=self.namespace))
+            shadingGroup.connectPlugs(shader['outColor'], 'surfaceShader')
 
             return shader, shadingGroup
 
