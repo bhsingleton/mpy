@@ -58,10 +58,10 @@ class HyperLayoutMixin(dependencymixin.DependencyMixin):
 
         # Find connected message plug
         #
-        plug = self.findConnectedMessage(dependNode, self.attribute('dependNode'))
+        plug = self.findConnectedMessage(dependNode, attribute=self.attribute('dependNode'))
 
         if plug is not None:
-
+            
             return plug.parent().logicalIndex()
 
         else:

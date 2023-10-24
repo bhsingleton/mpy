@@ -146,6 +146,23 @@ class SkinMixin(deformermixin.DeformerMixin):
 
         return skinutils.addInfluence(self.object(), influence, index=index)
 
+    def addInfluences(self, *influences):
+        """
+        Adds the supplied influences to this skin cluster.
+
+        :type influences: List[om.MObject]
+        :rtype: List[int]
+        """
+
+        influenceCount = len(influences)
+        influenceIds = [None] * influenceCount
+
+        for (i, influence) in enumerate(influences):
+
+            influenceIds[i] = self.addInfluence(influence)
+
+        return influenceIds
+
     def removeInfluence(self, influenceId):
         """
         Removes the specified influence ID from this skin cluster.

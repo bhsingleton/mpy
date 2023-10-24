@@ -30,7 +30,7 @@ class DeformerMixin(dependencymixin.DependencyMixin):
         """
         Returns the transform node associated with the deformed shape node.
 
-        :rtype: mpynode.nodetypes.transformmixin.TransformMixin
+        :rtype: mpynode.builtins.transformmixin.TransformMixin
         """
 
         return self.shape().parent()
@@ -39,7 +39,7 @@ class DeformerMixin(dependencymixin.DependencyMixin):
         """
         Returns the deformed shape node associated with this deformer.
 
-        :rtype: mpynode.nodetypes.meshmixin.MeshMixin
+        :rtype: mpynode.builtins.meshmixin.MeshMixin
         """
 
         return self.dependents(apiType=om.MFn.kShape)[0]
@@ -48,7 +48,7 @@ class DeformerMixin(dependencymixin.DependencyMixin):
         """
         Returns the base shape node associated with this deformer.
 
-        :rtype: mpynode.nodetypes.meshmixin.MeshMixin
+        :rtype: mpynode.builtins.meshmixin.MeshMixin
         """
 
         return self.dependsOn(apiType=om.MFn.kShape)[0]

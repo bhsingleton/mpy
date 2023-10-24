@@ -14,6 +14,21 @@ class DisplayLayerMixin(dependencymixin.DependencyMixin):
     Overload of `DependencyMixin` that interfaces with display layers.
     """
 
+    # region Attributes
+    displayInfo = mpyattribute.MPyAttribute('displayInfo')
+    displayType = mpyattribute.MPyAttribute('displayType')
+    levelOfDetail = mpyattribute.MPyAttribute('levelOfDetail')
+    shading = mpyattribute.MPyAttribute('shading')
+    texturing = mpyattribute.MPyAttribute('texturing')
+    playback = mpyattribute.MPyAttribute('playback')
+    enabled = mpyattribute.MPyAttribute('enabled')
+    visibility = mpyattribute.MPyAttribute('visibility')
+    hideOnPlayback = mpyattribute.MPyAttribute('hideOnPlayback')
+    overrideRGBColors = mpyattribute.MPyAttribute('overrideRGBColors')
+    color = mpyattribute.MPyAttribute('color')
+    overrideColorRGB = mpyattribute.MPyAttribute('overrideColorRGB')
+    # endregion
+
     # region Dunderscores
     __api_type__ = om.MFn.kDisplayLayer
 
@@ -54,21 +69,6 @@ class DisplayLayerMixin(dependencymixin.DependencyMixin):
         """
 
         return len(self.nodes())
-    # endregion
-
-    # region Attributes
-    displayInfo = mpyattribute.MPyAttribute('displayInfo')
-    displayType = mpyattribute.MPyAttribute('displayType')
-    levelOfDetail = mpyattribute.MPyAttribute('levelOfDetail')
-    shading = mpyattribute.MPyAttribute('shading')
-    texturing = mpyattribute.MPyAttribute('texturing')
-    playback = mpyattribute.MPyAttribute('playback')
-    enabled = mpyattribute.MPyAttribute('enabled')
-    visibility = mpyattribute.MPyAttribute('visibility')
-    hideOnPlayback = mpyattribute.MPyAttribute('hideOnPlayback')
-    overrideRGBColors = mpyattribute.MPyAttribute('overrideRGBColors')
-    color = mpyattribute.MPyAttribute('color')
-    overrideColorRGB = mpyattribute.MPyAttribute('overrideColorRGB')
     # endregion
 
     # region Methods

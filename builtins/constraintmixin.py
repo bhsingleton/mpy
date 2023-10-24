@@ -108,6 +108,17 @@ class ConstraintMixin(transformmixin.TransformMixin):
 
         for (sourceName, destinationName) in outputs.items():
 
+            # Check if children should be skipped
+            #
+            isCartesian = any([destinationName.endswith(axis) for axis in ('X', 'Y', 'Z')])
+            parentKey = 'skip{attributeName}'.format(attributeName=stringutils.pascalize(destinationName[:-1])) if isCartesian else destinationName
+            skipChildren = kwargs.get(parentKey, skipAll)
+
+            if isCartesian and skipChildren:
+
+                log.debug(f'Skipping "{constraintName}.{sourceName}" > "{nodeName}.{destinationName}" constraint!')
+                continue
+
             # Check if attribute should be skipped
             #
             key = 'skip{attributeName}'.format(attributeName=stringutils.pascalize(destinationName))
@@ -115,7 +126,7 @@ class ConstraintMixin(transformmixin.TransformMixin):
 
             if skipAttribute:
 
-                log.debug('Skipping "%s.%s" > "%s.%s" constraint!' % (constraintName, sourceName, nodeName, destinationName))
+                log.debug(f'Skipping "{constraintName}.{sourceName}" > "{nodeName}.{destinationName}" constraint!')
                 continue
 
             # Get associated plugs
@@ -149,7 +160,7 @@ class ConstraintMixin(transformmixin.TransformMixin):
         """
         Returns a generator that yields all the available constraint targets.
 
-        :rtype: iter
+        :rtype: Iterator[ConstraintTarget]
         """
 
         # Iterate through target indices
@@ -243,18 +254,23 @@ class ConstraintMixin(transformmixin.TransformMixin):
 
         return index
 
-    def addTargets(self, targets, maintainOffset=False):
+    def addTargets(self, targets, **kwargs):
         """
         Adds a list of new targets to this constraint.
 
         :type targets: List[transformmixin.TransformMixin]
-        :type maintainOffset: bool
+        :key maintainOffset: bool
         :rtype: int
         """
 
-        for target in targets:
+        targetCount = len(targets)
+        indices = [None] * targetCount
 
-            self.addTarget(target, maintainOffset=maintainOffset)
+        for (i, target) in enumerate(targets):
+
+            indices[i] = self.addTarget(target, **kwargs)
+
+        return indices
 
     @abstractmethod
     def maintainOffset(self):
@@ -399,7 +415,10 @@ class ConstraintMixin(transformmixin.TransformMixin):
         :rtype: om.MMatrix
         """
 
-        return self.restMatrix() * self.exclusiveMatrix()
+        parentInverseMatrix = self.tryGetAttr('constraintParentInverseMatrix', default=om.MMatrix.kIdentity)
+        restMatrix = self.restMatrix()
+
+        return restMatrix * parentInverseMatrix.inverse()
 
     def worldRestInverseMatrix(self):
         """
@@ -559,10 +578,13 @@ class ConstraintTarget(object):
         :rtype: om.MVector
         """
 
+        targetOffsetTranslatePlug = self.targetChildPlug('targetOffsetTranslate')
+        targetOffsetTranslateXPlug, targetOffsetTranslateYPlug, targetOffsetTranslateZPlug = targetOffsetTranslatePlug.child(0), targetOffsetTranslatePlug.child(1), targetOffsetTranslatePlug.child(2)
+
         return om.MVector(
-            self.targetChildPlug('targetOffsetTranslateX').asFloat(),
-            self.targetChildPlug('targetOffsetTranslateY').asFloat(),
-            self.targetChildPlug('targetOffsetTranslateZ').asFloat()
+            targetOffsetTranslateXPlug.asMDistance().value,
+            targetOffsetTranslateYPlug.asMDistance().value,
+            targetOffsetTranslateZPlug.asMDistance().value
         )
 
     def setTargetOffsetTranslate(self, translation):
@@ -573,9 +595,12 @@ class ConstraintTarget(object):
         :rtype: None
         """
 
-        self.targetChildPlug('targetOffsetTranslateX').setFloat(translation.x)
-        self.targetChildPlug('targetOffsetTranslateY').setFloat(translation.y)
-        self.targetChildPlug('targetOffsetTranslateZ').setFloat(translation.z)
+        targetOffsetTranslatePlug = self.targetChildPlug('targetOffsetTranslate')
+        targetOffsetTranslateXPlug, targetOffsetTranslateYPlug, targetOffsetTranslateZPlug = targetOffsetTranslatePlug.child(0), targetOffsetTranslatePlug.child(1), targetOffsetTranslatePlug.child(2)
+
+        targetOffsetTranslateXPlug.setMDistance(om.MDistance(translation.x, unit=om.MDistance.kCentimeters))
+        targetOffsetTranslateYPlug.setMDistance(om.MDistance(translation.y, unit=om.MDistance.kCentimeters))
+        targetOffsetTranslateZPlug.setMDistance(om.MDistance(translation.z, unit=om.MDistance.kCentimeters))
 
     def targetOffsetRotate(self):
         """
@@ -585,10 +610,13 @@ class ConstraintTarget(object):
         :rtype: om.MEulerRotation
         """
 
+        targetOffsetRotatePlug = self.targetChildPlug('targetOffsetRotate')
+        targetOffsetRotateXPlug, targetOffsetRotateYPlug, targetOffsetRotateZPlug = targetOffsetRotatePlug.child(0), targetOffsetRotatePlug.child(1), targetOffsetRotatePlug.child(2)
+
         return om.MEulerRotation(
-            self.targetChildPlug('targetOffsetRotateX').asFloat(),
-            self.targetChildPlug('targetOffsetRotateY').asFloat(),
-            self.targetChildPlug('targetOffsetRotateZ').asFloat(),
+            targetOffsetRotateXPlug.asMAngle().value,
+            targetOffsetRotateYPlug.asMAngle().value,
+            targetOffsetRotateZPlug.asMAngle().value,
             order=self.targetRotateOrder()
         )
 
@@ -610,7 +638,10 @@ class ConstraintTarget(object):
 
         # Assign rotation to plugs
         #
-        self.targetChildPlug('targetOffsetRotateX').setFloat(rotation.x)
-        self.targetChildPlug('targetOffsetRotateY').setFloat(rotation.y)
-        self.targetChildPlug('targetOffsetRotateZ').setFloat(rotation.z)
+        targetOffsetRotatePlug = self.targetChildPlug('targetOffsetRotate')
+        targetOffsetRotateXPlug, targetOffsetRotateYPlug, targetOffsetRotateZPlug = targetOffsetRotatePlug.child(0), targetOffsetRotatePlug.child(1), targetOffsetRotatePlug.child(2)
+
+        targetOffsetRotateXPlug.setMAngle(om.MAngle(rotation.x, unit=om.MAngle.kRadians))
+        targetOffsetRotateYPlug.setMAngle(om.MAngle(rotation.y, unit=om.MAngle.kRadians))
+        targetOffsetRotateZPlug.setMAngle(om.MAngle(rotation.z, unit=om.MAngle.kRadians))
     # endregion

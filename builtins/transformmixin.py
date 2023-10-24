@@ -1,3 +1,5 @@
+import math
+
 from maya import cmds as mc
 from maya.api import OpenMaya as om
 from dcc.python import stringutils
@@ -332,6 +334,35 @@ class TransformMixin(dagmixin.DagMixin):
 
         return self.worldMatrix(time=time).inverse()
 
+    def setWorldMatrix(self, worldMatrix, **kwargs):
+        """
+        Updates the world transformation matrix for this transform.
+
+        :type worldMatrix: om.MMatrix
+        :key skipTranslate: bool
+        :key skipRotate: bool
+        :key skipScale: bool
+        :rtype: None
+        """
+
+        parentInverseMatrix = self.parentInverseMatrix()
+        matrix = worldMatrix * parentInverseMatrix
+
+        self.setMatrix(matrix, **kwargs)
+
+    def distanceBetween(self, otherNode):
+        """
+        Returns the distance between this and the other node.
+
+        :type otherNode: TransformMixin
+        :rtype: float
+        """
+
+        position = self.translation(space=om.MSpace.kWorld)
+        otherPosition = otherNode.translation(space=om.MSpace.kWorld)
+
+        return om.MPoint(position).distanceTo(om.MPoint(otherPosition))
+
     def keyTransform(self, ensure=False):
         """
         Keys just the transform component attributes.
@@ -348,7 +379,7 @@ class TransformMixin(dagmixin.DagMixin):
             #
             if plug.isKeyable and not plug.isLocked:
 
-                self.keyAttr(plug, ensure=ensure)
+                self.keyAttr(plug)
 
             else:
 
@@ -480,7 +511,7 @@ class TransformMixin(dagmixin.DagMixin):
         """
         Copies the transform of the supplied node.
 
-        :type other: TransformMixin:
+        :type other: TransformMixin
         :rtype: None
         """
 
@@ -595,12 +626,13 @@ class TransformMixin(dagmixin.DagMixin):
 
         return self.controllerTag() is not None
 
-    def controllerTag(self):
+    def controllerTag(self, create=False):
         """
         Returns the controller tag for this transform node.
         This method will raise a type error if multiple tags are found!
 
-        :rtype: mpy.nodetypes.controllermixin.ControllerMixin
+        :type create: bool
+        :rtype: mpy.builtins.controllermixin.ControllerMixin
         """
 
         # Collect all controller tags
@@ -610,51 +642,63 @@ class TransformMixin(dagmixin.DagMixin):
         destinations = plug.destinations()
         numDestinations = len(destinations)
 
-        if numDestinations == 0:
+        if numDestinations > 0:
 
-            return None
-
-        # Iterate through destinations
-        #
-        for destination in destinations:
-
-            # Check if this is a controller node
+            # Iterate through destinations
             #
-            node = destination.node()
-            plugName = destination.partialName(useLongNames=True)
+            for destination in destinations:
 
-            if node.hasFn(om.MFn.kControllerTag) and plugName == 'controllerObject':
+                # Check if this is a controller node
+                #
+                node = destination.node()
+                plugName = destination.partialName(useLongNames=True)
 
-                return self.scene(node)
+                if node.hasFn(om.MFn.kControllerTag) and plugName == 'controllerObject':
+
+                    return self.scene(node)
+
+                else:
+
+                    continue
+
+            # Check if controller should be tagged
+            #
+            if create:
+
+                return self.tagAsController()
 
             else:
 
-                continue
+                return None
 
-        return None
+        elif create:
+
+            # Tag as controller
+            #
+            return self.tagAsController()
+
+        else:
+
+            return None
 
     def tagAsController(self, **kwargs):
         """
         Tags this transform node as a controller.
         If this transform is already tagged then that controller will be returned.
 
-        :rtype: mpy.nodetypes.controllermixin.ControllerMixin
+        :rtype: mpy.builtins.controllermixin.ControllerMixin
         """
 
-        # Check for redundancy
+        # Check if tag already exists
         #
         controllerTag = self.controllerTag()
 
-        if controllerTag is not None:
+        if controllerTag is None:
 
-            return controllerTag
+            controllerTag = self.scene.createNode('controller', name='{nodeName}_tag'.format(nodeName=self.name()))
+            controllerTag.controllerObject = self.object()
 
-        # Create new controller tag
-        #
-        controllerTag = self.scene.createNode('controller', name='{nodeName}_tag'.format(nodeName=self.name()))
-        controllerTag.controllerObject = self.object()
-
-        # Check if parent was supplied
+        # Check if a parent was supplied
         #
         parent = kwargs.get('parent', None)
 
@@ -662,13 +706,13 @@ class TransformMixin(dagmixin.DagMixin):
 
             controllerTag.parent = parent.object()
 
-        # Check if child controller were supplied
+        # Check if children were supplied
         #
         children = kwargs.get('children', None)
 
         if children is not None:
 
-            controllerTag.children = [child.object() for child in children]
+            controllerTag.children = [child.controllerTag(create=True).object() for child in children]
 
         return controllerTag
 
@@ -714,7 +758,7 @@ class TransformMixin(dagmixin.DagMixin):
         Retrieves a list of constraints that are driving this transform.
 
         :type apiType: int
-        :rtype: List[mpy.nodetypes.constraintmixin.ConstraintMixin]
+        :rtype: List[mpy.builtins.constraintmixin.ConstraintMixin]
         """
 
         return self.dependsOn(apiType=apiType)
@@ -745,7 +789,7 @@ class TransformMixin(dagmixin.DagMixin):
         :type typeName: str
         :type targets: List[TransformMixin]
         :key maintainOffset: bool
-        :rtype: mpy.nodetypes.constraintmixin.ConstraintMixin
+        :rtype: mpy.builtins.constraintmixin.ConstraintMixin
         """
 
         # Check if constraint already exists
@@ -770,7 +814,7 @@ class TransformMixin(dagmixin.DagMixin):
         If no constraint exists then none is returned!
 
         :type typeName: str
-        :rtype: mpy.nodetypes.constraintmixin.ConstraintMixin
+        :rtype: mpy.builtins.constraintmixin.ConstraintMixin
         """
 
         found = [constraint for constraint in self.constraints() if constraint.typeName == typeName]
@@ -798,17 +842,124 @@ class TransformMixin(dagmixin.DagMixin):
 
         return self.findConstraint(typeName) is not None
 
+    def addSpaceSwitch(self, spaces, **kwargs):
+        """
+        Adds a space switcher to this transform.
+
+        :type spaces: List[transformmixin.TransformMixin]
+        :key name: str
+        :key maintainOffset: bool
+        :key skipTranslate: bool
+        :key skipRotate: bool
+        :key skipScale: bool
+        :rtype: spaceswitchmixin.SpaceSwitchMixin
+        """
+
+        # Create space switcher
+        #
+        name = kwargs.get('name', f'{self.name()}_spaceSwitch1')
+
+        spaceSwitch = self.scene.createNode('spaceSwitch', name=name)
+        spaceSwitch.setAttr('restMatrix', self.matrix(asTransformationMatrix=True))
+
+        self.connectPlugs('rotateOrder', spaceSwitch['rotateOrder'])
+        self.connectPlugs(f'parentInverseMatrix[{self.instanceNumber()}]', spaceSwitch['parentInverseMatrix'])
+
+        # Add space targets
+        #
+        worldMatrix = self.worldMatrix()
+        maintainOffset = kwargs.get('maintainOffset', True)
+
+        for (i, space) in enumerate(spaces):
+
+            spaceSwitch.setAttr(f'target[{i}].targetName', space.name())
+            space.connectPlugs(f'worldMatrix[{space.instanceNumber()}]', spaceSwitch[f'target[{i}].targetMatrix'])
+
+            if maintainOffset:
+
+                offsetMatrix = worldMatrix * space.worldInverseMatrix()
+                offsetTranslate, offsetRotate, offsetScale = transformutils.decomposeTransformMatrix(offsetMatrix)
+
+                spaceSwitch.setAttr(f'target[{i}].targetOffsetTranslate', offsetTranslate)
+                spaceSwitch.setAttr(f'target[{i}].targetOffsetRotate', list(map(math.degrees, offsetRotate)))
+                spaceSwitch.setAttr(f'target[{i}].targetOffsetScale', offsetScale)
+
+        # Connect translate attributes
+        #
+        skipTranslate = kwargs.get('skipTranslate', False)
+
+        if not skipTranslate:
+
+            sources = list(plugutils.iterChildren(spaceSwitch['outputTranslate']))
+            destinations = list(plugutils.iterChildren(self['translate']))
+
+            for (source, destination) in zip(sources, destinations):
+
+                attributeName = destination.partialName(useLongNames=True)
+                key = 'skip{attributeName}'.format(attributeName=stringutils.pascalize(attributeName))
+                skipChild = kwargs.get(key, skipTranslate)
+
+                if not skipChild:
+
+                    self.connectPlugs(source, destination)
+
+        # Connect rotate attributes
+        #
+        skipRotate = kwargs.get('skipRotate', False)
+
+        if not skipRotate:
+
+            sources = list(plugutils.iterChildren(spaceSwitch['outputRotate']))
+            destinations = list(plugutils.iterChildren(self['rotate']))
+
+            for (source, destination) in zip(sources, destinations):
+
+                attributeName = destination.partialName(useLongNames=True)
+                key = 'skip{attributeName}'.format(attributeName=stringutils.pascalize(attributeName))
+                skipChild = kwargs.get(key, skipRotate)
+
+                if not skipChild:
+
+                    self.connectPlugs(source, destination)
+
+        # Connect scale attributes
+        #
+        skipScale = kwargs.get('skipScale', False)
+
+        if not skipScale:
+
+            sources = list(plugutils.iterChildren(spaceSwitch['outputScale']))
+            destinations = list(plugutils.iterChildren(self['scale']))
+
+            for (source, destination) in zip(sources, destinations):
+
+                attributeName = destination.partialName(useLongNames=True)
+                key = 'skip{attributeName}'.format(attributeName=stringutils.pascalize(attributeName))
+                skipChild = kwargs.get(key, skipScale)
+
+                if not skipChild:
+
+                    self.connectPlugs(source, destination)
+
+        return spaceSwitch
+
     def addShape(self, shape, **kwargs):
         """
         Adds the specified shape to this transform node.
-        See the shapes directory for a list of accepts shapes.
+        See the shapes directory for a list of accepted shape names!
 
         :type shape: str
+        :key localPosition: Union[om.MVector, Tuple[float, float, float]]
+        :key localRotate: Union[om.MVector, Tuple[float, float, float]]
+        :key localScale: Union[om.MVector, Tuple[float, float, float]]
+        :key lineWidth: float
         :rtype: List[om.MObject]
         """
 
         filePath = self.scene.getShapeTemplate(shape)
-        return shapeutils.applyShapeTemplate(filePath, parent=self.object(), **kwargs)
+        shapes = shapeutils.applyShapeTemplate(filePath, parent=self.object(), **kwargs)
+
+        return list(map(self.scene, shapes))
 
     def addLocator(self, *args, **kwargs):
         """
@@ -817,7 +968,7 @@ class TransformMixin(dagmixin.DagMixin):
         :key localPosition: Tuple[float, float, float]
         :key localRotate: Tuple[float, float, float]
         :key localScale: Tuple[float, float, float]
-        :rtype: mpy.nodetypes.shapemixin.ShapeMixin
+        :rtype: mpy.builtins.shapemixin.ShapeMixin
         """
 
         # Create point helper shape
@@ -850,11 +1001,10 @@ class TransformMixin(dagmixin.DagMixin):
         Adds a point helper shape to this transform.
 
         :key size: float
-        :key side: int
         :key localPosition: Tuple[float, float, float]
         :key localRotate: Tuple[float, float, float]
         :key localScale: Tuple[float, float, float]
-        :rtype: mpy.nodetypes.shapemixin.ShapeMixin
+        :rtype: mpy.builtins.shapemixin.ShapeMixin
         """
 
         # Create point helper shape

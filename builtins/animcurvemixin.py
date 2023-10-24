@@ -1,4 +1,6 @@
-from maya.api import OpenMaya as om
+import math
+
+from maya.api import OpenMaya as om, OpenMayaAnim as oma
 from dcc.python import stringutils
 from dcc.maya.libs import animutils
 from . import dependencymixin
@@ -86,7 +88,14 @@ class AnimCurveMixin(dependencymixin.DependencyMixin):
         #
         numArgs = len(args)
 
-        if numArgs == 1:
+        if numArgs == 0:
+
+            # Get current time
+            #
+            time = om.MTime(self.scene.time, unit=om.MTime.uiUnit())
+            self.remove(time)
+
+        elif numArgs == 1:
 
             # Evaluate argument type
             #
@@ -97,6 +106,13 @@ class AnimCurveMixin(dependencymixin.DependencyMixin):
                 # Call parent method
                 #
                 self.functionSet().remove(arg, **kwargs)
+
+            elif isinstance(arg, float):
+
+                # Convert to time and process again
+                #
+                time = om.MTime(arg, unit=om.MTime.uiUnit())
+                self.remove(time)
 
             elif isinstance(arg, om.MTime):
 
@@ -110,11 +126,11 @@ class AnimCurveMixin(dependencymixin.DependencyMixin):
 
                 else:
 
-                    log.warning('Cannot locate index at frame: %s!' % arg.value)
+                    log.warning(f'Cannot locate index at frame: {arg.value}!' )
 
             else:
 
-                raise TypeError('remove() expects either an int or MTime (%s given)!' % type(arg).__name__)
+                raise TypeError(f'remove() expects either an int or MTime ({type(arg).__name__} given)!')
 
         elif numArgs == 2:
 
@@ -129,7 +145,7 @@ class AnimCurveMixin(dependencymixin.DependencyMixin):
 
         else:
 
-            raise TypeError('remove() expects 1 or 2 arguments (%s given)!' % numArgs)
+            raise TypeError(f'remove() expects 1 or 2 arguments ({numArgs} given)!')
 
     def setValue(self, *args, **kwargs):
         """
@@ -202,6 +218,78 @@ class AnimCurveMixin(dependencymixin.DependencyMixin):
         else:
 
             return keys
+
+    def getInfinityKeys(self, animationRange, alignEndTangents=False):
+        """
+        Returns the infinity keyframes between the specified range.
+
+        :type animationRange: Union[Tuple[int, int], None]
+        :type alignEndTangents: bool
+        :rtype: List[keyframe.Keyframe]
+        """
+
+        # Check if anim-curve has enough inputs
+        #
+        keyframes = self.getKeys()
+        numKeyframes = len(keyframes)
+
+        if not (numKeyframes >= 2):
+
+            return keyframes
+
+        # Calculate number of cycles
+        #
+        startFrame, endFrame = animationRange
+
+        startInput, endInput = keyframes[0].time, keyframes[-1].time
+        inputDifference = (endInput - startInput)
+
+        preCycles = abs(math.floor((startFrame - startInput) / inputDifference))
+        postCycles = abs(math.floor((endInput - endFrame) / inputDifference))
+
+        # Iterate through infinity cycles
+        #
+        startBakeFrame = keyframes[0].time - (preCycles * inputDifference)
+        cycles = preCycles + 1 + postCycles
+        lastIndex = numKeyframes - 1
+        lastCycle = cycles - 1
+
+        infinityKeyframes = []
+
+        for cycle in range(cycles):
+
+            # Iterate through keyframes
+            #
+            offset = cycle * inputDifference
+
+            for (i, keyframe) in enumerate(keyframes):
+
+                # Check if frame should be skipped
+                #
+                skipFirstTangent = (i == 0 and not alignEndTangents) and cycle > 0
+                skipLastTangent = (i == lastIndex and alignEndTangents) and cycle < lastCycle
+
+                if skipFirstTangent or skipLastTangent:
+
+                    continue
+
+                # Calculate time offset and value
+                #
+                time = startBakeFrame + (keyframe.time - startInput) + offset
+                value = keyframe.value
+
+                if self.postInfinityType != oma.MFnAnimCurve.kCycle:
+
+                    value = self.evaluate(om.MTime(time, unit=om.MTime.uiUnit()))
+
+                # Copy and offset keyframe
+                #
+                infinityKeyframe = keyframe.copy()
+                infinityKeyframe.time = time
+                infinityKeyframe.value = value
+                infinityKeyframes.append(infinityKeyframe)
+
+        return infinityKeyframes
 
     def replaceKeys(self, keys, insertAt=None, animationRange=None):
         """

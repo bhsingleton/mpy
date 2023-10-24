@@ -1,7 +1,7 @@
 import os
 
 from maya.api import OpenMaya as om
-from PySide2 import QtGui
+from Qt import QtGui
 from six import string_types
 
 from . import dependencymixin
@@ -42,7 +42,7 @@ class ContainerBaseMixin(dependencymixin.DependencyMixin):
         """
         Private method that evaluates if an item belongs to this container.
 
-        :type item: mpynode.nodetypes.dependencymixin.DependencyMixin
+        :type item: mpynode.builtins.dependencymixin.DependencyMixin
         :rtype: bool
         """
 
@@ -84,7 +84,7 @@ class ContainerBaseMixin(dependencymixin.DependencyMixin):
         Returns a hyper layout for this container.
         If there is already a hyper layout attached to this container then that node is returned instead!
 
-        :rtype: mpy.nodetypes.hyperlayoutmixin.HyperLayoutMixin
+        :rtype: mpy.builtins.hyperlayoutmixin.HyperLayoutMixin
         """
 
         # Check for redundancy
@@ -194,7 +194,7 @@ class ContainerBaseMixin(dependencymixin.DependencyMixin):
         """
         Publishes the supplied node to this container.
 
-        :type node: mpy.mpynode.MPyNode
+        :type node: mpy.builtins.dependencymixin.DependencyMixin
         :type index: int
         :type alias: str
         :rtype: bool
@@ -374,7 +374,7 @@ class ContainerBaseMixin(dependencymixin.DependencyMixin):
         Returns the container node this transform is associated with.
         If this transform has not been published then none is returned!
 
-        :rtype: mpy.nodetypes.containermixin.ContainerMixin
+        :rtype: mpy.builtins.containermixin.ContainerMixin
         """
 
         # Iterate through destination plugs
@@ -410,7 +410,7 @@ class ContainerBaseMixin(dependencymixin.DependencyMixin):
 
         # Find connect message plug
         #
-        plug = self.findConnectedMessage(publishedNode.object(), self.attribute('publishedNode'))
+        plug = self.findConnectedMessage(publishedNode.object(), attribute='publishedNode')
 
         if plug is not None:
 
@@ -431,7 +431,7 @@ class ContainerBaseMixin(dependencymixin.DependencyMixin):
 
         # Find connect message plug
         #
-        plug = self.findConnectedMessage(publishedNode.object(), self.attribute('publishedNode'))
+        plug = self.findConnectedMessage(publishedNode.object(), attribute='publishedNode')
 
         if plug is not None:
 

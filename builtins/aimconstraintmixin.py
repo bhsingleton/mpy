@@ -89,7 +89,7 @@ class AimConstraintMixin(constraintmixin.ConstraintMixin):
         """
         Returns the world-up object for this constraint.
 
-        :rtype: mpynode.nodetypes.transformmixin.TransformMixin
+        :rtype: mpynode.builtins.transformmixin.TransformMixin
         """
 
         plug = self.findPlug('worldUpMatrix')
@@ -107,7 +107,7 @@ class AimConstraintMixin(constraintmixin.ConstraintMixin):
         """
         Updates the world-up object for this constraint.
 
-        :type node: mpynode.nodetypes.transformmixin.TransformMixin
+        :type node: mpynode.builtins.transformmixin.TransformMixin
         :rtype: None
         """
 

@@ -21,7 +21,7 @@ class ControllerMixin(dependencymixin.DependencyMixin):
     prepopulate = mpyattribute.MPyAttribute('prepopulate')
     parentprepopulate = mpyattribute.MPyAttribute('parentprepopulate')
     visibilityMode = mpyattribute.MPyAttribute('visibilityMode')
-    #
+    # endregion
 
     # region Dunderscores
     __api_type__ = om.MFn.kControllerTag

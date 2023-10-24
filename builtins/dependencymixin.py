@@ -1,15 +1,14 @@
 import os
 
 from maya import cmds as mc
-from maya import OpenMaya as legacy
 from maya.api import OpenMaya as om
 from six import string_types
 from Qt import QtGui
 from dcc.python import stringutils
 from dcc.naming import namingutils
 from dcc.maya.libs import dagutils, attributeutils, plugutils, plugmutators, animutils
+from dcc.maya.collections import userproperties
 from .. import mpyattribute, mpynode, mpycontext
-from ..collections import userproperties
 
 import logging
 logging.basicConfig()
@@ -454,6 +453,39 @@ class DependencyMixin(mpynode.MPyNode):
 
         return attributeutils.addAttribute(self.object(), **kwargs)
 
+    def addProxyAttr(self, name, plug):
+        """
+        Adds a proxy attribute to the supplied plug.
+
+        :type name: str
+        :type plug: om.MPlug
+        :rtype: om.MObject
+        """
+
+        mc.addAttr(self.name(includeNamespace=True), longName=name, proxy=plug.info)
+        return self.attribute(name)
+
+    def addDivider(self):
+        """
+        Adds a divider attribute to this node.
+
+        :rtype: None
+        """
+
+        # Create new divider
+        #
+        dividers = [attr for attr in self.iterAttr(userDefined=True) if om.MFnAttribute(attr).name.startswith('div')]
+        numDividers = len(dividers)
+
+        attr = self.addAttr(longName=f'div{numDividers}', niceName='_______________', attributeType='long', defaultValue=0)
+
+        # Edit divider properties
+        #
+        plug = self.findPlug(attr)
+        plug.isKeyable = False
+        plug.isLocked = True
+        plug.isChannelBox = True
+
     def removeAttr(self, attribute):
         """
         Removes an attribute from this node.
@@ -470,7 +502,7 @@ class DependencyMixin(mpynode.MPyNode):
         Returns the value from the supplied plug.
 
         :type plug: Union[str, om.MObject, om.MPlug]
-        :type time:
+        :type time: Union[int, None]
         :type convertUnits: bool
         :rtype: Any
         """
@@ -487,7 +519,7 @@ class DependencyMixin(mpynode.MPyNode):
         If no plug exists then the default value is returned instead!
 
         :type plug: Union[str, om.MObject, om.MPlug]
-        :type time:
+        :type time: Union[int, None]
         :type convertUnits: bool
         :type default: Any
         :rtype: Any
@@ -522,41 +554,49 @@ class DependencyMixin(mpynode.MPyNode):
 
         return self.attribute(attribute).apiTypeStr
 
-    def setAttr(self, plug, value, force=False):
+    def setAttr(self, plug, value, **kwargs):
         """
         Updates the value for the supplied plug.
 
         :type plug: Union[str, om.MObject, om.MPlug]
         :type value: object
-        :type force: bool
+        :key convertUnits: bool
+        :key force: bool
         :rtype: None
         """
 
         plug = self.findPlug(plug)
-        plugmutators.setValue(plug, value, force=force)
+        plugmutators.setValue(plug, value, **kwargs)
 
-    def dirtyAttr(self, plug):
+    def dirtyAttr(self, plug, **kwargs):
         """
         Marks the supplied plug as dirty.
 
         :type plug: Union[str, om.MObject, om.MPlug]
+        :key allPlugs: bool
+        :key clean: bool
+        :key implicit: bool
+        :key list: bool
+        :key propagation: bool
+        :key showTiming: bool
+        :key verbose: bool
         :rtype: None
         """
 
         plug = self.findPlug(plug)
-        mc.dgdirty(plug.info)
+        mc.dgdirty(plug.info, **kwargs)
 
-    def resetAttr(self, plug, force=False):
+    def resetAttr(self, plug, **kwargs):
         """
         Updates the value for the supplied plug back to its default value.
 
         :type plug: Union[str, om.MObject, om.MPlug]
-        :type force: bool
+        :key force: bool
         :rtype: None
         """
 
         plug = self.findPlug(plug)
-        plugmutators.resetValue(plug, force=force)
+        plugmutators.resetValue(plug, **kwargs)
 
     def hideAttr(self, *plugs):
         """
@@ -595,7 +635,7 @@ class DependencyMixin(mpynode.MPyNode):
 
         :type args: Union[om.MPlug, Tuple[om.MPlug, Any]]
         :type time: Union[int, float, om.MTime, None]
-        :rtype: mpy.nodetypes.animcurvemixin.AnimCurveMixin
+        :rtype: mpy.builtins.animcurvemixin.AnimCurveMixin
         """
 
         # Inspect supplied arguments
@@ -850,7 +890,7 @@ class DependencyMixin(mpynode.MPyNode):
 
         :type name: Union[str, om.MObject, om.MPlug]
         :type create: bool
-        :rtype: mpy.nodetypes.animcurvemixin.AnimCurveMixin
+        :rtype: mpy.builtins.animcurvemixin.AnimCurveMixin
         """
 
         # Check if plug is animated
@@ -917,20 +957,37 @@ class DependencyMixin(mpynode.MPyNode):
 
             # Check if child counts are identical
             #
-            if source.numChildren() == destination.numChildren():
+            sourceCount = source.numChildren()
+            destinationCount = destination.numChildren()
+
+            if sourceCount == destinationCount:
 
                 # Connect child plugs
                 #
-                for i in range(source.numChildren()):
+                for i in range(sourceCount):
 
                     self.connectPlugs(source.child(i), destination.child(i), force=force)
 
             else:
 
+                # Connect plugs
+                #
                 plugutils.connectPlugs(source, destination, force=force)
+
+        elif not source.isCompound and destination.isCompound:
+
+            # Connect source plug to destination's child plugs
+            #
+            destinationCount = destination.numChildren()
+
+            for i in range(destinationCount):
+
+                self.connectPlugs(source, destination.child(i), force=force)
 
         else:
 
+            # Connect plugs
+            #
             plugutils.connectPlugs(source, destination, force=force)
 
     def disconnectPlugs(self, source, destination):
@@ -982,7 +1039,7 @@ class DependencyMixin(mpynode.MPyNode):
         #
         plugutils.breakConnections(plug, source=source, destination=destination, recursive=recursive)
 
-    def findConnectedMessage(self, dependNode, attribute):
+    def findConnectedMessage(self, dependNode, attribute=om.MObject.kNullObj):
         """
         Locates the connected destination plug for the given dependency node.
 

@@ -48,10 +48,14 @@ class LocatorMixin(shapemixin.ShapeMixin):
         :rtype: om.MMatrix
         """
 
+        # Compose local matrix components
+        #
         localPositionMatrix = transformutils.createTranslateMatrix(self.localPosition)
         localRotateMatrix = om.MMatrix.kIdentity
         localScaleMatrix = transformutils.createScaleMatrix(self.localScale)
 
+        # Check if local rotation exists
+        #
         if self.hasAttr('localRotate'):
 
             localRotateMatrix = transformutils.createRotationMatrix(self.localRotate)
@@ -66,14 +70,16 @@ class LocatorMixin(shapemixin.ShapeMixin):
         :rtype: None
         """
 
+        # Update local position and scale
+        #
         localPosition, localRotate, localScale = transformutils.decomposeTransformMatrix(localMatrix)
 
-        self.localPosition = localPosition
-        self.localScale = localScale
+        self.setAttr('localPosition', localPosition)
+        self.setAttr('localScale', localScale)
 
+        # Check if local rotation exists
+        #
         if self.hasAttr('localRotate'):
 
-            self.localRotateX = math.degrees(localRotate.x)
-            self.localRotateY = math.degrees(localRotate.y)
-            self.localRotateZ = math.degrees(localRotate.z)
+            self.setAttr('localRotate', list(map(math.degrees, localRotate)))
     # endregion

@@ -86,5 +86,15 @@ class ParentConstraintMixin(constraintmixin.ConstraintMixin):
         :rtype: None
         """
 
-        raise NotImplementedError()
+        restMatrix = self.worldRestMatrix()
+
+        for target in self.iterTargets():
+
+            node = target.targetObject()
+            worldMatrix = node.worldMatrix()
+            offsetMatrix = restMatrix * worldMatrix.inverse()
+
+            translation, eulerRotation, scale = transformutils.decomposeTransformMatrix(offsetMatrix)
+            target.setTargetOffsetTranslate(translation)
+            target.setTargetOffsetRotate(eulerRotation)
     # endregion
