@@ -176,15 +176,6 @@ class MObjectWrapper(object, metaclass=mabcmeta.MABCMeta):
     # endregion
 
     # region Methods
-    def isInitialized(self):
-        """
-        Evaluates if this instance has already been initialized.
-
-        :rtype: bool
-        """
-
-        return hasattr(self, '__handle__')
-
     def handle(self):
         """
         Returns the object handle associated with this instance.
@@ -297,12 +288,13 @@ class MObjectWrapper(object, metaclass=mabcmeta.MABCMeta):
 
             return functionSet
 
-        # Collect function sets and sort by number of inheritance
+        # Collect function sets and sort by inheritance depth
         #
         functionSets = [x for x in dagutils.iterFunctionSets() if x().hasObj(dependNode)]
         functionSets.sort(key=lambda x: len(inspect.getmro(x)))
 
-        cls.__function_sets__[apiType] = functionSets[-1]
+        functionSet = functionSets[-1]
+        cls.__function_sets__[apiType] = functionSet
 
-        return cls.__function_sets__[apiType]
+        return functionSet
     # endregion
