@@ -11,9 +11,9 @@ log.setLevel(logging.INFO)
 
 class MPyNode(mobjectwrapper.MObjectWrapper, metaclass=mabcmeta.MABCMeta):
     """
-    Overload of MObjectWrapper used as the base class for all Maya node interfaces.
-    This class supports a range of constructor arguments that are outlined under the `__accepts__` dunderscore.
-    All derived classes should overload the `__api_type__` dunderscore, that way they can be registered by the `MPyFactory` class!
+    Overload of `MObjectWrapper` that acts as a base class for all Maya node interfaces.
+    See `__accepts__` dunderscore for a list of supported types to initialize from.
+    In order to register a new interface developers should override either the `__api_type__` for builtins or `__plugin__` for plugins!
     """
 
     # region Dunderscores
@@ -61,15 +61,15 @@ class MPyNode(mobjectwrapper.MObjectWrapper, metaclass=mabcmeta.MABCMeta):
         Returns the node factory class.
         It's a bit hacky but this way we can bypass cyclical import errors.
 
-        :rtype: mpy.mpyfactory.MPyFactory
+        :rtype: mpy.mpyscene.MPyScene
         """
 
-        # Check if factory exists
+        # Check if scene interface exists
         #
         if cls.__scene__ is None:
 
-            from . import mpyfactory
-            cls.__scene__ = mpyfactory.MPyFactory.getInstance(asWeakReference=True)
+            from . import mpyscene
+            cls.__scene__ = mpyscene.MPyScene.getInstance(asWeakReference=True)
 
         return cls.__scene__()
     # endregion
@@ -88,7 +88,7 @@ class MPyNode(mobjectwrapper.MObjectWrapper, metaclass=mabcmeta.MABCMeta):
         #
         if not isinstance(dependNode, om.MObject):
 
-            raise TypeError('isCompatible() expects an MObject (%s given)!' % type(dependNode).__name__)
+            raise TypeError(f'isCompatible() expects an MObject ({type(dependNode).__name__} given)!')
 
         # Check api type
         #
@@ -104,7 +104,7 @@ class MPyNode(mobjectwrapper.MObjectWrapper, metaclass=mabcmeta.MABCMeta):
 
         else:
 
-            raise TypeError('isCompatible() expects a valid type constant (%s given)!' % type(apiType).__name__)
+            raise TypeError(f'isCompatible() expects a valid type constant ({type(apiType).__name__} given)!')
 
     @classmethod
     def create(cls, typeName, name='', parent=None, skipSelect=True):
