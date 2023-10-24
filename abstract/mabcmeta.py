@@ -16,7 +16,7 @@ class MABCMeta(ABCMeta):
 
     # region Dunderscores
     __slots__ = ()
-    __accepts__ = (str, om.MObjectHandle, om.MObject, om.MDagPath)
+    __accepts__ = (str, om.MUuid, om.MObjectHandle, om.MObject, om.MDagPath)
     __instances__ = {}
 
     def __call__(cls, obj, **kwargs):
