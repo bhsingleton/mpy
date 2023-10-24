@@ -1,7 +1,7 @@
 from maya.api import OpenMaya as om
 from dcc.maya.libs import transformutils
 from .. import mpyattribute
-from ..nodetypes import transformmixin
+from ..builtins import transformmixin
 
 import logging
 logging.basicConfig()

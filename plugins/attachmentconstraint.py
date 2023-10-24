@@ -1,9 +1,7 @@
-import math
-
 from maya.api import OpenMaya as om
 from dcc.maya.libs import transformutils
 from .. import mpyattribute
-from ..nodetypes import constraintmixin
+from ..builtins import constraintmixin
 
 import logging
 logging.basicConfig()
@@ -11,17 +9,16 @@ log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
 
 
-class OrientationConstraintMixin(constraintmixin.ConstraintMixin):
+class AttachmentConstraintMixin(constraintmixin.ConstraintMixin):
     """
-    Overload of `ConstraintMixin` that interfaces with orientation constraints.
+    Overload of `ConstraintMixin` that interfaces with attachment constraints.
     """
 
     # region Dunderscores
-    __plugin__ = 'orientationConstraint'
+    __plugin__ = 'attachmentConstraint'
 
     __targets__ = {
-        'targetMatrix': 'matrix',
-        'targetParentMatrix': 'parentMatrix'
+        'targetMesh': 'worldMesh'
     }
 
     __inputs__ = {
@@ -30,6 +27,9 @@ class OrientationConstraintMixin(constraintmixin.ConstraintMixin):
     }
 
     __outputs__ = {
+        'constraintTranslateX': 'translateX',
+        'constraintTranslateY': 'translateY',
+        'constraintTranslateZ': 'translateZ',
         'constraintRotateX': 'rotateX',
         'constraintRotateY': 'rotateY',
         'constraintRotateZ': 'rotateZ'
@@ -37,12 +37,19 @@ class OrientationConstraintMixin(constraintmixin.ConstraintMixin):
     # endregion
 
     # region Attributes
-    localOrWorld = mpyattribute.MPyAttribute('localOrWorld')
     relative = mpyattribute.MPyAttribute('relative')
+    offsetTranslate = mpyattribute.MPyAttribute('offsetTranslate')
+    offsetTranslateX = mpyattribute.MPyAttribute('offsetTranslateX')
+    offsetTranslateY = mpyattribute.MPyAttribute('offsetTranslateY')
+    offsetTranslateZ = mpyattribute.MPyAttribute('offsetTranslateZ')
     offsetRotate = mpyattribute.MPyAttribute('offsetRotate')
     offsetRotateX = mpyattribute.MPyAttribute('offsetRotateX')
     offsetRotateY = mpyattribute.MPyAttribute('offsetRotateY')
     offsetRotateZ = mpyattribute.MPyAttribute('offsetRotateZ')
+    restTranslate = mpyattribute.MPyAttribute('restTranslate')
+    restTranslateX = mpyattribute.MPyAttribute('restTranslateX')
+    restTranslateY = mpyattribute.MPyAttribute('restTranslateY')
+    restTranslateZ = mpyattribute.MPyAttribute('restTranslateZ')
     restRotate = mpyattribute.MPyAttribute('restRotate')
     restRotateX = mpyattribute.MPyAttribute('restRotateX')
     restRotateY = mpyattribute.MPyAttribute('restRotateY')
@@ -57,22 +64,5 @@ class OrientationConstraintMixin(constraintmixin.ConstraintMixin):
         :rtype: None
         """
 
-        # Temporarily disable offset
-        #
-        self.relative = False
-
-        # Calculate offset
-        #
-        constraintMatrix = self.getAttr('constraintMatrix')
-        restMatrix = self.restMatrix()
-
-        offsetMatrix = restMatrix * constraintMatrix.inverse()
-        offsetEulerRotation = transformutils.decomposeTransformMatrix(offsetMatrix)[1]
-
-        # Update and re-enable offset
-        #
-        self.offsetRotateX = math.degrees(offsetEulerRotation.x)
-        self.offsetRotateY = math.degrees(offsetEulerRotation.y)
-        self.offsetRotateZ = math.degrees(offsetEulerRotation.z)
-        self.relative = True
+        raise NotImplementedError()
     # endregion

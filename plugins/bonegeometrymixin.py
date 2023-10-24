@@ -1,6 +1,6 @@
 from maya.api import OpenMaya as om
 from .. import mpyattribute
-from ..nodetypes import locatormixin
+from ..builtins import locatormixin
 
 import logging
 logging.basicConfig()

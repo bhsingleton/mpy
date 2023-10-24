@@ -3,7 +3,7 @@ import math
 from maya.api import OpenMaya as om
 from dcc.maya.libs import transformutils
 from .. import mpyattribute
-from ..nodetypes import constraintmixin
+from ..builtins import constraintmixin
 
 import logging
 logging.basicConfig()
@@ -11,17 +11,17 @@ log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
 
 
-class LookAtConstraintMixin(constraintmixin.ConstraintMixin):
+class OrientationConstraintMixin(constraintmixin.ConstraintMixin):
     """
-    Overload of `ConstraintMixin` that interfaces with look-at constraints.
+    Overload of `ConstraintMixin` that interfaces with orientation constraints.
     """
 
     # region Dunderscores
-    __plugin__ = 'lookAtConstraint'
+    __plugin__ = 'orientationConstraint'
 
     __targets__ = {
         'targetMatrix': 'matrix',
-        'targetParentMatrix': 'parentMatrix',
+        'targetParentMatrix': 'parentMatrix'
     }
 
     __inputs__ = {
@@ -30,9 +30,6 @@ class LookAtConstraintMixin(constraintmixin.ConstraintMixin):
     }
 
     __outputs__ = {
-        'constraintTranslateX': 'translateX',
-        'constraintTranslateY': 'translateY',
-        'constraintTranslateZ': 'translateZ',
         'constraintRotateX': 'rotateX',
         'constraintRotateY': 'rotateY',
         'constraintRotateZ': 'rotateZ'
@@ -40,28 +37,12 @@ class LookAtConstraintMixin(constraintmixin.ConstraintMixin):
     # endregion
 
     # region Attributes
-    targetAxis = mpyattribute.MPyAttribute('targetAxis')
-    targetAxisFlip = mpyattribute.MPyAttribute('targetAxisFlip')
-    sourceUpAxis = mpyattribute.MPyAttribute('sourceUpAxis')
-    sourceUpAxisFlip = mpyattribute.MPyAttribute('sourceUpAxisFlip')
-    upNode = mpyattribute.MPyAttribute('upNode')
-    upNodeWorld = mpyattribute.MPyAttribute('upNodeWorld')
-    upNodeControl = mpyattribute.MPyAttribute('upNodeControl')
-    upNodeAxis = mpyattribute.MPyAttribute('upNodeAxis')
-    upNodeAxisFlip = mpyattribute.MPyAttribute('upNodeAxisFlip')
+    localOrWorld = mpyattribute.MPyAttribute('localOrWorld')
     relative = mpyattribute.MPyAttribute('relative')
-    offsetTranslate = mpyattribute.MPyAttribute('offsetTranslate')
-    offsetTranslateX = mpyattribute.MPyAttribute('offsetTranslateX')
-    offsetTranslateY = mpyattribute.MPyAttribute('offsetTranslateY')
-    offsetTranslateZ = mpyattribute.MPyAttribute('offsetTranslateZ')
     offsetRotate = mpyattribute.MPyAttribute('offsetRotate')
     offsetRotateX = mpyattribute.MPyAttribute('offsetRotateX')
     offsetRotateY = mpyattribute.MPyAttribute('offsetRotateY')
     offsetRotateZ = mpyattribute.MPyAttribute('offsetRotateZ')
-    restTranslate = mpyattribute.MPyAttribute('restTranslate')
-    restTranslateX = mpyattribute.MPyAttribute('restTranslateX')
-    restTranslateY = mpyattribute.MPyAttribute('restTranslateY')
-    restTranslateZ = mpyattribute.MPyAttribute('restTranslateZ')
     restRotate = mpyattribute.MPyAttribute('restRotate')
     restRotateX = mpyattribute.MPyAttribute('restRotateX')
     restRotateY = mpyattribute.MPyAttribute('restRotateY')

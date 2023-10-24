@@ -1,7 +1,7 @@
 from maya.api import OpenMaya as om
 from dcc.python import stringutils
 from .. import mpyattribute
-from ..nodetypes import dependencymixin
+from ..builtins import dependencymixin
 
 import logging
 logging.basicConfig()
@@ -63,7 +63,7 @@ class ListMixin(dependencymixin.DependencyMixin):
 
         for i in range(numElements):
 
-            yield ListElement(self, index=i, attribute=self.__value_attribute__)
+            yield ListElement(self, index=i)
 
     def insertElement(self, index, name, absolute, weight, value, source=None):
         """
@@ -263,7 +263,8 @@ class ListElement(object):
         """
         Updates the source plugs from the value plug.
 
-        :rtype: Tuple[om.MPlug, om.MPlug, om.MPlug]
+        :type source: Tuple[om.MPlug, om.MPlug, om.MPlug]
+        :rtype: None
         """
 
         # Check if source is valid

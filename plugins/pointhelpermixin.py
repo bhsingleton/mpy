@@ -1,6 +1,9 @@
+import math
+
 from maya.api import OpenMaya as om
+from dcc.maya.libs import transformutils
 from .. import mpyattribute
-from ..nodetypes import locatormixin
+from ..builtins import locatormixin
 
 import logging
 logging.basicConfig()
@@ -36,10 +39,45 @@ class PointHelperMixin(locatormixin.LocatorMixin):
     choice = mpyattribute.MPyAttribute('choice')
     text = mpyattribute.MPyAttribute('text')
     fontSize = mpyattribute.MPyAttribute('fontSize')
-    lineWidth = mpyattribute.MPyAttribute('lineWidth')
     controlPoints = mpyattribute.MPyAttribute('controlPoints')
     fill = mpyattribute.MPyAttribute('fill')
     shaded = mpyattribute.MPyAttribute('shaded')
     drawOnTop = mpyattribute.MPyAttribute('drawOnTop')
     objectMatrix = mpyattribute.MPyAttribute('objectMatrix')
+    # endregion
+
+    # region Methods
+    def alignTo(self, node):
+        """
+        Locally scales the point helper to fit the distance to the supplied node.
+
+        :type node: mpy.plugins.transformmixin.TransformMixin
+        :rtype: None
+        """
+
+        # Get target point
+        #
+        parentMatrix = self.getAttr(f'parentMatrix[{self.instanceNumber()}]')
+        worldMatrix = node.worldMatrix()
+        targetMatrix = worldMatrix * parentMatrix.inverse()
+
+        aimVector = om.MVector(transformutils.breakMatrix(targetMatrix)[3])
+        distance = aimVector.length()
+        size = self.size
+        scale = distance / size
+
+        # Compose aim matrix
+        #
+        forwardVector = aimVector.normal()
+        upVector = om.MVector.kZaxisVector
+
+        aimMatrix = transformutils.createAimMatrix(0, forwardVector, 2, upVector)
+
+        # Assign object transform
+        #
+        localRotation = transformutils.decomposeTransformMatrix(aimMatrix)[1]
+
+        self.localPosition = (distance * 0.5, 0.0, 0.0)
+        self.localRotate = tuple(map(math.degrees, localRotation))
+        self.localScale = (scale, 1.0, 1.0)
     # endregion

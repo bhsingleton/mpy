@@ -1,6 +1,6 @@
 from maya.api import OpenMaya as om
 from .. import mpyattribute
-from ..nodetypes import dependencymixin
+from ..builtins import dependencymixin
 
 import logging
 logging.basicConfig()

@@ -1,7 +1,9 @@
+import math
+
 from maya.api import OpenMaya as om
 from dcc.maya.libs import transformutils
 from .. import mpyattribute
-from ..nodetypes import constraintmixin
+from ..builtins import constraintmixin
 
 import logging
 logging.basicConfig()
@@ -9,16 +11,17 @@ log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
 
 
-class AttachmentConstraintMixin(constraintmixin.ConstraintMixin):
+class LookAtConstraintMixin(constraintmixin.ConstraintMixin):
     """
-    Overload of `ConstraintMixin` that interfaces with attachment constraints.
+    Overload of `ConstraintMixin` that interfaces with look-at constraints.
     """
 
     # region Dunderscores
-    __plugin__ = 'attachmentConstraint'
+    __plugin__ = 'lookAtConstraint'
 
     __targets__ = {
-        'targetMesh': 'worldMesh'
+        'targetMatrix': 'matrix',
+        'targetParentMatrix': 'parentMatrix',
     }
 
     __inputs__ = {
@@ -37,6 +40,15 @@ class AttachmentConstraintMixin(constraintmixin.ConstraintMixin):
     # endregion
 
     # region Attributes
+    targetAxis = mpyattribute.MPyAttribute('targetAxis')
+    targetAxisFlip = mpyattribute.MPyAttribute('targetAxisFlip')
+    sourceUpAxis = mpyattribute.MPyAttribute('sourceUpAxis')
+    sourceUpAxisFlip = mpyattribute.MPyAttribute('sourceUpAxisFlip')
+    upNode = mpyattribute.MPyAttribute('upNode')
+    upNodeWorld = mpyattribute.MPyAttribute('upNodeWorld')
+    upNodeControl = mpyattribute.MPyAttribute('upNodeControl')
+    upNodeAxis = mpyattribute.MPyAttribute('upNodeAxis')
+    upNodeAxisFlip = mpyattribute.MPyAttribute('upNodeAxisFlip')
     relative = mpyattribute.MPyAttribute('relative')
     offsetTranslate = mpyattribute.MPyAttribute('offsetTranslate')
     offsetTranslateX = mpyattribute.MPyAttribute('offsetTranslateX')
@@ -64,5 +76,22 @@ class AttachmentConstraintMixin(constraintmixin.ConstraintMixin):
         :rtype: None
         """
 
-        raise NotImplementedError()
+        # Temporarily disable offset
+        #
+        self.relative = False
+
+        # Calculate offset
+        #
+        constraintMatrix = self.getAttr('constraintMatrix')
+        restMatrix = self.restMatrix()
+
+        offsetMatrix = restMatrix * constraintMatrix.inverse()
+        offsetEulerRotation = transformutils.decomposeTransformMatrix(offsetMatrix)[1]
+
+        # Update and re-enable offset
+        #
+        self.offsetRotateX = math.degrees(offsetEulerRotation.x)
+        self.offsetRotateY = math.degrees(offsetEulerRotation.y)
+        self.offsetRotateZ = math.degrees(offsetEulerRotation.z)
+        self.relative = True
     # endregion

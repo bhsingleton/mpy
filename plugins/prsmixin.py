@@ -1,7 +1,7 @@
 from maya.api import OpenMaya as om
 from dcc.maya.libs import plugutils
 from .. import mpyattribute
-from ..nodetypes import dependencymixin
+from ..builtins import dependencymixin
 
 import logging
 logging.basicConfig()
@@ -40,7 +40,7 @@ class PRSMixin(dependencymixin.DependencyMixin):
         """
         Returns the transform node associated with this node.
 
-        :rtype: Union[mpy.plugintypes.maxformmixin.MaxformMixin, None]
+        :rtype: Union[mpy.plugins.maxformmixin.MaxformMixin, None]
         """
 
         connections = self.findPlug('value').destinations()
