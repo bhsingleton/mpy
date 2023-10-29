@@ -747,11 +747,12 @@ class MPyScene(proxyfactory.ProxyFactory):
 
         return list(self.iterSelection(apiType=apiType))
 
-    def setSelection(self, selection):
+    def setSelection(self, selection, replace=True):
         """
         Updates the active selection.
 
         :type selection: Union[om.MSelectionList, List[om.MObject]]
+        :type replace: bool
         :rtype: None
         """
 
@@ -759,12 +760,25 @@ class MPyScene(proxyfactory.ProxyFactory):
         #
         if isinstance(selection, om.MSelectionList):
 
+            # Check if selection should be preserved
+            #
+            if not replace:
+
+                current = dagutils.createSelectionList([node.object() for node in self.iterSelection()])
+                selection.merge(current)
+
+            # Update active selection
+            #
             om.MGlobal.setActiveSelectionList(selection)
 
-        elif isinstance(selection, list):
+        elif isinstance(selection, (list, tuple, set)):
 
-            selection = dagutils.createSelectionList(selection)
-            self.setSelection(selection)
+            # Create selection list
+            #
+            nodes = [node.object() if isinstance(node, mpynode.MPyNode) else node for node in selection]
+            selectionList = dagutils.createSelectionList(nodes)
+
+            self.setSelection(selectionList, replace=replace)
 
         else:
 
