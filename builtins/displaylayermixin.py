@@ -1,5 +1,5 @@
 from maya.api import OpenMaya as om
-from dcc.maya.libs import dagutils, plugutils
+from dcc.maya.libs import plugutils
 from . import dependencymixin
 from .. import mpyattribute
 
@@ -96,9 +96,9 @@ class DisplayLayerMixin(dependencymixin.DependencyMixin):
 
             node = destination.node()
 
-            if not node.isNullObj():
+            if not node.isNull():
 
-                yield node
+                yield self.scene(node)
 
             else:
 
