@@ -2,7 +2,7 @@ from maya import cmds as mc
 from maya.api import OpenMaya as om
 from collections import deque
 from six import integer_types, string_types
-from dcc.maya.libs import dagutils
+from dcc.maya.libs import dagutils, layerutils
 from . import containerbasemixin
 from .. import mpyattribute
 
@@ -21,11 +21,31 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
     visibility = mpyattribute.MPyAttribute('visibility')
     template = mpyattribute.MPyAttribute('template')
     ghosting = mpyattribute.MPyAttribute('ghosting')
+    ghostColorPost = mpyattribute.MPyAttribute('ghostColorPost')
+    ghostColorPre = mpyattribute.MPyAttribute('ghostColorPre')
+    ghostCustomSteps = mpyattribute.MPyAttribute('ghostCustomSteps')
+    ghostDriver = mpyattribute.MPyAttribute('ghostDriver')
+    ghostFrames = mpyattribute.MPyAttribute('ghostFrames')
+    ghostingMode = mpyattribute.MPyAttribute('ghostingMode')
+    ghostOpacityRange = mpyattribute.MPyAttribute('ghostOpacityRange')
     useObjectColor = mpyattribute.MPyAttribute('useObjectColor')
     objectColor = mpyattribute.MPyAttribute('objectColor')
     objectColorRGB = mpyattribute.MPyAttribute('objectColorRGB')
     wireColorRGB = mpyattribute.MPyAttribute('wireColorRGB')
     hiddenInOutliner = mpyattribute.MPyAttribute('hiddenInOutliner')
+    drawOverride = mpyattribute.MPyAttribute('drawOverride')
+    overrideDisplayType = mpyattribute.MPyAttribute('overrideDisplayType')
+    overrideLevelOfDetail = mpyattribute.MPyAttribute('overrideLevelOfDetail')
+    overrideShading = mpyattribute.MPyAttribute('overrideShading')
+    overrideTexturing = mpyattribute.MPyAttribute('overrideTexturing')
+    overridePlayback = mpyattribute.MPyAttribute('overridePlayback')
+    overrideEnabled = mpyattribute.MPyAttribute('overrideEnabled')
+    overrideVisibility = mpyattribute.MPyAttribute('overrideVisibility')
+    hideOnPlayback = mpyattribute.MPyAttribute('hideOnPlayback')
+    overrideRGBColors = mpyattribute.MPyAttribute('overrideRGBColors')
+    overrideColor = mpyattribute.MPyAttribute('overrideColor')
+    overrideColorRGB = mpyattribute.MPyAttribute('overrideColorRGB')
+    overrideColorA = mpyattribute.MPyAttribute('overrideColorA')
     # endregion
 
     # region Dunderscores
@@ -512,4 +532,22 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
         """
 
         return list(self.iterDescendants())
+
+    def getAssociatedDisplayLayer(self):
+        """
+        Returns the display layer this node belongs to.
+
+        :rtype: Union[mpy.builtins.displaylayermixin.DisplayLayerMixin, None]
+        """
+
+        layers = list(layerutils.iterLayersFromNodes(self.object()))
+        numLayers = len(layers)
+
+        if numLayers > 0:
+
+            return self.scene(layers[0])
+
+        else:
+
+            return None
     # endregion
