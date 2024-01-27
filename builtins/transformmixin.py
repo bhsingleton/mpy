@@ -126,6 +126,16 @@ class TransformMixin(dagmixin.DagMixin):
 
         return transformutils.getRotationOrder(self.dagPath())
 
+    def setRotateOrder(self, rotateOrder):
+        """
+        Updates the transform's rotation order.
+
+        :type rotateOrder: int
+        :rtype: None
+        """
+
+        self.setAttr('rotateOrder', rotateOrder)
+
     def eulerRotation(self, time=None):
         """
         Returns the transform's rotation component.
