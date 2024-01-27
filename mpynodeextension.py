@@ -70,6 +70,16 @@ class MPyNodeExtension(mpynode.MPyNode, metaclass=mabcmeta.MABCMeta):
         return reversed(inspect.getmro(cls))
 
     @classmethod
+    def bases(cls):
+        """
+        Returns a list of parent classes.
+
+        :rtype: List[Callable]
+        """
+
+        return tuple(cls.iterBases())
+
+    @classmethod
     def getUserAttributeDefinition(cls):
         """
         Returns the attribute definition for this extension class.
