@@ -1,6 +1,8 @@
 from maya.api import OpenMaya as om
 from .. import mpyattribute
 from ..builtins import dependencymixin
+from mpy import mpynode
+from dcc.maya.libs import plugutils
 
 import logging
 logging.basicConfig()
@@ -33,4 +35,32 @@ class ShakeMixin(dependencymixin.DependencyMixin):
 
     # region Dunderscores
     __plugin__ = 'shake'
+    # endregion
+
+    # region Methods
+    def getAssociatedListController(self):
+        """
+        Returns the list controller associated with this node.
+
+        :rtype: Union[mpy.plugins.listmixin.ListMixin, None]
+        """
+
+        plugs = (self['outputTranslate'], self['outputRotate'], self['outputScale'])
+
+        for plug in plugs:
+
+            for child in plugutils.iterChildren(plug):
+
+                destinations = child.destinations()
+                destinationCount = len(destinations)
+
+                if destinationCount == 1:
+
+                    return mpynode.MPyNode(destinations[0].node())
+
+                else:
+
+                    continue
+
+        return None
     # endregion
