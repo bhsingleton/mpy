@@ -3,6 +3,7 @@ import os
 from maya import cmds as mc
 from maya.api import OpenMaya as om
 from six import string_types
+from dcc.python import stringutils
 from dcc.maya.libs import dagutils
 from . import dependencymixin
 
@@ -41,14 +42,40 @@ class ReferenceMixin(dependencymixin.DependencyMixin):
 
         return super(ReferenceMixin, self).functionSet()
 
+    @dependencymixin.DependencyMixin.isLocked.setter
+    def isLocked(self, isLocked):
+        """
+        Setter method used to change the lock state on this node.
+
+        :type isLocked: bool
+        :rtype: bool
+        """
+
+        om.MFnDependencyNode(self.object()).isLocked = isLocked  # Bypasses lock restrictions on `MFnReference` function set!
+
     def isValid(self):
         """
-        Evaluates whether this skeleton is valid.
+        Evaluates whether this reference is valid.
 
         :rtype: bool
         """
 
         return os.path.exists(self.filePath())
+
+    def isAlive(self):
+        """
+        Evaluates whether this reference is still alive.
+
+        :rtype: bool
+        """
+
+        try:
+
+            return not stringutils.isNullOrEmpty(self.filePath()) and super(ReferenceMixin, self).isAlive()
+
+        except RuntimeError as exception:
+
+            return False
 
     def getAssociatedReferenceNode(self):
         """
@@ -212,11 +239,7 @@ class ReferenceMixin(dependencymixin.DependencyMixin):
 
         if not self.isLoaded():
 
-            mc.file(
-                self.filePath(),
-                loadReference=self.name(includeNamespace=True),
-                loadReferenceDepth='asPrefs'
-            )
+            mc.file(self.filePath(), loadReference=self.name(includeNamespace=True), loadReferenceDepth='asPrefs')
 
         else:
 
@@ -231,10 +254,7 @@ class ReferenceMixin(dependencymixin.DependencyMixin):
 
         if self.isLoaded():
 
-            mc.file(
-                self.filePath(),
-                unloadReference=self.name(includeNamespace=True)
-            )
+            mc.file(self.filePath(), unloadReference=self.name(includeNamespace=True))
 
         else:
 
@@ -248,7 +268,11 @@ class ReferenceMixin(dependencymixin.DependencyMixin):
         :rtype: None
         """
 
-        mc.file(referenceNode=self.name(), loadReference=True)
+        if self.isLoaded():
+
+            self.unload()
+
+        self.load()
 
     def getEdits(self, successfulEdits=True, failedEdits=False):
         """
