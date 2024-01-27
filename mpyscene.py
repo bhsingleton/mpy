@@ -144,6 +144,26 @@ class MPyScene(proxyfactory.ProxyFactory):
         return sceneutils.currentNamespace()
 
     @property
+    def upAxis(self):
+        """
+        Getter method that returns the current up-axis.
+
+        :rtype: str
+        """
+
+        return sceneutils.currentUpAxis()
+
+    @property
+    def upVector(self):
+        """
+        Getter method that returns the current up-vector.
+
+        :rtype: om.MVector
+        """
+
+        return {'x': om.MVector.kXaxisVector, 'y': om.MVector.kYaxisVector, 'z': om.MVector.kZaxisVector}.get(self.upAxis, om.MVector.kZeroVector)
+
+    @property
     def time(self):
         """
         Getter method that returns the current time.
@@ -775,14 +795,14 @@ class MPyScene(proxyfactory.ProxyFactory):
 
             # Create selection list
             #
-            nodes = [node.object() if isinstance(node, mpynode.MPyNode) else node for node in selection]
+            nodes = [node.object() if isinstance(node, mpynode.MPyNode) else dagutils.getMObject(node) for node in selection]
             selectionList = dagutils.createSelectionList(nodes)
 
             self.setSelection(selectionList, replace=replace)
 
         else:
 
-            raise TypeError('setSelection() expects a selection list (%s given)!' % type(selection).__name__)
+            raise TypeError(f'setSelection() expects a selection list ({type(selection).__name__} given)!')
 
     def getShapeTemplate(self, name):
         """
