@@ -1,5 +1,5 @@
 from maya.api import OpenMaya as om
-from dcc.maya.libs import animutils
+from dcc.maya.libs import attributeutils, plugutils, animutils
 from . import dependencymixin
 from .. import mpyattribute
 
@@ -34,6 +34,15 @@ class AnimLayerMixin(dependencymixin.DependencyMixin):
     # endregion
 
     # region Methods
+    def isTopLevelParent(self):
+        """
+        Evaluates if this the base animation layer.
+
+        :rtype: bool
+        """
+
+        return animutils.isBaseAnimLayer(self.object())
+
     def parent(self):
         """
         Returns the parent of this animation layer.
@@ -60,4 +69,46 @@ class AnimLayerMixin(dependencymixin.DependencyMixin):
         """
 
         return animutils.getAnimLayerMembers(self.object())
+
+    def getAssociatedAnimCurve(self, member):
+        """
+        Returns the anim-curve associated with the supplied member.
+
+        :type member: om.MPlug
+        :rtype: mpy.builtins.animcurvemixin.AnimCurveMixin
+        """
+
+        # Find blend node associated with this layer
+        #
+        layer = self.object()
+        blends = animutils.getMemberBlends(member)
+
+        inputPlug = None
+
+        if self.isTopLevelParent():
+
+            inputPlug = plugutils.findPlug(blends[0], 'inputA')
+
+        else:
+
+            attribute = attributeutils.findAttribute(layer, 'blendNodes')
+            animLayers = [plugutils.findConnectedMessage(blend, attribute=attribute).node() for blend in blends]
+
+            index = animLayers.index(layer)
+            inputPlug = plugutils.findPlug(blends[index], 'inputB')
+
+        # Check if this is a compound plug
+        # If so, then get the corresponding indexed child plug
+        #
+        if inputPlug.isCompound:
+
+            inputChildren = list(plugutils.iterChildren(inputPlug))
+            plugChildren = list(plugutils.iterChildren(member.parent()))
+            index = plugChildren.index(member)
+
+            return inputChildren[index]
+
+        else:
+
+            return inputPlug
     # endregion
