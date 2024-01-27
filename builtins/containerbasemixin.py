@@ -523,7 +523,7 @@ class ContainerBaseMixin(dependencymixin.DependencyMixin):
         plug = self.findPlug('publishedNodeInfo')
         indices = plug.getExistingArrayAttributeIndices()
 
-        self.removePlugIndices(plug, indices)
+        self.removePlugElements(plug, indices)
 
     def getNextAvailablePublishedNodeIndex(self):
         """

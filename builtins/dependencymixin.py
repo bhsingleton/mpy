@@ -303,7 +303,7 @@ class DependencyMixin(mpynode.MPyNode):
         :rtype: None
         """
 
-        self.functionSet().isLocked = True
+        self.isLocked = True
 
     def unlock(self):
         """
@@ -312,7 +312,7 @@ class DependencyMixin(mpynode.MPyNode):
         :rtype: None
         """
 
-        self.functionSet().isLocked = False
+        self.isLocked = False
 
     def uuid(self, asString=False):
         """
@@ -1078,7 +1078,7 @@ class DependencyMixin(mpynode.MPyNode):
         #
         return plugutils.getNextAvailableConnection(plug, child=child)
 
-    def removePlugIndices(self, plug, indices):
+    def removePlugElements(self, plug, indices):
         """
         Removes a list of indices from the supplied array plug.
 

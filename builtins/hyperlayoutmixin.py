@@ -243,7 +243,7 @@ class HyperLayoutMixin(dependencymixin.DependencyMixin):
 
         # Remove indices from plug
         #
-        self.removePlugIndices(plug, elements)
+        self.removePlugElements(plug, elements)
     # endregion
 
 
