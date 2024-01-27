@@ -22,8 +22,8 @@ class AnimCurveMixin(dependencymixin.DependencyMixin):
     inStippleRange = mpyattribute.MPyAttribute('inStippleRange')
     outStippleRange = mpyattribute.MPyAttribute('outStippleRange')
     outStippleThreshold = mpyattribute.MPyAttribute('outStippleThreshold')
-    postInfinity = mpyattribute.MPyAttribute('postInfinity')
     preInfinity = mpyattribute.MPyAttribute('preInfinity')
+    postInfinity = mpyattribute.MPyAttribute('postInfinity')
     rotationInterpolation = mpyattribute.MPyAttribute('rotationInterpolation')
     stipplePattern = mpyattribute.MPyAttribute('stipplePattern')
     stippleReverse = mpyattribute.MPyAttribute('stippleReverse')
@@ -389,36 +389,38 @@ class AnimCurveMixin(dependencymixin.DependencyMixin):
             #
             self.setTangentsLocked(i, True)
 
-    def clearKeys(self, animationRange=None):
+    def clearKeys(self, animationRange=None, delete=True):
         """
         Removes all keyframes from this curve.
         Once all keys from an animation curve are removed the curve is deleted!
 
         :key animationRange: Union[Tuple[int, int], None]
+        :key delete: bool
         :rtype: None
         """
 
-        # Check if an animation range was supplied
-        # If not, then go ahead and delete the animation curve
+        # Check if there are any keys to remove
         #
-        if animationRange is None:
+        inputRange = self.inputRange()
+        inputCount = len(inputRange)
 
-            log.debug('No animation range specified to clear!')
-            self.delete()
+        if inputCount == 0:
 
             return
 
         # Check if animation range is redundant
-        # If so, again, go ahead and delete the animation curve
+        # If so, go ahead and delete the animation curve
         #
-        startTime, endTime = animationRange
-        inputRange = self.inputRange()
+        startTime, endTime = self.scene.animationRange if stringutils.isNullOrEmpty(animationRange) else animationRange
+        firstFrame, lastFrame = inputRange[0], inputRange[-1]
 
-        if startTime > inputRange[0] or endTime < inputRange[-1]:
+        requiresDeleting = (startTime <= firstFrame and endTime >= lastFrame) and delete
 
-            animutils.clearKeys(self.object(), animationRange=animationRange)
+        if requiresDeleting:
+
+            self.delete()
 
         else:
 
-            self.delete()
+            animutils.clearKeys(self.object(), animationRange=animationRange)
     # endregion
