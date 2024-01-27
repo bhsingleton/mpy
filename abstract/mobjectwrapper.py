@@ -16,6 +16,7 @@ log.setLevel(logging.INFO)
 class MObjectWrapper(object, metaclass=mabcmeta.MABCMeta):
     """
     Abstract base class used as a low-level wrapper for Maya scene objects.
+    Abstract base class used as a low-level wrapper for Maya scene objects.
     A lot of the architecture in this class is designed around dynamically looking up compatible function sets.
     If this class detects an unknown attribute it will attempt to resolve it through the function set.
     """
