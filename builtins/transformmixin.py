@@ -959,17 +959,19 @@ class TransformMixin(dagmixin.DagMixin):
         See the shapes directory for a list of accepted shape names!
 
         :type shape: str
-        :key localPosition: Union[om.MVector, Tuple[float, float, float]]
-        :key localRotate: Union[om.MVector, Tuple[float, float, float]]
-        :key localScale: Union[om.MVector, Tuple[float, float, float]]
+        :key localPosition: Union[Tuple[float, float, float], om.MVector]
+        :key localRotate: Union[Tuple[float, float, float], om.MVector]
+        :key localScale: Union[Tuple[float, float, float], om.MVector]
         :key lineWidth: float
-        :rtype: List[om.MObject]
+        :rtype: List[mpy.builtins.shapemixin.ShapeMixin]
         """
 
         filePath = self.scene.getShapeTemplate(shape)
-        shapes = shapeutils.applyShapeTemplate(filePath, parent=self.object(), **kwargs)
+        shapes = shapeutils.loadShapeTemplate(filePath, parent=self.object(), **kwargs)
 
-        return list(map(self.scene, shapes))
+        shapeutils.colorizeShape(*shapes, **kwargs)
+
+        return list(map(self.scene.__call__, shapes))
 
     def addLocator(self, *args, **kwargs):
         """
@@ -978,7 +980,7 @@ class TransformMixin(dagmixin.DagMixin):
         :key localPosition: Tuple[float, float, float]
         :key localRotate: Tuple[float, float, float]
         :key localScale: Tuple[float, float, float]
-        :rtype: mpy.builtins.shapemixin.ShapeMixin
+        :rtype: mpy.builtins.locatormixin.LocatorMixin
         """
 
         # Create point helper shape
@@ -1006,6 +1008,12 @@ class TransformMixin(dagmixin.DagMixin):
             locator.setAttr('localScaleY', localScale[1])
             locator.setAttr('localScaleZ', localScale[2])
 
+        # Colourize locator
+        #
+        shapeutils.colorizeShape(locator.dagPath(), **kwargs)
+
+        return locator
+
     def addPointHelper(self, *args, **kwargs):
         """
         Adds a point helper shape to this transform.
@@ -1014,7 +1022,7 @@ class TransformMixin(dagmixin.DagMixin):
         :key localPosition: Tuple[float, float, float]
         :key localRotate: Tuple[float, float, float]
         :key localScale: Tuple[float, float, float]
-        :rtype: mpy.builtins.shapemixin.ShapeMixin
+        :rtype: mpy.plugins.pointhelpermixin.PointHelperMixin
         """
 
         # Create point helper shape
@@ -1081,6 +1089,10 @@ class TransformMixin(dagmixin.DagMixin):
             pointHelper.setAttr('localScaleX', localScale[0])
             pointHelper.setAttr('localScaleY', localScale[1])
             pointHelper.setAttr('localScaleZ', localScale[2])
+
+        # Colourize point helper
+        #
+        shapeutils.colorizeShape(pointHelper.dagPath(), **kwargs)
 
         return pointHelper
 
