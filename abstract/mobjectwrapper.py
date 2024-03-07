@@ -213,15 +213,15 @@ class MObjectWrapper(object, metaclass=mabcmeta.MABCMeta):
 
         return self.__handle__.object()
 
-    def hasFn(self, apiType):
+    def hasFn(self, *apiTypes):
         """
         Evaluates whether this instance is derived from the supplied api type.
 
-        :type apiType: int
+        :type apiTypes: Union[int, List[int]]
         :rtype: bool
         """
 
-        return self.object().hasFn(apiType)
+        return any(map(self.object().hasFn, apiTypes))
 
     def apiType(self):
         """
