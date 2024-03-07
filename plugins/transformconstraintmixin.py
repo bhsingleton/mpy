@@ -52,9 +52,9 @@ class TransformConstraintMixin(constraintmixin.ConstraintMixin):
         'constraintRotatePivotX': 'rotatePivotX',
         'constraintRotatePivotY': 'rotatePivotY',
         'constraintRotatePivotZ': 'rotatePivotZ',
-        'constraintRotateTranslateX': 'rotatePivotTranslateX',
-        'constraintRotateTranslateY': 'rotatePivotTranslateY',
-        'constraintRotateTranslateZ': 'rotatePivotTranslateZ',
+        'constraintRotatePivotTranslateX': 'rotatePivotTranslateX',
+        'constraintRotatePivotTranslateY': 'rotatePivotTranslateY',
+        'constraintRotatePivotTranslateZ': 'rotatePivotTranslateZ',
         'constraintRotateOrder': 'rotateOrder',
         'constraintJointOrientX': 'jointOrientX',
         'constraintJointOrientY': 'jointOrientY',
@@ -62,9 +62,9 @@ class TransformConstraintMixin(constraintmixin.ConstraintMixin):
         'constraintScalePivotX': 'scalePivotX',
         'constraintScalePivotY': 'scalePivotY',
         'constraintScalePivotZ': 'scalePivotZ',
-        'constraintScaleTranslateX': 'scalePivotTranslateX',
-        'constraintScaleTranslateY': 'scalePivotTranslateY',
-        'constraintScaleTranslateZ': 'scalePivotTranslateZ',
+        'constraintScalePivotTranslateX': 'scalePivotTranslateX',
+        'constraintScalePivotTranslateY': 'scalePivotTranslateY',
+        'constraintScalePivotTranslateZ': 'scalePivotTranslateZ',
         'constraintParentInverseMatrix': 'parentInverseMatrix'
     }
 
