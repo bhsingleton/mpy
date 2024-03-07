@@ -232,6 +232,16 @@ class DependencyMixin(mpynode.MPyNode):
 
         return self.functionSet().namespace
 
+    def setNamespace(self, namespace):
+        """
+        Updates the namespace this node belongs to.
+
+        :type namespace: str
+        :rtype: None
+        """
+
+        self.setName(f'{namespace}:{self.name()}')
+
     def icon(self):
         """
         Returns the icon used for this node type.
@@ -627,6 +637,62 @@ class DependencyMixin(mpynode.MPyNode):
             plug.isKeyable = keyable
             plug.isChannelBox = True
 
+    def lockAttr(self, *plugs):
+        """
+        Locks an attribute that belongs to this node.
+
+        :type plugs: Union[str, List[str], om.MPlug, List[om.MPlug]]
+        :rtype: None
+        """
+
+        for plug in plugs:
+
+            plug = self.findPlug(plug)
+
+            if plug.isCompound:
+
+                for child in plugutils.iterChildren(plug):
+
+                    child.isLocked = True
+
+            elif plug.isArray and not plug.isElement:
+
+                for element in plugutils.iterElements(plug):
+
+                    element.isLocked = True
+
+            else:
+
+                plug.isLocked = True
+
+    def unlockAttr(self, *plugs):
+        """
+        Unlocks an attribute that belongs to this node.
+
+        :type plugs: Union[str, List[str], om.MPlug, List[om.MPlug]]
+        :rtype: None
+        """
+
+        for plug in plugs:
+
+            plug = self.findPlug(plug)
+
+            if plug.isCompound:
+
+                for child in plugutils.iterChildren(plug):
+
+                    child.isLocked = False
+
+            elif plug.isArray and not plug.isElement:
+
+                for element in plugutils.iterElements(plug):
+
+                    element.isLocked = False
+
+            else:
+
+                plug.isLocked = False
+
     def keyAttr(self, *args, time=None):
         """
         Keys an attribute at the specified time.
@@ -779,6 +845,18 @@ class DependencyMixin(mpynode.MPyNode):
             # Check if plug is animated
             #
             if not plugutils.isAnimated(plug):
+
+                continue
+
+            # Check if plug should be skipped
+            #
+            plugName = plug.partialName(useLongNames=True)
+
+            skipKey = 'skip{plugName}'.format(plugName=stringutils.pascalize(plugName))
+            skipAllKey = stringutils.stripCartesian(skipKey)
+            skipPlug = kwargs.get(skipKey, kwargs.get(skipAllKey, False))
+
+            if skipPlug:
 
                 continue
 
@@ -1012,9 +1090,34 @@ class DependencyMixin(mpynode.MPyNode):
 
             destination = self.findPlug(destination)
 
-        # Disconnect plugs
+        # Check if these are compound plugs
         #
-        plugutils.disconnectPlugs(source, destination)
+        if source.isCompound and destination.isCompound:
+
+            # Check if child counts are identical
+            #
+            sourceCount = source.numChildren()
+            destinationCount = destination.numChildren()
+
+            if sourceCount == destinationCount:
+
+                # Connect child plugs
+                #
+                for i in range(sourceCount):
+
+                    self.disconnectPlugs(source.child(i), destination.child(i))
+
+            else:
+
+                # Disconnect plugs
+                #
+                plugutils.disconnectPlugs(source, destination)
+
+        else:
+
+            # Disconnect plugs
+            #
+            plugutils.disconnectPlugs(source, destination)
 
     def breakConnections(self, plug, source=True, destination=True, recursive=False):
         """
@@ -1097,25 +1200,25 @@ class DependencyMixin(mpynode.MPyNode):
         #
         plugutils.removeMultiInstances(plug, indices)
 
-    def dependsOn(self, apiType=om.MFn.kDependencyNode, typeName=''):
+    def dependsOn(self, apiType=om.MFn.kDependencyNode, typeName=None):
         """
         Returns a list of nodes that this object is dependent on.
 
         :type apiType: int
-        :type typeName: str
+        :type typeName: Union[str, None]
         :rtype: List[DependencyMixin]
         """
 
-        return [self.scene(dependency) for dependency in dagutils.iterDependencies(self.object(), apiType, typeName=typeName, direction=om.MItDependencyGraph.kUpstream)]
+        return list(map(self.scene.__call__, dagutils.iterDependencies(self.object(), apiType, typeName=typeName, direction=om.MItDependencyGraph.kUpstream)))
 
     def dependents(self, apiType=om.MFn.kDependencyNode, typeName=''):
         """
         Returns a list of nodes that are dependent on this object.
 
         :type apiType: int
-        :type typeName: str
+        :type typeName: Union[str, None]
         :return: List[DependencyMixin]
         """
 
-        return [self.scene(dependency) for dependency in dagutils.iterDependencies(self.object(), apiType, typeName=typeName, direction=om.MItDependencyGraph.kDownstream)]
+        return list(map(self.scene.__call__, dagutils.iterDependencies(self.object(), apiType, typeName=typeName, direction=om.MItDependencyGraph.kDownstream)))
     # endregion
