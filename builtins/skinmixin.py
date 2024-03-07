@@ -5,9 +5,12 @@ For SM4 (D3D10) and SM5 (D3D11) the max influence is 8.
 For ES2 (Mobile) max influence is 4.
 Anything prior to UE4 will also be capped at 4 influences.
 """
+import os
+
 from maya import cmds as mc
 from maya.api import OpenMaya as om
 from six import string_types, integer_types
+from dcc.python import stringutils
 from dcc.maya.libs import skinutils
 from . import deformermixin
 from .. import mpyattribute
@@ -124,7 +127,9 @@ class SkinMixin(deformermixin.DeformerMixin):
         :rtype: Iterator[int, om.MObject]
         """
 
-        return skinutils.iterInfluences(self.object())
+        for (influenceId, influenceObj) in skinutils.iterInfluences(self.object()):
+
+            yield influenceId, self.scene(influenceObj)
 
     def influences(self):
         """
@@ -133,7 +138,7 @@ class SkinMixin(deformermixin.DeformerMixin):
         :rtype: Dict[int, om.MObject]
         """
 
-        return list(self.iterInfluences())
+        return dict(self.iterInfluences())
 
     def addInfluence(self, influence, index=None):
         """
@@ -172,6 +177,33 @@ class SkinMixin(deformermixin.DeformerMixin):
         """
 
         skinutils.removeInfluence(self.object(), influenceId)
+
+    def rootInfluence(self):
+        """
+        Returns the root joint from this skin.
+
+        :rtype: Union[mpynode.MPyNode, None]
+        """
+
+        # Search for common dag path
+        #
+        influences = self.influences()
+        dagPaths = [influenceObject.fullPathName().replace('|', os.path.sep) for (influenceId, influenceObject) in influences.items()]
+
+        commonPath = os.path.commonpath(dagPaths)
+
+        if stringutils.isNullOrEmpty(commonPath):
+
+            return None
+
+        # Get top-most ancestor
+        #
+        dagPath = commonPath.replace(os.path.sep, "|")
+        joint = self.scene(dagPath)
+
+        ancestors = joint.ancestors(apiType=om.MFn.kJoint, includeSelf=True)
+
+        return ancestors[-1]
 
     def preBindMatrix(self, influenceId):
         """
@@ -226,7 +258,7 @@ class SkinMixin(deformermixin.DeformerMixin):
         :rtype: Dict[int, Dict[int, float]]
         """
 
-        return self.iterWeightList(*args)
+        return dict(self.iterWeightList(*args))
 
     def setWeightList(self, vertexWeights):
         """
