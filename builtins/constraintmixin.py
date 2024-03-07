@@ -154,7 +154,7 @@ class ConstraintMixin(transformmixin.TransformMixin):
         :rtype: List[transformmixin.TransformMixin]
         """
 
-        return [x.targetObject() for x in self.iterTargets()]
+        return [target.targetObject() for target in self.iterTargets()]
 
     def iterTargets(self):
         """
@@ -165,9 +165,12 @@ class ConstraintMixin(transformmixin.TransformMixin):
 
         # Iterate through target indices
         #
-        for i in range(self.targetCount()):
+        for physicalIndex in range(self.targetCount()):
 
-            yield ConstraintTarget(self, index=i)
+            plug = self.findPlug(f'target').elementByPhysicalIndex(physicalIndex)
+            logicalIndex = plug.logicalIndex()
+
+            yield ConstraintTarget(self, index=logicalIndex)
 
     def targetCount(self):
         """
@@ -366,7 +369,7 @@ class ConstraintMixin(transformmixin.TransformMixin):
 
     def setRestMatrix(self, restMatrix):
         """
-        Updates the rest matrix for this constraint by changing the rest components.
+        Updates the rest matrix for this constraint.
 
         :type restMatrix: om.MMatrix
         :rtype: None
@@ -398,6 +401,18 @@ class ConstraintMixin(transformmixin.TransformMixin):
         if self.hasAttr('restScale'):
 
             self.setAttr('restScale', scale)
+
+    def updateRestMatrix(self):
+        """
+        Updates the rest matrix for this constraint using the constraint object's transform.
+
+        :rtype: None
+        """
+
+        node = self.constraintObject()
+        matrix = node.matrix()
+
+        self.setRestMatrix(matrix)
 
     def restInverseMatrix(self):
         """
@@ -480,58 +495,94 @@ class ConstraintTarget(object):
     # endregion
 
     # region Methods
-    def targetPlug(self):
+    def plug(self, *args):
         """
         Returns the plug element associated with this constraint target.
 
+        :type args: Union[str, List[str]]
         :rtype: om.MPlug
         """
 
-        return self.constraint.findPlug('target[{index}]'.format(index=self.index))
+        numArgs = len(args)
 
-    def targetChildPlug(self, name):
-        """
-        Returns a child plug from the associated plug element.
+        if numArgs == 0:
 
-        :type name: str
-        :rtype: om.MPlug
-        """
+            return self.constraint.findPlug('target[{index}]'.format(index=self.index))
 
-        return self.targetPlug().child(self.constraint.attribute(name))
+        elif numArgs == 1:
+
+            return self.plug().child(self.constraint.attribute(args[0]))
+
+        else:
+
+            raise TypeError(f'plug() expects 1 argument ({numArgs} given)!')
 
     def name(self):
         """
-        Returns the alias name for this constraint target.
+        Returns the alias for this constraint target.
 
         :rtype: str
         """
 
-        return self.targetChildPlug('targetWeight').source().partialName(useLongNames=True)
+        plug = self.plug('targetWeight')
+
+        if plug.isDestination:
+
+            return plug.source().partialName(useLongNames=True)
+
+        else:
+
+            return ''
 
     def setName(self, name):
         """
-        Updates the alias name for this constraint target.
+        Updates the alias for this constraint target.
 
         :type name: str
-        :rtype: bool
+        :rtype: None
         """
 
         # Get source connection from target weight plug
         #
-        plug = self.targetChildPlug('targetWeight')
+        plug = self.plug('targetWeight')
+
+        if not plug.isDestination:
+
+            return
+
+        # Rename user attribute
+        #
+        currentName = self.name()
+
+        if name != currentName:
+
+            fullPathName = self.constraint.fullPathName()
+            fnAttribute = om.MFnAttribute(plug.source().attribute())
+
+            mc.renameAttr(f'{fullPathName}.{fnAttribute.name}', name)
+
+    def resetName(self):
+        """
+        Resets the alias for this constraint target.
+
+        :rtype: None
+        """
+
+        # Get source connection from target weight plug
+        #
+        plug = self.plug('targetWeight')
         otherPlug = plug.source()
 
         if otherPlug.isNull:
 
             return
 
-        # Rename user attribute
+        # Update attribute name using source name
         #
-        fullPathName = self.constraint.fullPathName()
-        fnAttribute = om.MFnAttribute(otherPlug.attribute())
+        target = self.targetObject()
+        name = f'{target.name()}W{self.index}'
 
-        mc.renameAttr('%s.%s' % (fullPathName, fnAttribute.shortName), name)
-        mc.renameAttr('%s.%s' % (fullPathName, fnAttribute.name), name)
+        self.setName(name)
 
     def weight(self):
         """
@@ -540,7 +591,17 @@ class ConstraintTarget(object):
         :rtype: float
         """
 
-        return self.targetChildPlug('targetWeight').asFloat()
+        return self.plug('targetWeight').asFloat()
+
+    def setWeight(self, weight):
+        """
+        Updates the weight for this constraint target.
+
+        :type weight: float
+        :rtype: None
+        """
+
+        self.plug('targetWeight').source().setFloat(weight)
 
     def targetObject(self):
         """
@@ -550,12 +611,11 @@ class ConstraintTarget(object):
         :rtype: mpynode.MPyNode
         """
 
-        plug = self.targetChildPlug('targetParentMatrix')
-        source = plug.source()
+        plug = self.plug('targetParentMatrix')
 
-        if not source.isNull:
+        if plug.isDestination:
 
-            return self.constraint.scene(source.node())
+            return self.constraint.scene(plug.source().node())
 
         else:
 
@@ -568,25 +628,38 @@ class ConstraintTarget(object):
         :rtype: int
         """
 
-        return self.targetChildPlug('targetRotateOrder').asInt()
+        if self.constraint.hasAttr('targetRotateOrder'):
+
+            return self.plug('targetRotateOrder').asInt()
+
+        else:
+
+            return 0
 
     def targetOffsetTranslate(self):
         """
-        Retrieves the offset translation for this constraint target.
-        This method is only supported by parent constraints!
+        Returns the offset translation for this constraint target.
 
         :rtype: om.MVector
         """
-
-        targetOffsetTranslatePlug = self.targetChildPlug('targetOffsetTranslate')
-        targetOffsetTranslateXPlug, targetOffsetTranslateYPlug, targetOffsetTranslateZPlug = targetOffsetTranslatePlug.child(0), targetOffsetTranslatePlug.child(1), targetOffsetTranslatePlug.child(2)
-
-        return om.MVector(
-            targetOffsetTranslateXPlug.asMDistance().value,
-            targetOffsetTranslateYPlug.asMDistance().value,
-            targetOffsetTranslateZPlug.asMDistance().value
-        )
-
+        
+        # Check if attribute exists
+        #
+        if self.constraint.hasAttr('targetOffsetTranslate'):
+        
+            translatePlug = self.plug('targetOffsetTranslate')
+            translateXPlug, translateYPlug, translateZPlug = translatePlug.child(0), translatePlug.child(1), translatePlug.child(2)
+    
+            return om.MVector(
+                translateXPlug.asMDistance().asCentimeters(),
+                translateYPlug.asMDistance().asCentimeters(),
+                translateZPlug.asMDistance().asCentimeters()
+            )
+        
+        else:
+            
+            return om.MVector.kZeroVector
+        
     def setTargetOffsetTranslate(self, translation):
         """
         Updates the offset translation for this constraint target.
@@ -594,32 +667,47 @@ class ConstraintTarget(object):
         :type translation: om.MVector
         :rtype: None
         """
+        
+        # Check if attribute exists
+        #
+        if not self.constraint.hasAttr('targetOffsetTranslate'):
+            
+            return
+        
+        # Update plug values
+        #
+        translatePlug = self.plug('targetOffsetTranslate')
+        translateXPlug, translateYPlug, translateZPlug = translatePlug.child(0), translatePlug.child(1), translatePlug.child(2)
 
-        targetOffsetTranslatePlug = self.targetChildPlug('targetOffsetTranslate')
-        targetOffsetTranslateXPlug, targetOffsetTranslateYPlug, targetOffsetTranslateZPlug = targetOffsetTranslatePlug.child(0), targetOffsetTranslatePlug.child(1), targetOffsetTranslatePlug.child(2)
-
-        targetOffsetTranslateXPlug.setMDistance(om.MDistance(translation.x, unit=om.MDistance.kCentimeters))
-        targetOffsetTranslateYPlug.setMDistance(om.MDistance(translation.y, unit=om.MDistance.kCentimeters))
-        targetOffsetTranslateZPlug.setMDistance(om.MDistance(translation.z, unit=om.MDistance.kCentimeters))
+        translateXPlug.setMDistance(om.MDistance(translation.x, unit=om.MDistance.kCentimeters))
+        translateYPlug.setMDistance(om.MDistance(translation.y, unit=om.MDistance.kCentimeters))
+        translateZPlug.setMDistance(om.MDistance(translation.z, unit=om.MDistance.kCentimeters))
 
     def targetOffsetRotate(self):
         """
-        Retrieves the offset rotation for this constraint target.
-        This method is only supported by parent constraints!
+        Returns the offset rotation for this constraint target.
 
         :rtype: om.MEulerRotation
         """
-
-        targetOffsetRotatePlug = self.targetChildPlug('targetOffsetRotate')
-        targetOffsetRotateXPlug, targetOffsetRotateYPlug, targetOffsetRotateZPlug = targetOffsetRotatePlug.child(0), targetOffsetRotatePlug.child(1), targetOffsetRotatePlug.child(2)
-
-        return om.MEulerRotation(
-            targetOffsetRotateXPlug.asMAngle().value,
-            targetOffsetRotateYPlug.asMAngle().value,
-            targetOffsetRotateZPlug.asMAngle().value,
-            order=self.targetRotateOrder()
-        )
-
+        
+        # Check if attribute exists
+        #
+        if self.constraint.hasAttr('targetOffsetRotate'):
+            
+            rotatePlug = self.plug('targetOffsetRotate')
+            rotateXPlug, rotateYPlug, rotateZPlug = rotatePlug.child(0), rotatePlug.child(1), rotatePlug.child(2)
+    
+            return om.MEulerRotation(
+                rotateXPlug.asMAngle().asRadians(),
+                rotateYPlug.asMAngle().asRadians(),
+                rotateZPlug.asMAngle().asRadians(),
+                order=self.targetRotateOrder()
+            )
+        
+        else:
+            
+            return om.MEulerRotation.kIdentity
+        
     def setTargetOffsetRotate(self, rotation):
         """
         Updates the offset rotation for this constraint target.
@@ -628,7 +716,13 @@ class ConstraintTarget(object):
         :rtype: None
         """
 
-        # Check if rotation needs reordering
+        # Check if attribute exists
+        #
+        if not self.constraint.hasAttr('targetOffsetRotate'):
+            
+            return
+
+        # Check if rotation requires reordering
         #
         rotateOrder = self.targetRotateOrder()
 
@@ -636,12 +730,71 @@ class ConstraintTarget(object):
 
             rotation = rotation.reorder(rotateOrder)
 
-        # Assign rotation to plugs
+        # Update plug values
         #
-        targetOffsetRotatePlug = self.targetChildPlug('targetOffsetRotate')
-        targetOffsetRotateXPlug, targetOffsetRotateYPlug, targetOffsetRotateZPlug = targetOffsetRotatePlug.child(0), targetOffsetRotatePlug.child(1), targetOffsetRotatePlug.child(2)
+        rotatePlug = self.plug('targetOffsetRotate')
+        rotateXPlug, rotateYPlug, rotateZPlug = rotatePlug.child(0), rotatePlug.child(1), rotatePlug.child(2)
 
-        targetOffsetRotateXPlug.setMAngle(om.MAngle(rotation.x, unit=om.MAngle.kRadians))
-        targetOffsetRotateYPlug.setMAngle(om.MAngle(rotation.y, unit=om.MAngle.kRadians))
-        targetOffsetRotateZPlug.setMAngle(om.MAngle(rotation.z, unit=om.MAngle.kRadians))
+        rotateXPlug.setMAngle(om.MAngle(rotation.x, unit=om.MAngle.kRadians))
+        rotateYPlug.setMAngle(om.MAngle(rotation.y, unit=om.MAngle.kRadians))
+        rotateZPlug.setMAngle(om.MAngle(rotation.z, unit=om.MAngle.kRadians))
+
+    def targetOffsetScale(self):
+        """
+        Retrieves the offset rotation for this constraint target.
+        This method is only supported by transform constraints!
+
+        :rtype: om.MEulerRotation
+        """
+
+        # Check if attribute exists
+        #
+        if self.constraint.hasAttr('targetOffsetScale'):
+                
+            scalePlug = self.plug('targetOffsetScale')
+            scaleXPlug, scaleYPlug, scaleZPlug = scalePlug.child(0), scalePlug.child(1), scalePlug.child(2)
+    
+            return om.MVector(
+                scaleXPlug.asDouble(),
+                scaleYPlug.asDouble(),
+                scaleZPlug.asDouble()
+            )
+        
+        else:
+            
+            return om.MVector.kOneVector
+    
+    def setTargetOffsetScale(self, scale):
+        """
+        Updates the offset rotation for this constraint target.
+
+        :type scale: Union[om.MVector, Tuple[float, float, float]]
+        :rtype: None
+        """
+
+        # Check if attribute exists
+        #
+        if not self.constraint.hasAttr('targetOffsetScale'):
+            
+            return
+
+        # Update plug values
+        #
+        scalePlug = self.plug('targetOffsetScale')
+        scaleXPlug, scaleYPlug, scaleZPlug = scalePlug.child(0), scalePlug.child(1), scalePlug.child(2)
+
+        scaleXPlug.setDouble(scale[0])
+        scaleYPlug.setDouble(scale[1])
+        scaleZPlug.setDouble(scale[2])
+
+    def resetTargetOffsets(self):
+        """
+        Resets the offsets on this constraint target.
+
+        :rtype: None
+        """
+
+        self.setTargetOffsetTranslate(om.MVector.kZeroVector)
+        self.setTargetOffsetRotate(om.MEulerRotation.kIdentity)
+        self.setTargetOffsetScale(om.MVector.kOneVector)
     # endregion
