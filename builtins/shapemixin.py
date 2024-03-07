@@ -23,10 +23,103 @@ class ShapeMixin(dagmixin.DagMixin):
     # endregion
 
     # region Methods
+    def isSelectable(self):
+        """
+        Evaluates if this shape is selectable.
+
+        :rtype: bool
+        """
+
+        return self.dagPath().getDrawOverrideInfo().displayType == om.MDAGDrawOverrideInfo.kDisplayTypeNormal
+
+    def controlPoints(self):
+        """
+        Returns the control points that make up this shape node.
+        This method should be overloaded for complex shape types.
+
+        :rtype: om.MPointArray
+        """
+
+        # Find control points plug
+        #
+        plug = self.findPlug('controlPoints')
+        points = om.MPointArray()
+
+        if plug.isNull:
+
+            return points
+
+        #  Iterate through plug elements
+        #
+        numElements = plug.numElements()
+        points.setLength(numElements)
+
+        for physicalIndex in range(numElements):
+
+            # Select plug element
+            #
+            element = plug.elementByPhysicalIndex(physicalIndex)
+
+            # Get point from elements
+            #
+            points[physicalIndex] = om.MPoint(
+                [
+                    element.child(0).asFloat(),
+                    element.child(1).asFloat(),
+                    element.child(2).asFloat(),
+                    1.0
+                ]
+            )
+
+        return points
+
+    def numControlPoints(self):
+        """
+        Returns the number of control points associated with this shape.
+
+        :rtype: int
+        """
+
+        return self.findPlug('controlPoints').evaluateNumElements()
+
+    def setControlPoints(self, points):
+        """
+        Updates the control points for this shape node.
+
+        :type points: Union[om.MPointArray, List[om.MPoint]]
+        :rtype: None
+        """
+
+        # Find control points plug
+        #
+        plug = self.findPlug('controlPoints')
+
+        if plug.isNull:
+
+            return
+
+        #  Iterate through plug elements
+        #
+        numPoints = len(points)
+
+        for logicalIndex in range(numPoints):
+
+            # Get plug element
+            #
+            element = plug.elementByLogicalIndex(logicalIndex)
+
+            # Commit point to elements
+            #
+            point = points[logicalIndex]
+
+            element.child(0).setFloat(point[0])
+            element.child(1).setFloat(point[1])
+            element.child(2).setFloat(point[2])
+
     def addDeformer(self, typeName):
         """
         Returns a new deformer derived from the supplied type name.
-        By default this deformer is inserted at the end of the chain.
+        By default, this deformer is inserted at the end of the chain.
 
         :type typeName: str
         :rtype: mpynode.MPyNode
@@ -99,90 +192,6 @@ class ShapeMixin(dagmixin.DagMixin):
         else:
 
             return None
-
-    def controlPoints(self):
-        """
-        Returns the control points that make up this shape node.
-        This method should be overloaded for complex shape types.
-
-        :rtype: om.MPointArray
-        """
-
-        # Find control points plug
-        #
-        plug = self.findPlug('controlPoints')
-        points = om.MPointArray()
-
-        if plug.isNull:
-
-            return points
-
-        #  Iterate through plug elements
-        #
-        numElements = plug.numElements()
-        points.setLength(numElements)
-
-        for physicalIndex in range(numElements):
-
-            # Select plug element
-            #
-            element = plug.elementByPhysicalIndex(physicalIndex)
-
-            # Get point from elements
-            #
-            points[physicalIndex] = om.MPoint(
-                [
-                    element.child(0).asFloat(),
-                    element.child(1).asFloat(),
-                    element.child(2).asFloat(),
-                    1.0
-                ]
-            )
-
-        return points
-
-    def numControlPoints(self):
-        """
-        Returns the number of control points associated with this shape.
-
-        :rtype: int
-        """
-
-        return self.findPlug('controlPoints').evaluateNumElements()
-
-    def setControlPoints(self, points):
-        """
-        Updates the control points for this shape node.
-
-        :type points: om.MPointArray
-        :rtype: None
-        """
-
-        # Find control points plug
-        #
-        plug = self.findPlug('controlPoints')
-
-        if plug.isNull:
-
-            return
-
-        #  Iterate through plug elements
-        #
-        numPoints = len(points)
-
-        for logicalIndex in range(numPoints):
-
-            # Get plug element
-            #
-            element = plug.elementByLogicalIndex(logicalIndex)
-
-            # Commit point to elements
-            #
-            point = points[logicalIndex]
-
-            element.child(0).setFloat(point[0])
-            element.child(1).setFloat(point[1])
-            element.child(2).setFloat(point[2])
 
     def resetTransform(self):
         """
