@@ -486,6 +486,16 @@ class MPyScene(proxyfactory.ProxyFactory):
 
         return mc.objExists(nodeName)
 
+    def isNameUnique(self, nodeName):
+        """
+        Evaluates if the supplied name is unique.
+
+        :type nodeName: str
+        :rtype: bool
+        """
+
+        return not self.doesNodeExist(nodeName)
+
     def getNodeByName(self, name):
         """
         Returns a node interface based on the given node name.
@@ -804,18 +814,51 @@ class MPyScene(proxyfactory.ProxyFactory):
 
             raise TypeError(f'setSelection() expects a selection list ({type(selection).__name__} given)!')
 
-    def getShapeTemplate(self, name):
+    def iterComponentSelection(self, apiType=om.MFn.kShape):
         """
-        Returns a shape template from the supplied name.
-        No error checking is performed to test if this file actually exists!
+        Returns a generator that can iterate through the active component selection.
+        An optional api type can be supplied to narrow down the selection.
+
+        :type apiType: int
+        :rtype: Iterator[Tuple[mpynode.MPyNode, om.MObject]]
+        """
+
+        for (dagPath, component) in dagutils.iterActiveComponentSelection(apiType=apiType, skipNullComponents=False):
+
+            yield mpynode.MPyNode(dagPath), component
+
+    def componentSelection(self, apiType=om.MFn.kShape):
+        """
+        Returns the active component selection.
+
+        :type apiType: int
+        :rtype: List[Tuple[mpynode.MPyNode, om.MObject]]
+        """
+
+        return list(self.iterComponentSelection(apiType=apiType))
+
+    def getShapesDirectory(self):
+        """
+        Returns the location of the shapes directory.
 
         :rtype: str
         """
 
-        directory = os.path.dirname(os.path.abspath(__file__))
-        filename = '{name}.json'.format(name=name)
+        return os.path.join(os.path.dirname(os.path.abspath(__file__)), 'shapes')
 
-        return os.path.join(directory, 'shapes', filename)
+    def getAbsoluteShapePath(self, name):
+        """
+        Returns the absolute path to the specified shape.
+        No error checking is performed to test if this file actually exists!
+
+        :type name: str
+        :rtype: str
+        """
+
+        directory = self.getShapesDirectory()
+        filename = '{name}.json'.format(name=name) if not name.endswith('.json') else name
+
+        return os.path.join(directory, filename)
 
     def createNode(self, typeName, name='', parent=None, skipSelect=True, **kwargs):
         """
