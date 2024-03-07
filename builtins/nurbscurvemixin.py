@@ -50,5 +50,7 @@ class NurbsCurveMixin(shapemixin.ShapeMixin):
         :rtype: None
         """
 
-        self.functionSet().setCVPositions(points, space=space)
+        functionSet = self.functionSet()  # type: om.MFnNurbsCurve
+        functionSet.setCVPositions(points, space=space)
+        functionSet.updateCurve()
     # endregion
