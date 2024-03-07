@@ -262,19 +262,6 @@ class TransformMixin(dagmixin.DagMixin):
 
         transformutils.resetPivots(self.dagPath())
 
-    def matrix(self, asTransformationMatrix=False, time=None):
-        """
-        Returns the local transformation matrix for this transform.
-
-        :type asTransformationMatrix: bool
-        :type time: Union[int, None]
-        :rtype: Union[om.MMatrix, om.MTransformationMatrix]
-        """
-
-        with mpycontext.MPyContext(time=time):
-
-            return transformutils.getMatrix(self.dagPath(), asTransformationMatrix=asTransformationMatrix)
-
     def setMatrix(self, matrix, **kwargs):
         """
         Updates the local transformation matrix for this transform.
@@ -299,50 +286,6 @@ class TransformMixin(dagmixin.DagMixin):
         self.resetPreEulerRotation()
         self.resetEulerRotation()
         self.resetScale()
-
-    def parentMatrix(self, time=None):
-        """
-        Returns the parent matrix for this transform.
-
-        :type time: Union[int, None]
-        :rtype: om.MMatrix
-        """
-
-        with mpycontext.MPyContext(time=time):
-
-            return transformutils.getParentMatrix(self.dagPath())
-
-    def parentInverseMatrix(self, time=None):
-        """
-        Returns the parent inverse-matrix for this transform.
-
-        :type time: Union[int, None]
-        :rtype: om.MMatrix
-        """
-
-        return self.parentMatrix(time=time).inverse()
-
-    def worldMatrix(self, time=None):
-        """
-        Returns the world matrix for this transform.
-
-        :type time: Union[int, None]
-        :rtype: om.MMatrix
-        """
-
-        with mpycontext.MPyContext(time=time):
-
-            return transformutils.getWorldMatrix(self.dagPath())
-
-    def worldInverseMatrix(self, time=None):
-        """
-        Returns the world inverse-matrix for this transform.
-
-        :type time: Union[int, None]
-        :rtype: om.MMatrix
-        """
-
-        return self.worldMatrix(time=time).inverse()
 
     def setWorldMatrix(self, worldMatrix, **kwargs):
         """
@@ -428,7 +371,7 @@ class TransformMixin(dagmixin.DagMixin):
 
         # Iterate through time range
         #
-        self.clearKeys(animationRange=(startTime, endTime), skipUserAttributes=True)
+        self.clearKeys(animationRange=(startTime, endTime), skipUserAttributes=True, **kwargs)
 
         for time in inclusiveRange(startTime, endTime, step):
 
@@ -763,15 +706,56 @@ class TransformMixin(dagmixin.DagMixin):
         self.hideAttr('visibility')
         self.showAttr('rotateOrder')
 
-    def constraints(self, apiType=om.MFn.kConstraint):
+    def iterConstraints(self, typeName='constraint'):
+        """
+        Returns a generator that yields constraints from this transform.
+
+        :type typeName: str
+        :rtype: Iterator[mpy.builtins.constraintmixin.ConstraintMixin]
+        """
+
+        # Iterate through connections
+        #
+        plugs = self.getConnections()
+        typeNames = mc.nodeType(typeName, isTypeName=True, derived=True)
+
+        constraints = {}
+
+        for plug in plugs:
+
+            # Check if plug is destination
+            #
+            if not plug.isDestination:
+
+                continue
+
+            # Evaluate source node
+            #
+            source = self.scene(plug.source().node())
+
+            if not (source.typeName in typeNames):
+
+                continue
+
+            # Check if constraint was already yielded
+            #
+            hashCode = source.hashCode()
+            yielded = constraints.get(hashCode, False)
+
+            if not yielded:
+
+                constraints[hashCode] = True
+                yield source
+
+    def constraints(self, typeName='constraint'):
         """
         Retrieves a list of constraints that are driving this transform.
 
-        :type apiType: int
+        :type typeName: str
         :rtype: List[mpy.builtins.constraintmixin.ConstraintMixin]
         """
 
-        return self.dependsOn(apiType=apiType)
+        return list(self.iterConstraints(typeName=typeName))
 
     def constraintCount(self):
         """
@@ -827,7 +811,7 @@ class TransformMixin(dagmixin.DagMixin):
         :rtype: mpy.builtins.constraintmixin.ConstraintMixin
         """
 
-        found = [constraint for constraint in self.constraints() if constraint.typeName == typeName]
+        found = self.constraints(typeName=typeName)
         numFound = len(found)
 
         if numFound == 0:
@@ -840,7 +824,7 @@ class TransformMixin(dagmixin.DagMixin):
 
         else:
 
-            raise TypeError(f'findConstraint() expects only 1 constraint ({numFound} found)!')
+            raise TypeError(f'findConstraint() expects to find 1 unique constraint ({numFound} found)!')
 
     def hasConstraint(self, typeName):
         """
@@ -966,24 +950,46 @@ class TransformMixin(dagmixin.DagMixin):
         :rtype: List[mpy.builtins.shapemixin.ShapeMixin]
         """
 
-        filePath = self.scene.getShapeTemplate(shape)
-        shapes = shapeutils.loadShapeTemplate(filePath, parent=self.object(), **kwargs)
+        filePath = self.scene.getAbsoluteShapePath(shape)
 
+        shapes = shapeutils.loadShapeTemplate(filePath, parent=self.object(), **kwargs)
         shapeutils.colorizeShape(*shapes, **kwargs)
 
         return list(map(self.scene.__call__, shapes))
+
+    def addStar(self, *args, **kwargs):
+        """
+        Adds a star shape to this transform.
+
+        :key outerRadius: float
+        :key innerRadius: float
+        :key points: int
+        :rtype: mpy.plugins.pointhelpermixin.PointHelperMixin
+        """
+
+        outerRadius = kwargs.pop('outerRadius', 1.0)
+        innerRadius = kwargs.pop('innerRadius', outerRadius * 0.5)
+
+        shapeData = shapeutils.createStar(outerRadius, innerRadius, **kwargs)
+        controlPoints = om.MFnNurbsCurve(shapeData).cvPositions()
+
+        pointHelper = self.addPointHelper('custom')
+        pointHelper.setAttr('controlPoints', controlPoints)
+
+        shapeutils.colorizeShape(pointHelper.object(), **kwargs)
+
+        return pointHelper
 
     def addLocator(self, *args, **kwargs):
         """
         Adds a locator shape to this transform.
 
         :key localPosition: Tuple[float, float, float]
-        :key localRotate: Tuple[float, float, float]
         :key localScale: Tuple[float, float, float]
         :rtype: mpy.builtins.locatormixin.LocatorMixin
         """
 
-        # Create point helper shape
+        # Create locator shape
         #
         name = '{name}Shape'.format(name=self.name())
         locator = self.scene.createNode('locator', name=name, parent=self)
@@ -1096,6 +1102,25 @@ class TransformMixin(dagmixin.DagMixin):
 
         return pointHelper
 
+    def addCamera(self, **kwargs):
+        """
+        Adds a camera shape to this transform.
+
+        :rtype: mpy.builtins.cameramixin.CameraMixin
+        """
+
+        # Create camera shape
+        #
+        name = '{name}Shape'.format(name=self.name())
+        camera = self.scene.createNode('camera', name=name, parent=self)
+
+        # Edit camera scale
+        #
+        scale = kwargs.get('scale', 1.0)
+        camera.cameraScale = scale
+
+        return camera
+
     def removeShapes(self):
         """
         Removes all shapes underneath this transform.
@@ -1106,7 +1131,9 @@ class TransformMixin(dagmixin.DagMixin):
 
         # Iterate through shapes
         #
-        for shape in self.iterShapes():
+        shapes = self.shapes()
+
+        for shape in shapes:
 
             shape.delete()
 

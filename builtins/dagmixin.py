@@ -2,9 +2,9 @@ from maya import cmds as mc
 from maya.api import OpenMaya as om
 from collections import deque
 from six import integer_types, string_types
-from dcc.maya.libs import dagutils, layerutils
+from dcc.maya.libs import dagutils, transformutils, layerutils
 from . import containerbasemixin
-from .. import mpyattribute
+from .. import mpyattribute, mpycontext
 
 import logging
 logging.basicConfig()
@@ -341,23 +341,31 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
 
             raise TypeError('setParent() expects a valid dag node (%s given)!' % parent.apiTypeStr)
 
-    def iterAncestors(self, apiType=om.MFn.kDagNode):
+    def iterAncestors(self, apiType=om.MFn.kDagNode, includeSelf=False):
         """
         Returns a generator that yields the parents from this node.
 
+        :type apiType: int
+        :type includeSelf: bool
         :rtype: Iterator[DagMixin]
         """
 
-        return map(self.scene, dagutils.iterAncestors(self.object(), apiType=apiType))
+        if includeSelf:
 
-    def ancestors(self):
+            yield self
+
+        yield from map(self.scene.__call__, dagutils.iterAncestors(self.object(), apiType=apiType))
+
+    def ancestors(self, apiType=om.MFn.kDagNode, includeSelf=False):
         """
         Returns a list of parents from this node.
 
+        :type apiType: int
+        :type includeSelf: bool
         :rtype: List[DagMixin]
         """
 
-        return list(self.iterAncestors())
+        return list(self.iterAncestors(apiType=apiType, includeSelf=includeSelf))
 
     def topLevelParent(self):
         """
@@ -385,7 +393,7 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
         :rtype: Iterator[DagMixin]
         """
 
-        return map(self.scene, dagutils.traceHierarchy(self.object()))
+        return map(self.scene.__call__, dagutils.traceHierarchy(self.object()))
 
     def child(self, index):
         """
@@ -425,40 +433,7 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
         :rtype: Iterator[DagMixin]
         """
 
-        return map(self.scene, dagutils.iterChildren(self.dagPath(), apiType=apiType))
-
-    def iterShapes(self):
-        """
-        Returns a generator that yields shapes from this node.
-
-        :rtype: Iterator[DagMixin]
-        """
-
-        return self.iterChildren(apiType=om.MFn.kShape)
-
-    def iterDescendants(self, apiType=om.MFn.kDagNode):
-        """
-        Returns a generator that yields the descendants from this node.
-        An optional api type can be supplied to narrow down the descendants.
-
-        :type apiType: int
-        :rtype: Iterator[DagMixin]
-        """
-
-        # Iterate through queue
-        #
-        queue = deque(self.children(apiType=apiType))
-
-        while len(queue) > 0:
-
-            # Yield child node
-            #
-            child = queue.popleft()
-            yield child
-
-            # Collect descendants
-            #
-            queue.extend(child.children(apiType=apiType))
+        return map(self.scene.__call__, dagutils.iterChildren(self.dagPath(), apiType=apiType))
 
     def children(self, apiType=om.MFn.kDagNode):
         """
@@ -470,12 +445,48 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
 
         return list(self.iterChildren(apiType=apiType))
 
+    def iterDescendants(self, apiType=om.MFn.kDagNode, includeSelf=False):
+        """
+        Returns a generator that yields the descendants from this node.
+        An optional api type can be supplied to narrow down the descendants.
+
+        :type apiType: int
+        :type includeSelf: bool
+        :rtype: Iterator[DagMixin]
+        """
+
+        if includeSelf:
+
+            yield self
+
+        yield from map(self.scene.__call__, dagutils.iterDescendants(self.object(), apiType=apiType))
+
+    def descendants(self, apiType=om.MFn.kDagNode, includeSelf=False):
+        """
+        Returns a list of descendants from this node.
+
+        :type apiType: int
+        :type includeSelf: bool
+        :rtype: list[DagMixin]
+        """
+
+        return list(self.iterDescendants(apiType=apiType, includeSelf=includeSelf))
+
+    def iterShapes(self):
+        """
+        Returns a generator that yields shapes from this node.
+
+        :rtype: Iterator[DagMixin]
+        """
+
+        return self.iterChildren(apiType=om.MFn.kShape)
+
     def shape(self, index=0):
         """
         Returns an indexed shape from this node.
 
         :type index: int
-        :rtype: DagMixin
+        :rtype: Union[DagMixin, None]
         """
 
         # Inspect number of shapes
@@ -515,6 +526,34 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
 
         return self.numberOfShapesDirectlyBelow() > 0
 
+    def shapeBox(self):
+        """
+        Returns the bounding-box for all shapes under this node.
+
+        :rtype: om.MBoundingBox
+        """
+
+        shapes = self.shapes()
+        numShapes = len(shapes)
+
+        if numShapes == 0:
+
+            return om.MBoundingBox()
+
+        elif numShapes == 1:
+
+            return om.MBoundingBox(shapes[0].boundingBox)
+
+        else:
+
+            boundingBox = om.MBoundingBox(shapes[0].boundingBox)
+
+            for shape in shapes[1:]:
+
+                boundingBox.expand(shape.boundingBox)
+
+            return boundingBox
+
     def intermediateObjects(self):
         """
         Returns a list of intermediate objects from this node.
@@ -524,14 +563,62 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
 
         return [x for x in self.iterShapes() if x.isIntermediateObject]
 
-    def descendants(self):
+    def matrix(self, asTransformationMatrix=False, time=None):
         """
-        Returns a list of descendants from this node.
+        Returns the local transformation matrix for this transform.
 
-        :rtype: list[DagMixin]
+        :type asTransformationMatrix: bool
+        :type time: Union[int, None]
+        :rtype: Union[om.MMatrix, om.MTransformationMatrix]
         """
 
-        return list(self.iterDescendants())
+        with mpycontext.MPyContext(time=time):
+
+            return transformutils.getMatrix(self.dagPath(), asTransformationMatrix=asTransformationMatrix)
+
+    def parentMatrix(self, time=None):
+        """
+        Returns the parent matrix for this transform.
+
+        :type time: Union[int, None]
+        :rtype: om.MMatrix
+        """
+
+        with mpycontext.MPyContext(time=time):
+
+            return transformutils.getParentMatrix(self.dagPath())
+
+    def parentInverseMatrix(self, time=None):
+        """
+        Returns the parent inverse-matrix for this transform.
+
+        :type time: Union[int, None]
+        :rtype: om.MMatrix
+        """
+
+        return self.parentMatrix(time=time).inverse()
+
+    def worldMatrix(self, time=None):
+        """
+        Returns the world matrix for this transform.
+
+        :type time: Union[int, None]
+        :rtype: om.MMatrix
+        """
+
+        with mpycontext.MPyContext(time=time):
+
+            return transformutils.getWorldMatrix(self.dagPath())
+
+    def worldInverseMatrix(self, time=None):
+        """
+        Returns the world inverse-matrix for this transform.
+
+        :type time: Union[int, None]
+        :rtype: om.MMatrix
+        """
+
+        return self.worldMatrix(time=time).inverse()
 
     def getAssociatedDisplayLayer(self):
         """
