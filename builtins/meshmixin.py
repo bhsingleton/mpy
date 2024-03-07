@@ -1,10 +1,8 @@
 import sys
-import math
 
 from maya import cmds as mc
 from maya.api import OpenMaya as om
 from collections import deque
-from scipy.spatial import cKDTree
 from six import string_types
 from six.moves import collections_abc
 from dcc.maya.libs import dagutils
@@ -255,6 +253,39 @@ class MeshComponent(collections_abc.MutableSequence):
         return self.__class__(self._handle, *args, apiType=self._apiType)
     # endregion
 
+    # region Properties
+    @property
+    def apiTypeStr(self):
+        """
+        Getter method that returns the api type as a human-readable string.
+
+        :rtype: str
+        """
+
+        return self._apiTypeStr
+
+    @property
+    def numElements(self):
+        """
+        Getter method that evaluates the number of elements belonging to this component.
+
+        :rtype: int
+        """
+
+        return len(self._elements)
+
+    @property
+    def maxElements(self):
+        """
+        Getter method that returns the maximum number of elements this component can have.
+        This is dictated by the associated node handle.
+
+        :rtype: int
+        """
+
+        return self._maxElements
+    # endregion
+
     # region Methods
     def remove(self, elements):
         """
@@ -467,16 +498,6 @@ class MeshComponent(collections_abc.MutableSequence):
 
             raise TypeError('setApiType() expect a valid API type (%s given)!' % self._apiType)
 
-    @property
-    def apiTypeStr(self):
-        """
-        Getter method that returns the api type as a human readable string.
-
-        :rtype: str
-        """
-
-        return self._apiTypeStr
-
     def component(self):
         """
         Returns a component object.
@@ -586,27 +607,6 @@ class MeshComponent(collections_abc.MutableSequence):
         """
 
         return list(sorted(self._elements))
-
-    @property
-    def numElements(self):
-        """
-        Getter method that evaluates the number of elements belonging to this component.
-
-        :rtype: int
-        """
-
-        return len(self._elements)
-
-    @property
-    def maxElements(self):
-        """
-        Getter method that returns the maximum number of elements this component can have.
-        This is dictated by the associated node handle.
-
-        :rtype: int
-        """
-
-        return self._maxElements
 
     def weights(self):
         """
@@ -866,31 +866,25 @@ class MeshComponent(collections_abc.MutableSequence):
         :rtype: Union[MeshVertexComponent, MeshEdgeComponent, MeshPolygonComponent]
         """
 
-        # Check for redundancy
-        #
-        if apiType == self._apiType:
-
-            return self
-
         # Create new component
         #
-        connected = self.getConnected(apiType=apiType)
+        elements = self.elements() if apiType == self.apiType() else self.getConnected(apiType=apiType)
 
         if apiType == om.MFn.kMeshVertComponent:
 
-            return MeshVertexComponent(self.handle(), connected)
+            return MeshVertexComponent(self.handle(), elements)
 
         elif apiType == om.MFn.kMeshEdgeComponent:
 
-            return MeshEdgeComponent(self.handle(), connected)
+            return MeshEdgeComponent(self.handle(), elements)
 
         elif apiType == om.MFn.kMeshPolygonComponent:
 
-            return MeshPolygonComponent(self.handle(), connected)
+            return MeshPolygonComponent(self.handle(), elements)
 
         else:
 
-            raise TypeError('Unable to convert mesh component to supplied api type!')
+            raise TypeError(f'convert() expects a valid mesh component type ({apiType} given)!')
 
     def grow(self):
         """
@@ -1235,23 +1229,28 @@ class MeshVertexComponent(MeshComponent):
         # Find the edges that only have one connected edge
         #
         connectionCounts = [len([y for y in self.getConnectedVertices([x]) if self._occupied[y]]) for x in self._elements]
-        startIndex, endIndex = [self._elements[x] for x, y in enumerate(connectionCounts) if y == 1]
+        vertexTips = [self._elements[x] for x, y in enumerate(connectionCounts) if y == 1]
+
+        startIndex = vertexTips[0] if len(vertexTips) == 2 else self._elements[0]
 
         # Re-traverse connected edges
         #
         previousIndex = startIndex
         reordered = [startIndex]
 
-        while previousIndex != endIndex:
+        success = True
+
+        while len(reordered) != self.numElements:
 
             # Go to next edge
             #
             connectedVertices = [x for x in self.getConnectedVertices([previousIndex]) if x not in reordered and self._occupied[x]]
             numConnectedVertices = len(connectedVertices)
 
-            if numConnectedVertices != 1:
+            if numConnectedVertices == 0:
 
-                raise TypeError('retraceElements() expects a valid edge loop!')
+                success = False
+                break
 
             # Append item to traversed
             #
@@ -1260,7 +1259,11 @@ class MeshVertexComponent(MeshComponent):
 
         # Reassign elements
         #
-        self._elements = deque(reordered)
+        if success:
+
+            self._elements = deque(reordered)
+
+        return success
 
     def length(self):
         """
@@ -1367,40 +1370,48 @@ class MeshEdgeComponent(MeshComponent):
     def retraceElements(self):
         """
         Reorders the internal elements to maintain an edge loop.
-        A type error will be raised this component is not an edge loop!
 
-        :rtype: None
+        :rtype: bool
         """
 
-        # Find the edges that only have one connected edge
+        # Find the edge tips
         #
         connectionCounts = [len([y for y in self.getConnectedEdges([x]) if self._occupied[y]]) for x in self._elements]
-        startIndex, endIndex = [self._elements[x] for x, y in enumerate(connectionCounts) if y == 1]
+        edgeTips = [self._elements[x] for (x, y) in enumerate(connectionCounts) if y == 1]
+
+        startIndex = edgeTips[0] if len(edgeTips) == 2 else self._elements[0]
 
         # Re-traverse connected edges
         #
         previousIndex = startIndex
         reordered = [startIndex]
 
-        while previousIndex != endIndex:
+        success = True
+
+        while len(reordered) != self.numElements:
 
             # Go to next edge
             #
             connectedEdges = [x for x in self.getConnectedEdges([previousIndex]) if x not in reordered and self._occupied[x]]
             numConnectedEdges = len(connectedEdges)
 
-            if numConnectedEdges != 1:
+            if numConnectedEdges == 0:
 
-                raise TypeError('retraceElements() expects a valid edge loop!')
+                success = False
+                break
 
-            # Append item to traversed
+            # Append item to traversal tracker
             #
             previousIndex = connectedEdges[0]
             reordered.append(previousIndex)
 
         # Reassign elements
         #
-        self._elements = deque(reordered)
+        if success:
+
+            self._elements = deque(reordered)
+
+        return success
 
     def length(self):
         """
@@ -1562,27 +1573,61 @@ class MeshMixin(shapemixin.ShapeMixin):
         #
         super(MeshMixin, self).__init__(*args, **kwargs)
 
-    def __call__(self, elements, apiType=om.MFn.kMeshVertComponent):
+    def __call__(self, *args, **kwargs):
         """
         Private method called whenever the user evokes this class.
         This method will return a mesh component based on the supplied elements.
 
-        :type elements: List[int]
-        :type apiType: int
+        :type args: Union[List[int], om.MObject]
+        :key apiType: int
         :rtype: Union[MeshVertexComponent, MeshEdgeComponent, MeshPolygonComponent]
         """
 
-        # Check api type
+        # Evaluate arguments
         #
-        componentType = self.__class__.__components__.get(apiType, None)
+        numArgs = len(args)
 
-        if componentType is not None:
+        if numArgs != 1:
 
-            return componentType(self.handle(), elements)
+            raise TypeError(f'__call__() expects 1 argument ({numArgs} given)!')
+
+        # Evaluate argument type
+        #
+        arg = args[0]
+
+        if isinstance(arg, om.MObject):
+
+            # Evaluate api type
+            #
+            apiType = arg.apiType()
+            componentType = self.__class__.__components__.get(apiType, None)
+
+            if callable(componentType):
+
+                return componentType(self.handle(), arg)
+
+            else:
+
+                raise TypeError(f'__call__() a compatible API type ({apiType} given)!')
+
+        elif isinstance(arg, collections_abc.Sequence):
+
+            # Evaluate api type
+            #
+            apiType = kwargs.get('apiType', om.MFn.kMeshVertComponent)
+            componentType = self.__class__.__components__.get(apiType, None)
+
+            if callable(componentType):
+
+                return componentType(self.handle(), arg)
+
+            else:
+
+                raise TypeError(f'__call__() a compatible API type ({apiType} given)!')
 
         else:
 
-            raise TypeError('__call__() a compatible api type (%s given)!' % apiType)
+            raise TypeError(f'__call__() expects either a list or MObject ({type(arg).__name__} given)!')
     # endregion
 
     # region Methods
