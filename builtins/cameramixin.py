@@ -1,0 +1,90 @@
+from maya.api import OpenMaya as om
+from . import shapemixin
+from .. import mpyattribute
+
+import logging
+logging.basicConfig()
+log = logging.getLogger(__name__)
+log.setLevel(logging.INFO)
+
+
+class CameraMixin(shapemixin.ShapeMixin):
+    """
+    Overload of `ShapeMixin` that interfaces with camera nodes.
+    """
+
+    # region Dunderscores
+    __api_type__ = om.MFn.kCamera
+    # endregion
+
+    # region Attributes
+    autoSetPivot = mpyattribute.MPyAttribute('autoSetPivot')
+    backgroundColor = mpyattribute.MPyAttribute('backgroundColor')
+    bestFitClippingPlanes = mpyattribute.MPyAttribute('bestFitClippingPlanes')
+    bookmarks = mpyattribute.MPyAttribute('bookmarks')
+    bookmarksEnabled = mpyattribute.MPyAttribute('bookmarksEnabled')
+    cameraAperture = mpyattribute.MPyAttribute('cameraAperture')
+    horizontalFilmAperture = mpyattribute.MPyAttribute('cameraAperture')
+    verticalFilmAperture = mpyattribute.MPyAttribute('cameraAperture')
+    locatorScale = mpyattribute.MPyAttribute('locatorScale')
+    cameraPrecompTemplate = mpyattribute.MPyAttribute('cameraPrecompTemplate')
+    centerOfInterest = mpyattribute.MPyAttribute('centerOfInterest')
+    clippingPlanes = mpyattribute.MPyAttribute('clippingPlanes')
+    useExploreDepthFormat = mpyattribute.MPyAttribute('useExploreDepthFormat')
+    depth = mpyattribute.MPyAttribute('depth')
+    depthName = mpyattribute.MPyAttribute('depthName')
+    depthOfField = mpyattribute.MPyAttribute('depthOfField')
+    displayCameraFarClip = mpyattribute.MPyAttribute('displayCameraFarClip')
+    displayCameraFrustum = mpyattribute.MPyAttribute('displayCameraFrustum')
+    displayCameraNearClip = mpyattribute.MPyAttribute('displayCameraNearClip')
+    displayFieldChart = mpyattribute.MPyAttribute('displayFieldChart')
+    displayFilmGate = mpyattribute.MPyAttribute('displayFilmGate')
+    displayFilmOrigin = mpyattribute.MPyAttribute('displayFilmOrigin')
+    displayFilmPivot = mpyattribute.MPyAttribute('displayFilmPivot')
+    displayGateMask = mpyattribute.MPyAttribute('displayGateMask')
+    displayGateMaskColor = mpyattribute.MPyAttribute('displayGateMaskColor')
+    displayGateMaskOpacity = mpyattribute.MPyAttribute('displayGateMaskOpacity')
+    displayResolution = mpyattribute.MPyAttribute('displayResolution')
+    displaySafeAction = mpyattribute.MPyAttribute('displaySafeAction')
+    displaySafeTitle = mpyattribute.MPyAttribute('displaySafeTitle')
+    fStop = mpyattribute.MPyAttribute('fStop')
+    farClipPlane = mpyattribute.MPyAttribute('farClipPlane')
+    filmFit = mpyattribute.MPyAttribute('filmFit')
+    filmFitOffset = mpyattribute.MPyAttribute('filmFitOffset')
+    filmOffset = mpyattribute.MPyAttribute('filmOffset')
+    horizontalFilmOffset = mpyattribute.MPyAttribute('horizontalFilmOffset')
+    verticalFilmOffset = mpyattribute.MPyAttribute('verticalFilmOffset')
+    focalLength = mpyattribute.MPyAttribute('focalLength')
+    focusDistance = mpyattribute.MPyAttribute('focusDistance')
+    focusRegionScale = mpyattribute.MPyAttribute('focusRegionScale')
+    homeCommand = mpyattribute.MPyAttribute('homeCommand')
+    image = mpyattribute.MPyAttribute('image')
+    imageName = mpyattribute.MPyAttribute('imageName')
+    imagePlane = mpyattribute.MPyAttribute('imagePlane')
+    journalCommand = mpyattribute.MPyAttribute('journalCommand')
+    lensSqueezeRatio = mpyattribute.MPyAttribute('lensSqueezeRatio')
+    mask = mpyattribute.MPyAttribute('mask')
+    maskName = mpyattribute.MPyAttribute('maskName')
+    motionBlur = mpyattribute.MPyAttribute('motionBlur')
+    nearClipPlane = mpyattribute.MPyAttribute('nearClipPlane')
+    orthographic = mpyattribute.MPyAttribute('orthographic')
+    orthographicWidth = mpyattribute.MPyAttribute('orthographicWidth')
+    overscan = mpyattribute.MPyAttribute('overscan')
+    pan = mpyattribute.MPyAttribute('pan')
+    panZoomEnabled = mpyattribute.MPyAttribute('panZoomEnabled')
+    postProjection = mpyattribute.MPyAttribute('postProjection')
+    renderPanZoom = mpyattribute.MPyAttribute('renderPanZoom')
+    renderable = mpyattribute.MPyAttribute('renderable')
+    shake = mpyattribute.MPyAttribute('shake')
+    shakeEnabled = mpyattribute.MPyAttribute('shakeEnabled')
+    shakeOverscan = mpyattribute.MPyAttribute('shakeOverscan')
+    shakeOverscanEnabled = mpyattribute.MPyAttribute('shakeOverscanEnabled')
+    shutterAngle = mpyattribute.MPyAttribute('shutterAngle')
+    stereoHorizontalImageTranslate = mpyattribute.MPyAttribute('stereoHorizontalImageTranslate')
+    stereoHorizontalImageTranslateEnabled = mpyattribute.MPyAttribute('stereoHorizontalImageTranslateEnabled')
+    threshold = mpyattribute.MPyAttribute('threshold')
+    transparencyBasedDepth = mpyattribute.MPyAttribute('transparencyBasedDepth')
+    triggerUpdate = mpyattribute.MPyAttribute('triggerUpdate')
+    tumblePivot = mpyattribute.MPyAttribute('tumblePivot')
+    usePivotAsLocalSpace = mpyattribute.MPyAttribute('usePivotAsLocalSpace')
+    zoom = mpyattribute.MPyAttribute('zoom')
