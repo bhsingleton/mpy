@@ -47,23 +47,26 @@ class PointHelperMixin(locatormixin.LocatorMixin):
     # endregion
 
     # region Methods
-    def alignTo(self, node):
+    def reorientAndScaleToFit(self, *args):
         """
         Locally scales the point helper to fit the distance to the supplied node.
 
-        :type node: mpy.plugins.transformmixin.TransformMixin
+        :type args: Union[mpy.plugins.transformmixin.TransformMixin, None]
         :rtype: None
         """
 
         # Get target point
         #
+        numArgs = len(args)
+        target = args[0] if (numArgs == 1) else self.parent().child(0)
+
         parentMatrix = self.getAttr(f'parentMatrix[{self.instanceNumber()}]')
-        worldMatrix = node.worldMatrix()
+        worldMatrix = target.worldMatrix()
         targetMatrix = worldMatrix * parentMatrix.inverse()
 
         aimVector = om.MVector(transformutils.breakMatrix(targetMatrix)[3])
         distance = aimVector.length()
-        size = self.size
+        size = float(self.size)
         scale = distance / size
 
         # Compose aim matrix
