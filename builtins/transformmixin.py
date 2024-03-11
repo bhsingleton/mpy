@@ -5,6 +5,7 @@ from maya.api import OpenMaya as om
 from dcc.python import stringutils
 from dcc.generators.inclusiverange import inclusiveRange
 from dcc.maya.libs import plugutils, transformutils, shapeutils, animutils
+from dcc.maya.json import mshapeparser
 from dcc.maya.decorators.animate import animate
 from . import dagmixin
 from .. import mpyattribute, mpycontext
@@ -951,9 +952,7 @@ class TransformMixin(dagmixin.DagMixin):
         """
 
         filePath = self.scene.getAbsoluteShapePath(shape)
-
-        shapes = shapeutils.loadShapeTemplate(filePath, parent=self.object(), **kwargs)
-        shapeutils.colorizeShape(*shapes, **kwargs)
+        shapes = mshapeparser.loadShapeTemplate(filePath, parent=self.object(), **kwargs)
 
         return list(map(self.scene.__call__, shapes))
 
