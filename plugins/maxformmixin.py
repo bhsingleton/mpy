@@ -1,3 +1,5 @@
+import math
+
 from maya.api import OpenMaya as om
 from dcc.maya.libs import transformutils
 from .. import mpyattribute
@@ -57,7 +59,8 @@ class MaxformMixin(transformmixin.TransformMixin):
 
         if includeTranslate and positionController is not None:
 
-            positionController.setAttr('list[0].position', matrix.translation())
+            positionController.setAttr('list[0].position', matrix.translation(om.MSpace.kTransform))
+            self.resetTranslation()
 
         # Check if rotation should be frozen
         #
@@ -66,12 +69,13 @@ class MaxformMixin(transformmixin.TransformMixin):
         if includeRotate and rotationController is not None:
 
             rotationController.setAttr('list[0].rotation', matrix.rotation(asQuaternion=False))
+            self.resetEulerRotation()
 
     def getTMController(self):
         """
         Returns the transform controller for this node.
 
-        :rtype: dependencymixin.DependencyMixin
+        :rtype: mpy.builtins.dependencymixin.DependencyMixin
         """
 
         # Check for null objects
