@@ -1229,7 +1229,7 @@ class MeshVertexComponent(MeshComponent):
         # Find the edges that only have one connected edge
         #
         connectionCounts = [len([y for y in self.getConnectedVertices([x]) if self._occupied[y]]) for x in self._elements]
-        vertexTips = [self._elements[x] for x, y in enumerate(connectionCounts) if y == 1]
+        vertexTips = [self._elements[x] for (x, y) in enumerate(connectionCounts) if y == 1]
 
         startIndex = vertexTips[0] if len(vertexTips) == 2 else self._elements[0]
 
@@ -1252,10 +1252,12 @@ class MeshVertexComponent(MeshComponent):
                 success = False
                 break
 
-            # Append item to traversed
-            #
-            previousIndex = connectedVertices[0]
-            reordered.append(previousIndex)
+            else:
+
+                # Append item to traversed
+                #
+                previousIndex = connectedVertices[0]
+                reordered.append(previousIndex)
 
         # Reassign elements
         #
@@ -1309,64 +1311,6 @@ class MeshEdgeComponent(MeshComponent):
     # endregion
 
     # region Methods
-    def consolidateElements(self, retraceElements=False):
-        """
-        Returns a list of consecutive edge loop components.
-        Enabling retrace elements will ensure the elements are ordered from start to finish.
-
-        :type retraceElements: bool
-        :rtype: List[MeshEdgeComponent]
-        """
-
-        # Iterate through elements
-        #
-        edgeLoops = []
-        processed = dict.fromkeys(self._elements, False)
-
-        for element in self._elements:
-
-            # Check if element has already been processed
-            #
-            if processed[element]:
-
-                continue
-
-            # Grow edges until we find a complete connection
-            #
-            edgeIndices = [element]
-            diff = len(edgeIndices)
-
-            while diff > 0:
-
-                # Record pre-growth size
-                #
-                before = len(edgeIndices)
-
-                # Extend connected edges
-                #
-                connectedEdges = [x for x in self.getConnectedEdges(edgeIndices) if x in processed and not processed.get(x, False)]
-                edgeIndices.extend(connectedEdges)
-
-                processed.update([(x, True) for x in connectedEdges])
-
-                # Update difference in edges
-                #
-                diff = len(edgeIndices) - before
-
-            # Create new edge loop component
-            #
-            edgeLoop = self.__class__(self._handle, edgeIndices)
-
-            if retraceElements:
-
-                edgeLoop.retraceElements()
-
-            # Add item to dictionary
-            #
-            edgeLoops.append(edgeLoop)
-
-        return edgeLoops
-
     def retraceElements(self):
         """
         Reorders the internal elements to maintain an edge loop.
@@ -1412,6 +1356,70 @@ class MeshEdgeComponent(MeshComponent):
             self._elements = deque(reordered)
 
         return success
+
+    def associatedVertices(self, ordered=False):
+        """
+        Returns a list of vertex elements that make up this edge component.
+
+        :type ordered: bool
+        :rtype: List[int]
+        """
+
+        # Check if ordered vertices are required
+        #
+        if ordered:
+
+            # Reorder internal elements
+            #
+            success = self.retraceElements()
+
+            if not success:
+
+                return []
+
+            # Iterate through elements
+            #
+            vertexIndices = []
+            iterator = self.__iterators__[self.apiType()](self.dagPath())
+
+            for (i, element) in enumerate(self._elements):
+
+                # Check if edge direction requires re-evaluation
+                #
+                if i == 1:
+
+                    iterator.setIndex(element)
+                    startIndex, endIndex = iterator.vertexId(0), iterator.vertexId(1)
+
+                    if vertexIndices[-1] not in (startIndex, endIndex):
+
+                        vertexIndices[0], vertexIndices[1] = vertexIndices[1], vertexIndices[0]
+
+                    vertexIndices.extend([index for index in (startIndex, endIndex) if index not in vertexIndices])
+
+                else:
+
+                    iterator.setIndex(element)
+                    startIndex, endIndex = iterator.vertexId(0), iterator.vertexId(1)
+
+                    vertexIndices.extend([index for index in (startIndex, endIndex) if index not in vertexIndices])
+
+            return vertexIndices
+
+        else:
+
+            # Iterate through elements
+            #
+            vertexIndices = set()
+            iterator = self.__iterators__[self.apiType()](self.dagPath())
+
+            for element in self._elements:
+
+                iterator.setIndex(element)
+                vertexIndices.add(iterator.vertexId(0))
+                vertexIndices.add(iterator.vertexId(1))
+
+            return list(vertexIndices)
 
     def length(self):
         """
