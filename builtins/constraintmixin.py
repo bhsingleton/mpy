@@ -293,27 +293,30 @@ class ConstraintMixin(transformmixin.TransformMixin):
         :rtype: None
         """
 
-        # Break connections to target element
+        # Check if target exists
         #
-        plug = self.findPlug('target')
-        plug.selectAncestorLogicalIndex(index)
+        targetPlug = self.findPlug('target')
+        existingIndices = targetPlug.getExistingArrayAttributeIndices()
 
-        for attributeName in self.__targets__.keys():
+        if index not in existingIndices:
 
-            child = plug.child(self.attribute(attributeName))
-            plugutils.breakConnections(child)
+            log.warning(f'Cannot locate target @ {index}')
+            return
 
-        # Remove custom attribute
+        # Break all connections to target element
         #
-        child = plug.child(self.attribute('targetWeight'))
-        attribute = child.source().attribute()
-        plugutils.breakConnections(child)
+        target = ConstraintTarget(self, index=index)
+        driver = target.driver()
+        element = target.plug()
 
-        self.removeAttr(attribute)
+        self.breakConnections(element, source=True, destination=True, recursive=True)
+        self.removePlugElements(targetPlug, [index])
 
-        # Remove element from array
+        # Remove associated attribute
         #
-        plugutils.removeMultiInstances(plug, [index])
+        if not driver.isNull:
+
+            self.removeAttr(driver.attribute())
 
     def clearTargets(self):
         """
@@ -459,6 +462,7 @@ class ConstraintTarget(object):
         Private method called after a new instance has been created.
 
         :type constraint: ConstraintMixin
+        :key index: int
         :rtype: None
         """
 
@@ -517,6 +521,15 @@ class ConstraintTarget(object):
 
             raise TypeError(f'plug() expects 1 argument ({numArgs} given)!')
 
+    def driver(self):
+        """
+        Returns the driver plug for this constraint target.
+
+        :rtype: om.MPlug
+        """
+
+        return self.plug('targetWeight').source()
+
     def name(self):
         """
         Returns the alias for this constraint target.
@@ -524,11 +537,11 @@ class ConstraintTarget(object):
         :rtype: str
         """
 
-        plug = self.plug('targetWeight')
+        plug = self.driver()
 
-        if plug.isDestination:
+        if not plug.isNull:
 
-            return plug.source().partialName(useLongNames=True)
+            return plug.partialName(useLongNames=True)
 
         else:
 
