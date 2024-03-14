@@ -578,6 +578,27 @@ class DependencyMixin(mpynode.MPyNode):
         plug = self.findPlug(plug)
         plugmutators.setValue(plug, value, **kwargs)
 
+    def trySetAttr(self, plug, value, **kwargs):
+        """
+        Tries to update the value for the supplied plug.
+
+        :type plug: Union[str, om.MObject, om.MPlug]
+        :type value: object
+        :key convertUnits: bool
+        :key force: bool
+        :rtype: bool
+        """
+
+        if self.hasAttr(plug):
+
+            self.setAttr(plug, value, **kwargs)
+            return True
+
+        else:
+
+            log.warning(f'Cannot locate "{plug}" from {self.name()} node!')
+            return False
+
     def dirtyAttr(self, plug, **kwargs):
         """
         Marks the supplied plug as dirty.
