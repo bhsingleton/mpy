@@ -62,24 +62,51 @@ class LocatorMixin(shapemixin.ShapeMixin):
 
         return localScaleMatrix * localRotateMatrix * localPositionMatrix
 
-    def setLocalMatrix(self, localMatrix):
+    def setLocalMatrix(self, localMatrix, **kwargs):
         """
         Updates the local matrix for this locator.
 
         :type localMatrix: om.MMatrix
+        :key skipPosition: bool
+        :key skipRotate: bool
+        :key skipScale: bool
         :rtype: None
         """
 
-        # Update local position and scale
+        # Decompose local matrix
         #
         localPosition, localRotate, localScale = transformutils.decomposeTransformMatrix(localMatrix)
 
-        self.setAttr('localPosition', localPosition)
-        self.setAttr('localScale', localScale)
-
-        # Check if local rotation exists
+        # Check if position should be skipped
         #
-        if self.hasAttr('localRotate'):
+        skipPosition = kwargs.get('skipPosition', False)
+
+        if not skipPosition:
+
+            self.setAttr('localPosition', localPosition)
+
+        # Check if rotation should be skipped
+        #
+        skipRotate = kwargs.get('skipRotate', False)
+
+        if not skipRotate and self.hasAttr('localRotate'):
 
             self.setAttr('localRotate', list(map(math.degrees, localRotate)))
+
+        # Check if scale should be skipped
+        #
+        skipScale = kwargs.get('skipScale', False)
+
+        if not skipScale:
+
+            self.setAttr('localScale', localScale)
+
+    def resetLocalMatrix(self):
+        """
+        Resets the local matrix for this locator.
+
+        :rtype: None
+        """
+
+        self.setLocalMatrix(om.MMatrix.kIdentity)
     # endregion
