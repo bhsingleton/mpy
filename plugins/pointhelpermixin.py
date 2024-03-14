@@ -55,11 +55,20 @@ class PointHelperMixin(locatormixin.LocatorMixin):
         :rtype: None
         """
 
+        # Evaluate supplied target
+        #
+        siblings = [sibling for sibling in self.parent().iterChildren() if sibling is not self]
+        numSiblings = len(siblings)
+        numArgs = len(args)
+
+        target = args[0] if (numArgs > 0) else siblings[0] if (numSiblings > 0) else None
+
+        if target is None:
+
+            return
+
         # Get target point
         #
-        numArgs = len(args)
-        target = args[0] if (numArgs == 1) else self.parent().child(0)
-
         parentMatrix = self.getAttr(f'parentMatrix[{self.instanceNumber()}]')
         worldMatrix = target.worldMatrix()
         targetMatrix = worldMatrix * parentMatrix.inverse()
@@ -78,9 +87,10 @@ class PointHelperMixin(locatormixin.LocatorMixin):
 
         # Assign object transform
         #
+        localPosition = transformutils.breakMatrix(transformutils.createTranslateMatrix(forwardVector * (distance * 0.5)))[3]
         localRotation = transformutils.decomposeTransformMatrix(aimMatrix)[1]
 
-        self.localPosition = (distance * 0.5, 0.0, 0.0)
+        self.localPosition = localPosition
         self.localRotate = tuple(map(math.degrees, localRotation))
-        self.localScale = (scale, 1.0, 1.0)
+        self.localScale = (scale, self.localScaleY, self.localScaleZ)
     # endregion
