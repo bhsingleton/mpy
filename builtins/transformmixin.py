@@ -254,9 +254,35 @@ class TransformMixin(dagmixin.DagMixin):
 
         transformutils.scaleTo(self.dagPath(), scale)
 
+    def freezePivots(self, includeTranslate=True, includeRotate=True, includeScale=False):
+        """
+        Pushes the transform's translation into its pivots.
+
+        :type includeTranslate: bool
+        :type includeRotate: bool
+        :type includeScale: bool
+        :rtype: None
+        """
+
+        transformutils.freezePivots(
+            self.dagPath(),
+            includeTranslate=includeTranslate,
+            includeRotate=includeRotate,
+            includeScale=includeScale
+        )
+
+    def unfreezePivots(self):
+        """
+        Pushes the transform's pivots back into translation.
+
+        :rtype: None
+        """
+
+        transformutils.unfreezePivots(self.dagPath())
+
     def resetPivots(self):
         """
-        Resets all the transform's pivot components.
+        Resets the transform's pivots.
 
         :rtype: None
         """
@@ -485,7 +511,7 @@ class TransformMixin(dagmixin.DagMixin):
 
     def freezeTransform(self, includeTranslate=True, includeRotate=True, includeScale=False):
         """
-        Pushes the transform's local matrix into the parent offset matrix.
+        Pushes the transform's matrix into the parent offset matrix.
 
         :type includeTranslate: bool
         :type includeRotate: bool
@@ -502,7 +528,7 @@ class TransformMixin(dagmixin.DagMixin):
 
     def unfreezeTransform(self):
         """
-        Pushes the transform's parent offset matrix into the local matrix.
+        Pushes the transform's parent offset matrix back into its matrix.
 
         :rtype: None
         """
