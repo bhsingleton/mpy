@@ -472,21 +472,22 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
 
         return list(self.iterDescendants(apiType=apiType, includeSelf=includeSelf))
 
-    def iterShapes(self):
+    def iterShapes(self, apiType=om.MFn.kShape):
         """
         Returns a generator that yields shapes from this node.
 
-        :rtype: Iterator[DagMixin]
+        :type apiType: int
+        :rtype: Iterator[mpy.builtins.shapemixin.ShapeMixin]
         """
 
-        return self.iterChildren(apiType=om.MFn.kShape)
+        return self.iterChildren(apiType=apiType)
 
     def shape(self, index=0):
         """
         Returns an indexed shape from this node.
 
         :type index: int
-        :rtype: Union[DagMixin, None]
+        :rtype: Union[mpy.builtins.shapemixin.ShapeMixin, None]
         """
 
         # Inspect number of shapes
@@ -499,14 +500,15 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
 
             return None
 
-    def shapes(self):
+    def shapes(self, apiType=om.MFn.kShape):
         """
         Returns a list of the shapes from this node.
 
-        :rtype: List[DagMixin]
+        :type apiType: int
+        :rtype: List[mpy.builtins.shapemixin.ShapeMixin]
         """
 
-        return [x for x in self.iterShapes() if not x.isIntermediateObject]
+        return [x for x in self.iterShapes(apiType=apiType) if not x.isIntermediateObject]
 
     def numberOfShapesDirectlyBelow(self):
         """
@@ -558,7 +560,7 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
         """
         Returns a list of intermediate objects from this node.
 
-        :rtype: list[DagMixin]
+        :rtype: List[mpy.builtins.shapemixin.ShapeMixin]
         """
 
         return [x for x in self.iterShapes() if x.isIntermediateObject]
