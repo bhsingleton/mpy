@@ -1657,15 +1657,18 @@ class MeshMixin(shapemixin.ShapeMixin):
 
         return self.functionSet().getPoints()
 
-    def setControlPoints(self, controlPoints):
+    def setControlPoints(self, controlPoints, space=om.MSpace.kObject):
         """
         Returns the control points for this shape.
 
         :type controlPoints: om.MPointArray
+        :type space: int
         :rtype: None
         """
 
-        return self.functionSet().setPoints(controlPoints)
+        functionSet = self.functionSet()  # type: om.MFnMesh
+        functionSet.setPoints(controlPoints, space=space)
+        functionSet.updateSurface()
 
     def numControlPoints(self):
         """
