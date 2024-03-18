@@ -541,7 +541,7 @@ class DependencyMixin(mpynode.MPyNode):
 
         else:
 
-            log.warning(f'Cannot locate "{plug}" from {self.name()} node!')
+            log.debug(f'Cannot locate "{plug}" from {self.name()} node!')
             return default
 
     def getAttrType(self, attribute):
@@ -596,7 +596,7 @@ class DependencyMixin(mpynode.MPyNode):
 
         else:
 
-            log.warning(f'Cannot locate "{plug}" from {self.name()} node!')
+            log.debug(f'Cannot locate "{plug}" from {self.name()} node!')
             return False
 
     def dirtyAttr(self, plug, **kwargs):
