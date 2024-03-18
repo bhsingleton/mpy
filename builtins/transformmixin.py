@@ -615,46 +615,37 @@ class TransformMixin(dagmixin.DagMixin):
         :rtype: mpy.builtins.controllermixin.ControllerMixin
         """
 
-        # Collect all controller tags
+        # Find associated controller tag
         #
         plug = self.findPlug('message')
-
         destinations = plug.destinations()
-        numDestinations = len(destinations)
 
-        if numDestinations > 0:
+        tag = None
 
-            # Iterate through destinations
+        for destination in destinations:
+
+            # Check if this is a controller node
             #
-            for destination in destinations:
+            node = destination.node()
+            plugName = destination.partialName(useLongNames=True)
 
-                # Check if this is a controller node
-                #
-                node = destination.node()
-                plugName = destination.partialName(useLongNames=True)
+            if node.hasFn(om.MFn.kControllerTag) and plugName == 'controllerObject':
 
-                if node.hasFn(om.MFn.kControllerTag) and plugName == 'controllerObject':
-
-                    return self.scene(node)
-
-                else:
-
-                    continue
-
-            # Check if controller should be tagged
-            #
-            if create:
-
-                return self.tagAsController()
+                tag = self.scene(node)
+                break
 
             else:
 
-                return None
+                continue
+
+        # Evaluate results
+        #
+        if tag is not None:
+
+            return tag
 
         elif create:
 
-            # Tag as controller
-            #
             return self.tagAsController()
 
         else:
@@ -684,15 +675,18 @@ class TransformMixin(dagmixin.DagMixin):
 
         if parent is not None:
 
-            controllerTag.parent = parent.object()
+            parentTag = parent.controllerTag(create=True)
+            parentTag.connectPlugs('message', controllerTag['parent'])
+            parentTag.connectPlugs('prepopulate', controllerTag['prepopulate'])
 
         # Check if children were supplied
         #
-        children = kwargs.get('children', None)
+        children = kwargs.get('children', [])
 
-        if children is not None:
+        for (i, child) in enumerate(children):
 
-            controllerTag.children = [child.controllerTag(create=True).object() for child in children]
+            childTag = child.controllerTag(create=True)
+            controllerTag.connectPlugs(childTag['parent'], f'children[{i}]')
 
         return controllerTag
 
@@ -893,6 +887,15 @@ class TransformMixin(dagmixin.DagMixin):
 
         for (i, space) in enumerate(spaces):
 
+            # Check if space exists
+            #
+            if space is None:
+
+                spaceSwitch.setAttr(f'target[{i}].targetName', 'World')
+                continue
+
+            # Connect space to switch
+            #
             spaceSwitch.setAttr(f'target[{i}].targetName', space.name())
             space.connectPlugs(f'worldMatrix[{space.instanceNumber()}]', spaceSwitch[f'target[{i}].targetMatrix'])
 
