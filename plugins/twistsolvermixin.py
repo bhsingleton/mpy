@@ -10,7 +10,7 @@ log.setLevel(logging.INFO)
 
 class TwistSolverMixin(dependencymixin.DependencyMixin):
     """
-    Overload of `DependencyMixin` that interfaces with twist-solver nodes.
+    Overload of `DependencyMixin` that interfaces with twist solvers.
     """
 
     # region Dunderscores
@@ -18,8 +18,6 @@ class TwistSolverMixin(dependencymixin.DependencyMixin):
     # endregion
 
     # region Attributes
-    segments = mpyattribute.MPyAttribute('segments')
-    inCurve = mpyattribute.MPyAttribute('inCurve')
     forwardAxis = mpyattribute.MPyAttribute('forwardAxis')
     forwardAxisFlip = mpyattribute.MPyAttribute('forwardAxisFlip')
     upAxis = mpyattribute.MPyAttribute('upAxis')
@@ -28,6 +26,8 @@ class TwistSolverMixin(dependencymixin.DependencyMixin):
     reverse = mpyattribute.MPyAttribute('reverse')
     falloffEnabled = mpyattribute.MPyAttribute('falloffEnabled')
     falloff = mpyattribute.MPyAttribute('falloff')
+    inCurve = mpyattribute.MPyAttribute('inCurve')
+    segments = mpyattribute.MPyAttribute('segments')
     startMatrix = mpyattribute.MPyAttribute('startMatrix')
     startOffsetMatrix = mpyattribute.MPyAttribute('startOffsetMatrix')
     endMatrix = mpyattribute.MPyAttribute('endMatrix')
