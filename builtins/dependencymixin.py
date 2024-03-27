@@ -629,34 +629,60 @@ class DependencyMixin(mpynode.MPyNode):
         plug = self.findPlug(plug)
         plugmutators.resetValue(plug, **kwargs)
 
-    def hideAttr(self, *plugs):
+    def hideAttr(self, *plugs, lock=False):
         """
         Hides an attribute that belongs to this node.
 
         :type plugs: Union[str, List[str], om.MPlug, List[om.MPlug]]
+        :type lock: bool
         :rtype: None
         """
 
         for plug in plugs:
 
             plug = self.findPlug(plug)
-            plug.isKeyable = False
-            plug.isChannelBox = False
 
-    def showAttr(self, *plugs, keyable=False):
+            if plug.isCompound:
+
+                for child in plugutils.iterChildren(plug):
+
+                    child.isKeyable = False
+                    child.isChannelBox = False
+                    child.isLocked = lock
+
+            else:
+
+                plug.isKeyable = False
+                plug.isChannelBox = False
+                plug.isLocked = lock
+
+    def showAttr(self, *plugs, keyable=False, unlock=False):
         """
         Un-hides an attribute that belongs to this node.
 
         :type plugs: Union[str, List[str], om.MPlug, List[om.MPlug]]
         :type keyable: bool
+        :type unlock: bool
         :rtype: None
         """
 
         for plug in plugs:
 
             plug = self.findPlug(plug)
-            plug.isKeyable = keyable
-            plug.isChannelBox = True
+
+            if plug.isCompound:
+
+                for child in plugutils.iterChildren(plug):
+
+                    child.isKeyable = keyable
+                    child.isChannelBox = True
+                    child.isLocked = not unlock
+
+            else:
+
+                plug.isKeyable = keyable
+                plug.isChannelBox = True
+                plug.isLocked = not unlock
 
     def lockAttr(self, *plugs):
         """
