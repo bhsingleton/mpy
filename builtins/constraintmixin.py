@@ -235,10 +235,12 @@ class ConstraintMixin(transformmixin.TransformMixin):
 
         attribute = self.addAttr(
             longName=attributeName,
-            attributeType='float',
+            attributeType='double',
             min=0.0,
+            default=1.0,
             keyable=True,
-            channelBox=True
+            cachedInternally=True,
+            disconnectBehaviour=0
         )
 
         # Connect target weight attributes
