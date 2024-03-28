@@ -1,4 +1,5 @@
 import os
+import string
 import inspect
 
 from maya import cmds as mc
@@ -476,25 +477,45 @@ class MPyScene(proxyfactory.ProxyFactory):
         self.__classes__[apiType] = cls
         return cls
 
-    def doesNodeExist(self, nodeName):
+    def doesNodeExist(self, name):
         """
         Evaluates if a node with the supplied name exists.
 
-        :type nodeName: str
+        :type name: str
         :rtype: bool
         """
 
-        return mc.objExists(nodeName)
+        return mc.objExists(name)
 
-    def isNameUnique(self, nodeName):
+    def isNameUnique(self, name):
         """
         Evaluates if the supplied name is unique.
 
-        :type nodeName: str
+        :type name: str
         :rtype: bool
         """
 
-        return not self.doesNodeExist(nodeName)
+        return not self.doesNodeExist(name)
+
+    def makeNameUnique(self, name):
+        """
+        Returns a unique version of the supplied name.
+
+        :type name: str
+        :rtype: str
+        """
+
+        strippedName = name.rstrip(string.digits)
+        newName = str(name)
+
+        digit = 1
+
+        while not self.isNameUnique(newName):
+
+            newName = f'{strippedName}{digit}'
+            digit += 1
+
+        return newName
 
     def getNodeByName(self, name):
         """
