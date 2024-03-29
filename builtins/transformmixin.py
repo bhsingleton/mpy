@@ -1062,6 +1062,43 @@ class TransformMixin(dagmixin.DagMixin):
 
         return camera
 
+    def renameShapes(self):
+        """
+        Renames the shapes under this transform.
+
+        :rtype: None
+        """
+
+        # Evaluate number of shapes
+        #
+        name = self.name()
+
+        shapes = self.shapes()
+        numShapes = len(shapes)
+
+        if numShapes == 0:
+
+            return
+
+        elif numShapes == 1:
+
+            shape = shapes[0]
+            originalName = shape.name()
+            newName = f'{name}Shape'
+
+            log.info(f'Renaming {originalName} > {newName}')
+            shape.setName(newName)
+
+        else:
+
+            for (i, shape) in enumerate(shapes, start=1):
+
+                originalName = shape.name()
+                newName = f'{name}Shape{i}'
+
+                log.info(f'Renaming {originalName} > {newName}')
+                shape.setName(newName)
+
     def removeShapes(self):
         """
         Removes all shapes underneath this transform.
