@@ -122,48 +122,80 @@ class SpaceSwitchMixin(dependencymixin.DependencyMixin):
 
                     self.connectPlugs(source, destination)
 
-    def addSpace(self, *spaces, **kwargs):
+    def addSpace(self, space, **kwargs):
         """
         Adds the supplied spaces to this switch.
 
-        :type spaces: Union[mpy.builtins.transformmixin.TransformMixin, List[mpy.builtins.transformmixin.TransformMixin]]
+        :type space: mpy.builtins.transformmixin.TransformMixin
         :key maintainOffset: bool
-        :rtype: None
+        :rtype: int
         """
 
-        # Add space targets
+        # Get world rest-matrix
+        #
+        driven = self.driven()
+        restMatrix = om.MMatrix(self.restMatrix)
+
+        restWorldMatrix = restMatrix * driven.parentMatrix()
+
+        # Get next available space index
         #
         plug = self.findPlug('target')
         attribute = self.attribute('targetMatrix')
-
-        driven = self.driven()
-        restMatrix = om.MMatrix(self.restMatrix)
-        restWorldMatrix = restMatrix * driven.parentMatrix()
+        index = self.getNextAvailableConnection(plug, child=attribute)
 
         maintainOffset = kwargs.get('maintainOffset', True)
 
-        for (physicalIndex, space) in enumerate(spaces):
-
-            # Check if space exists
-            #
-            logicalIndex = self.getNextAvailableConnection(plug, child=attribute)
-
-            if space is None:
-
-                self.setAttr(f'target[{logicalIndex}].targetName', 'World')
-                continue
+        if space is not None:
 
             # Connect space to switch
             #
-            self.setAttr(f'target[{logicalIndex}].targetName', space.name())
-            self.connectPlugs(space[f'worldMatrix[{space.instanceNumber()}]'], f'target[{logicalIndex}].targetMatrix')
+            self.setAttr(f'target[{index}].targetName', space.name())
+            self.connectPlugs(space[f'worldMatrix[{space.instanceNumber()}]'], f'target[{index}].targetMatrix')
 
             if maintainOffset:
 
                 offsetMatrix = restWorldMatrix * space.worldInverseMatrix()
                 offsetTranslate, offsetRotate, offsetScale = transformutils.decomposeTransformMatrix(offsetMatrix)
 
-                self.setAttr(f'target[{logicalIndex}].targetOffsetTranslate', offsetTranslate)
-                self.setAttr(f'target[{logicalIndex}].targetOffsetRotate', list(map(math.degrees, offsetRotate)))
-                self.setAttr(f'target[{logicalIndex}].targetOffsetScale', offsetScale)
+                self.setAttr(f'target[{index}].targetOffsetTranslate', offsetTranslate)
+                self.setAttr(f'target[{index}].targetOffsetRotate', list(map(math.degrees, offsetRotate)))
+                self.setAttr(f'target[{index}].targetOffsetScale', offsetScale)
+
+        else:
+
+            # Add world space to switch
+            #
+            worldMatrix = om.MMatrix.kIdentity
+
+            self.setAttr(f'target[{index}].targetName', 'World')
+            self.setAttr(f'target[{index}].targetMatrix', worldMatrix)
+
+            if maintainOffset:
+
+                offsetMatrix = restWorldMatrix * worldMatrix.inverse()
+                offsetTranslate, offsetRotate, offsetScale = transformutils.decomposeTransformMatrix(offsetMatrix)
+
+                self.setAttr(f'target[{index}].targetOffsetTranslate', offsetTranslate)
+                self.setAttr(f'target[{index}].targetOffsetRotate', list(map(math.degrees, offsetRotate)))
+                self.setAttr(f'target[{index}].targetOffsetScale', offsetScale)
+
+        return index
+
+    def addSpaces(self, spaces, **kwargs):
+        """
+        Adds the supplied spaces to this switch.
+
+        :type spaces: List[mpy.builtins.transformmixin.TransformMixin]
+        :rtype: List[int]
+        """
+
+        numSpaces = len(spaces)
+        indices = [None] * numSpaces
+
+        for (i, space) in enumerate(spaces):
+
+            indices[i] = self.addSpace(space, **kwargs)
+
+        return indices
     # endregion
