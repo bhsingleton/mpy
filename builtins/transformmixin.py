@@ -876,7 +876,7 @@ class TransformMixin(dagmixin.DagMixin):
 
         spaceSwitch = self.scene.createNode('spaceSwitch', name=name)
         spaceSwitch.setDriven(self, **kwargs)
-        spaceSwitch.addSpace(*spaces, **kwargs)
+        spaceSwitch.addSpaces(spaces, **kwargs)
 
         return spaceSwitch
 
@@ -898,23 +898,19 @@ class TransformMixin(dagmixin.DagMixin):
 
         return list(map(self.scene.__call__, shapes))
 
-    def addStar(self, *args, **kwargs):
+    def addStar(self, size, **kwargs):
         """
         Adds a star shape to this transform.
 
-        :key outerRadius: float
-        :key innerRadius: float
-        :key points: int
+        :key numPoints: int
         :rtype: mpy.plugins.pointhelpermixin.PointHelperMixin
         """
 
-        outerRadius = kwargs.pop('outerRadius', 1.0)
-        innerRadius = kwargs.pop('innerRadius', outerRadius * 0.5)
-
-        shapeData = shapeutils.createStar(outerRadius, innerRadius, **kwargs)
-        controlPoints = om.MFnNurbsCurve(shapeData).cvPositions()
+        curveData = shapeutils.createStar(1.0, 0.5, **kwargs)
+        controlPoints = om.MFnNurbsCurve(curveData).cvPositions()
 
         pointHelper = self.addPointHelper('custom')
+        pointHelper.size = size
         pointHelper.setAttr('controlPoints', controlPoints)
 
         shapeutils.colorizeShape(pointHelper.object(), **kwargs)
