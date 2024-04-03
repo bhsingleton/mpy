@@ -287,11 +287,12 @@ class ConstraintMixin(transformmixin.TransformMixin):
 
         pass
 
-    def removeTarget(self, index):
+    def removeTarget(self, index, maintainOffset=False):
         """
         Removes the specified target from this constraint.
 
         :type index: int
+        :type maintainOffset: bool
         :rtype: None
         """
 
@@ -319,6 +320,12 @@ class ConstraintMixin(transformmixin.TransformMixin):
         if not driver.isNull:
 
             self.removeAttr(driver.attribute())
+
+        # Check if offset should be maintained
+        #
+        if maintainOffset:
+
+            self.maintainOffset()
 
     def clearTargets(self):
         """
