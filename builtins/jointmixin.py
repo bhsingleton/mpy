@@ -38,6 +38,25 @@ class JointMixin(transformmixin.TransformMixin):
     # endregion
 
     # region Methods
+    def setParent(self, parent, absolute=False):
+        """
+        Updates the parent for this node.
+
+        :type parent: Union[None, str, om.MObject, DagMixin]
+        :type absolute: bool
+        :rtype: None
+        """
+
+        # Call parent method
+        #
+        super(JointMixin, self).setParent(parent, absolute=absolute)
+
+        # Check if inverse-scale is required
+        #
+        if parent.hasFn(om.MFn.kJoint):
+
+            self.connectPlugs(parent['scale'], 'inverseScale', force=True)
+
     def preEulerRotation(self):
         """
         Returns the transform's pre-euler rotation component.
