@@ -52,7 +52,6 @@ class TransformMixin(dagmixin.DagMixin):
     def setParent(self, parent, absolute=False):
         """
         Updates the parent for this node.
-        This overload supports the use of transform preservation when changing parents.
 
         :type parent: Union[None, str, om.MObject, DagMixin]
         :type absolute: bool
@@ -706,15 +705,11 @@ class TransformMixin(dagmixin.DagMixin):
 
         # Create global scale attribute
         #
-        self.addAttr(longName='globalScale', shortName='gs', attributeType='float', default=1.0)
+        self.addAttr(longName='globalScale', shortName='gs', attributeType='float', min=0.0, default=1.0, channelBox=True)
         self.connectPlugs('globalScale', 'scaleX')
         self.connectPlugs('globalScale', 'scaleY')
         self.connectPlugs('globalScale', 'scaleZ')
-
-        # Hide scale attributes
-        #
-        self.hideAttr('scaleX', 'scaleY', 'scaleZ')
-        self.showAttr('globalScale')
+        self.hideAttr('scaleX', 'scaleY', 'scaleZ', lock=True)
 
     def prepareChannelBoxForAnimation(self):
         """
@@ -856,6 +851,19 @@ class TransformMixin(dagmixin.DagMixin):
         """
 
         return self.findConstraint(typeName) is not None
+
+    def removeConstraints(self):
+        """
+        Removes all constraints from this transform.
+
+        :rtype: None
+        """
+
+        constraints = self.constraints()
+
+        for constraint in constraints:
+
+            constraint.delete()
 
     def addSpaceSwitch(self, spaces, **kwargs):
         """
