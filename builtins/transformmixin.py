@@ -675,8 +675,8 @@ class TransformMixin(dagmixin.DagMixin):
         if parent is not None:
 
             parentTag = parent.controllerTag(create=True)
-            parentTag.connectPlugs('message', controllerTag['parent'])
-            parentTag.connectPlugs('prepopulate', controllerTag['prepopulate'])
+            parentTag.connectPlugs('message', controllerTag['parent'], force=True)
+            parentTag.connectPlugs('prepopulate', controllerTag['prepopulate'], force=True)
 
         # Check if children were supplied
         #
@@ -685,7 +685,7 @@ class TransformMixin(dagmixin.DagMixin):
         for (i, child) in enumerate(children):
 
             childTag = child.controllerTag(create=True)
-            controllerTag.connectPlugs(childTag['parent'], f'children[{i}]')
+            controllerTag.connectPlugs(childTag['parent'], f'children[{i}]', force=True)
 
         return controllerTag
 
