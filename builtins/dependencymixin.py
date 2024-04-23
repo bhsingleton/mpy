@@ -475,26 +475,25 @@ class DependencyMixin(mpynode.MPyNode):
         mc.addAttr(self.name(includeNamespace=True), longName=name, proxy=plug.info)
         return self.attribute(name)
 
-    def addDivider(self):
+    def addDivider(self, title):
         """
         Adds a divider attribute to this node.
 
+        :type title: str
         :rtype: None
         """
 
-        # Create new divider
+        # Add attribute
         #
         dividers = [attr for attr in self.iterAttr(userDefined=True) if om.MFnAttribute(attr).name.startswith('div')]
         numDividers = len(dividers)
 
-        attr = self.addAttr(longName=f'div{numDividers}', niceName='_______________', attributeType='long', defaultValue=0)
+        attribute = self.addAttr(longName=f'div{numDividers}', niceName='//', attributeType='enum', fields={title: 0}, channelBox=True)
 
-        # Edit divider properties
+        # Lock associated plug
         #
-        plug = self.findPlug(attr)
-        plug.isKeyable = False
+        plug = om.MPlug(self.object(), attribute)
         plug.isLocked = True
-        plug.isChannelBox = True
 
     def removeAttr(self, attribute):
         """
