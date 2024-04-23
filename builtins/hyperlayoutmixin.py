@@ -184,20 +184,17 @@ class HyperLayoutMixin(dependencymixin.DependencyMixin):
         :rtype: None
         """
 
-        # Iterate through hyper positions
+        # Iterate through members
         #
-        for hyperPosition in self.iterHyperPositions():
+        members = list(self.iterMembers())
 
-            # Check if hyper position has depend node
+        for member in members:
+
+            # Check if member is still alive
             #
-            if not hyperPosition.hasDependNode():
+            if member.isAlive():
 
-                continue
-
-            # Delete dependency node
-            #
-            dependNode = hyperPosition.dependNode()
-            dagutils.deleteNode(dependNode)
+                member.delete()
 
     def hyperPositions(self):
         """
