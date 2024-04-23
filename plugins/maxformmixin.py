@@ -55,11 +55,11 @@ class MaxformMixin(transformmixin.TransformMixin):
         prs = self.getTMController()
         positionController = prs.getPositionController()
 
-        matrix = self.matrix(asTransformationMatrix=True)
+        position, eulerRotation, scale = transformutils.decomposeTransformMatrix(self.matrix(), rotateOrder=self.rotateOrder())
 
         if includeTranslate and positionController is not None:
 
-            positionController.setAttr('list[0].position', matrix.translation(om.MSpace.kTransform))
+            positionController.setAttr('list[0].position', position)
             self.resetTranslation()
 
         # Check if rotation should be frozen
@@ -68,7 +68,7 @@ class MaxformMixin(transformmixin.TransformMixin):
 
         if includeRotate and rotationController is not None:
 
-            rotationController.setAttr('list[0].rotation', matrix.rotation(asQuaternion=False))
+            rotationController.setAttr('list[0].rotation', eulerRotation, convertUnits=False)
             self.resetEulerRotation()
 
     def getTMController(self):
