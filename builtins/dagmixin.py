@@ -337,6 +337,10 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
 
             dagutils.reparentNode(self.object(), parent.object())
 
+        elif parent is None:
+
+            dagutils.reparentNode(self.object(), om.MObject.kNullObj)
+
         else:
 
             raise TypeError('setParent() expects a valid dag node (%s given)!' % parent.apiTypeStr)
