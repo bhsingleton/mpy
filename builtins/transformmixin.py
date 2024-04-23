@@ -534,11 +534,12 @@ class TransformMixin(dagmixin.DagMixin):
 
         transformutils.unfreezeTransform(self.dagPath())
 
-    def detectMirroring(self):
+    def detectMirroring(self, normal=om.MVector.kXaxisVector):
         """
         Detects the mirror settings for this transform.
         Each transform component uses the keyword pattern: mirrorTranslateX, etc
 
+        :type normal: om.MVector
         :rtype: bool
         """
 
@@ -546,7 +547,7 @@ class TransformMixin(dagmixin.DagMixin):
         #
         matrix = self.parentMatrix()
         xAxis, yAxis, zAxis, pos = transformutils.breakMatrix(matrix, normalize=True)
-        mirrorXAxis, mirrorYAxis, mirrorZAxis = list(map(transformutils.mirrorVector, (xAxis, yAxis, zAxis)))
+        mirrorXAxis, mirrorYAxis, mirrorZAxis = [transformutils.mirrorVector(axis, normal=normal) for axis in (xAxis, yAxis, zAxis)]
 
         otherTransform = self.getOppositeNode()
         otherMatrix = otherTransform.parentMatrix()
