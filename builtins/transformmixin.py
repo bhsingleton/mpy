@@ -58,9 +58,13 @@ class TransformMixin(dagmixin.DagMixin):
         :rtype: None
         """
 
-        # Cache world-matrix
+        # Check if world-matrix requires caching
         #
-        worldMatrix = self.worldMatrix()
+        worldMatrix = om.MMatrix.kIdentity
+
+        if absolute:
+
+            worldMatrix = self.worldMatrix()
 
         # Call parent method
         #
