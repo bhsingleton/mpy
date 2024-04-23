@@ -325,7 +325,8 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
 
         # Redundancy check
         #
-        parent = self.scene(parent)
+        acceptsType = isinstance(parent, self.__class__.__accepts__)
+        parent = self.scene(parent) if acceptsType else parent
 
         if self.parent() == parent:
 
@@ -333,13 +334,13 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
 
         # Execute dag modifier
         #
-        if parent.hasFn(om.MFn.kDagNode):
-
-            dagutils.reparentNode(self.object(), parent.object())
-
-        elif parent is None:
+        if parent is None:
 
             dagutils.reparentNode(self.object(), om.MObject.kNullObj)
+
+        elif parent.hasFn(om.MFn.kDagNode):
+
+            dagutils.reparentNode(self.object(), parent.object())
 
         else:
 
