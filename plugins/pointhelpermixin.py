@@ -92,5 +92,5 @@ class PointHelperMixin(locatormixin.LocatorMixin):
 
         self.localPosition = localPosition
         self.localRotate = tuple(map(math.degrees, localRotation))
-        self.localScale = (scale, self.localScaleY, self.localScaleZ)
+        self.localScaleX = scale
     # endregion
