@@ -857,18 +857,48 @@ class TransformMixin(dagmixin.DagMixin):
 
         return self.findConstraint(typeName) is not None
 
-    def removeConstraints(self):
+    def removeConstraints(self, absolute=False):
         """
         Removes all constraints from this transform.
 
+        :type absolute: bool
         :rtype: None
         """
 
+        # Iterate through constraints
+        #
         constraints = self.constraints()
+        restTranslate, restRotate, restScale = None, None, None
 
         for constraint in constraints:
 
+            # Cache rest values
+            #
+            if absolute:
+
+                restTranslate = constraint.tryGetAttr('restTranslate', default=None)
+                restRotate = constraint.tryGetAttr('restRotate', default=None)
+                restScale = constraint.tryGetAttr('restScale', default=None)
+
+            # Delete constraint
+            #
             constraint.delete()
+
+            # Restore rest values
+            #
+            if absolute:
+
+                if restTranslate is not None:
+
+                    self.setAttr('translate', restTranslate)
+
+                if restRotate is not None:
+
+                    self.setAttr('rotate', restRotate)
+
+                if restScale is not None:
+
+                    self.setAttr('scale', restScale)
 
     def addSpaceSwitch(self, spaces, **kwargs):
         """
