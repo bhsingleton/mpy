@@ -100,7 +100,7 @@ class MPyNode(mobjectwrapper.MObjectWrapper, metaclass=mabcmeta.MABCMeta):
 
         elif isinstance(apiType, (list, tuple)):
 
-            return any([dependNode.hasFn(x) for x in apiType])
+            return any(map(dependNode.hasFn, apiType))
 
         else:
 
