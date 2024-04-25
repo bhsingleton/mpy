@@ -404,9 +404,7 @@ class ConstraintMixin(transformmixin.TransformMixin):
             rotateOrder = self.getAttr('constraintRotateOrder')
             eulerRotation.reorderIt(rotateOrder)
 
-            self.setAttr('restRotateX', math.degrees(eulerRotation.x))
-            self.setAttr('restRotateY', math.degrees(eulerRotation.y))
-            self.setAttr('restRotateZ', math.degrees(eulerRotation.z))
+            self.setAttr('restRotate', eulerRotation, convertUnits=False)
 
         # Check if constraint has rest scale
         #
