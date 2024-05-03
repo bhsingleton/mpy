@@ -347,7 +347,7 @@ class DependencyMixin(mpynode.MPyNode):
         """
         Changes the unique identification value associated with this node.
 
-        :type uuid: str
+        :type uuid: Union[om.MUuid, str]
         :rtype: None
         """
 
@@ -358,7 +358,7 @@ class DependencyMixin(mpynode.MPyNode):
         Returns the reference node associated with this node.
         If this node is not referenced the none will be returned!
 
-        :rtype: mpynode.MPyNode
+        :rtype: Union[mpy.builtins.referencemixin.ReferenceMixin, None]
         """
 
         # Check if node is referenced
@@ -376,7 +376,7 @@ class DependencyMixin(mpynode.MPyNode):
         Finds the node opposite to this one.
         If no opposite is found then this node is returned instead!
 
-        :rtype: TransformMixin
+        :rtype: mpy.builtins.transformmixin.TransformMixin
         """
 
         # Check if mirror node is defined
@@ -400,9 +400,9 @@ class DependencyMixin(mpynode.MPyNode):
     def iterAttr(self, **kwargs):
         """
         Returns a generator that can iterate over attributes derived from this node.
-        This method piggybacks off of the maya command.
+        This method uses Maya's `listAttr` command since it performs faster than the alternative API methods?
 
-        :rtype: iter
+        :rtype: Iterator[om.MObject]
         """
 
         attributes = mc.listAttr(self.name(includeNamespace=True), **kwargs)
@@ -419,7 +419,7 @@ class DependencyMixin(mpynode.MPyNode):
         """
         Returns a list of attributes derived from this node.
 
-        :rtype: list[om.MObject]
+        :rtype: List[om.MObject]
         """
 
         return list(self.iterAttr(**kwargs))
