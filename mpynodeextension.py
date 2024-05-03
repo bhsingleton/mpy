@@ -1,6 +1,7 @@
 import inspect
 
-from dcc.maya.libs import attributeutils
+from maya.api import OpenMaya as om
+from dcc.maya.libs import attributeutils, plugutils
 from . import mpynode, mpyattribute
 from .abstract import mabcmeta
 
@@ -83,14 +84,14 @@ class MPyNodeExtension(mpynode.MPyNode, metaclass=mabcmeta.MABCMeta):
     def getUserAttributeDefinition(cls):
         """
         Returns the attribute definition for this extension class.
-        All attributes are nested under a compound metadata attribute!
+        Each attribute is categorizing by its associated extension class.
 
-        :rtype: Dict[str, Any]
+        :rtype: List[Dict[str, Any]]
         """
 
         # Iterate through bases
         #
-        definition = {'longName': 'metadata', 'attributeType': 'compound', 'children': []}
+        definitions = []
 
         for base in cls.iterBases():
 
@@ -114,27 +115,107 @@ class MPyNodeExtension(mpynode.MPyNode, metaclass=mabcmeta.MABCMeta):
 
                 # Create child-attribute definition
                 #
-                childDefinition = {'longName': value.name, 'shortName': value.name}
-                childDefinition.update(value.constructors)
+                definition = {'longName': value.name, 'shortName': value.name, 'category': base.__name__}
+                definition.update(value.constructors)
 
-                definition['children'].append(childDefinition)
+                definitions.append(definition)
 
-        return definition
+        return definitions
 
-    def ensureUserAttributes(self):
+    def findDeprecatedAttributes(self):
         """
-        Ensures that the user attributes exist on this node.
+        Returns a list of deprecated attributes.
+
+        :rtype: List[om.MObject]
+        """
+
+        fnAttribute = om.MFnAttribute()
+        categories = [base.__name__ for base in self.iterBases()]
+        exceptions = ['notes', 'attributeAliasList']
+
+        deprecated = []
+
+        for attribute in self.listAttr(userDefined=True):
+
+            fnAttribute.setObject(attribute)
+            hasCategory = any([fnAttribute.hasCategory(category) for category in categories])
+            isException = fnAttribute.name in exceptions
+
+            if not (hasCategory or isException):
+
+                deprecated.append(attribute)
+
+            else:
+
+                continue
+
+        return deprecated
+
+    def removeDeprecatedAttributes(self):
+        """
+        Removes any deprecated attributes from this node.
 
         :rtype: None
         """
 
+        # Iterate through known attributes
+        #
+        deprecatedAttributes = self.findDeprecatedAttributes()
+
+        for attribute in deprecatedAttributes:
+
+            # Break any connections
+            #
+            plug = self.findPlug(attribute)
+            plugutils.breakConnections(plug)
+
+            # Remove attribute from node
+            #
+            log.info(f'Removing deprecated attribute: {plug.info}')
+            self.removeAttr(attribute)
+
+    def ensureUserAttributes(self):
+        """
+        Ensures that all required user attributes exist on this node.
+
+        :rtype: None
+        """
+
+        # Remove deprecated attributes
+        #
+        self.removeDeprecatedAttributes()
+
         # Merge missing attributes
         #
-        definition = self.getUserAttributeDefinition()
-        attributeutils.addAttribute(self.object(), **definition)
+        attributeDefinition = self.getUserAttributeDefinition()
+
+        for attributeSpec in attributeDefinition:
+
+            attributeutils.addAttribute(self.object(), **attributeSpec)
 
         # Update extension pointers
         #
         self.extensionName = self.__class__.__bases__[-1].__name__
         self.extensionPath = self.__class__.__bases__[-1].__module__
+
+    def revertUserAttributes(self):
+        """
+        Reverts any user attributes associated with this extension.
+
+        :rtype: None
+        """
+
+        attributeDefinition = self.getUserAttributeDefinition()
+
+        for attributeSpec in attributeDefinition:
+
+            attributeName = attributeSpec['longName']
+            hasAttribute = self.hasAttr(attributeName)
+
+            if not hasAttribute:
+
+                continue
+
+            attribute = self.attribute(attributeName)
+            self.removeAttr(attribute)
     # endregion

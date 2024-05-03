@@ -162,15 +162,9 @@ class MPyNode(mobjectwrapper.MObjectWrapper, metaclass=mabcmeta.MABCMeta):
 
             return
 
-        # Remove extension related attributes
+        # Revert extension changes and update class
         #
-        plug = self.findPlug('metadata')
-
-        self.breakConnections(plug, recursive=True)
-        self.removeAttr(plug.attribute())
-
-        # Update class
-        #
+        self.revertUserAttributes()
         self.__class__ = self.scene.getClass(self.object())
 
     def delete(self):
