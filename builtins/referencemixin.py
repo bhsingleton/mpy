@@ -101,7 +101,7 @@ class ReferenceMixin(dependencymixin.DependencyMixin):
         """
         Returns the nodes that belong to this reference.
 
-        :rtype: list[om.MObject]
+        :rtype: List[om.MObject]
         """
 
         return self.functionSet().nodes()
