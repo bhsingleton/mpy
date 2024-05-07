@@ -30,7 +30,12 @@ class ShapeMixin(dagmixin.DagMixin):
         :rtype: bool
         """
 
-        return self.dagPath().getDrawOverrideInfo().displayType == om.MDAGDrawOverrideInfo.kDisplayTypeNormal
+        isNormal = not self.template
+
+        drawOverrideInfo = self.dagPath().getDrawOverrideInfo()
+        isOverrideNormal = drawOverrideInfo.displayType == om.MDAGDrawOverrideInfo.kDisplayTypeNormal
+
+        return isNormal and isOverrideNormal
 
     def controlPoints(self):
         """
