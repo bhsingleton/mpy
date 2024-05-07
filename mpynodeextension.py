@@ -21,7 +21,9 @@ class MPyNodeExtension(mpynode.MPyNode, metaclass=mabcmeta.MABCMeta):
     extensionPath = mpyattribute.MPyAttribute('__module__', attributeType='str')
     # endregion
 
-    # region Methods
+    # region Dunderscores
+    __attribute_exceptions__ = ('notes', 'attributeAliasList')
+
     def __post_init__(self, *args, **kwargs):
         """
         Private method called after a new instance has been initialized.
@@ -130,18 +132,17 @@ class MPyNodeExtension(mpynode.MPyNode, metaclass=mabcmeta.MABCMeta):
         """
 
         fnAttribute = om.MFnAttribute()
-        categories = [base.__name__ for base in self.iterBases()]
-        exceptions = ['notes', 'attributeAliasList']
+        accepted = [attributeSpec['longName'] for attributeSpec in self.getUserAttributeDefinition()]
 
         deprecated = []
 
         for attribute in self.listAttr(userDefined=True):
 
             fnAttribute.setObject(attribute)
-            hasCategory = any([fnAttribute.hasCategory(category) for category in categories])
-            isException = fnAttribute.name in exceptions
+            isAccepted = fnAttribute.name in accepted
+            isException = fnAttribute.name in self.__attribute_exceptions__
 
-            if not (hasCategory or isException):
+            if not (isAccepted or isException):
 
                 deprecated.append(attribute)
 
