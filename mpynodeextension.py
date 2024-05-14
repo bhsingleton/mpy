@@ -199,6 +199,8 @@ class MPyNodeExtension(mpynode.MPyNode, metaclass=mabcmeta.MABCMeta):
         self.extensionName = self.__class__.__bases__[-1].__name__
         self.extensionPath = self.__class__.__bases__[-1].__module__
 
+        self.lockAttr('__class__', '__module__')
+
     def revertUserAttributes(self):
         """
         Reverts any user attributes associated with this extension.
