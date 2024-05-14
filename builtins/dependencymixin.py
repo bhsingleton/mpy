@@ -799,12 +799,13 @@ class DependencyMixin(mpynode.MPyNode):
 
         return animCurve
 
-    def mirrorAttr(self, plug, pull=False, includeKeys=False, animationRange=None, insertAt=None):
+    def mirrorAttr(self, plug, inverse=False, pull=False, includeKeys=False, animationRange=None, insertAt=None):
         """
         Mirrors the supplied plug to the opposite node.
         If no node is found opposite to this node then itself is used instead!
 
         :type plug: om.MPlug
+        :type inverse: bool
         :type pull: bool
         :type includeKeys: bool
         :type animationRange: Union[Tuple[int, int], None]
@@ -823,22 +824,22 @@ class DependencyMixin(mpynode.MPyNode):
 
         # Get mirror flag for plug
         #
-        plugName = plug.partialName(useLongNames=True, useFullAttributePath=True)
+        plugName = plug.partialName(useLongNames=True, useFullAttributePath=False)
         otherPlug = otherNode.findPlug(plugName)
 
-        mirrorFlag = 'mirror{name}'.format(name=stringutils.titleize(plugName))
-        mirrorEnabled = self.userProperties.get(mirrorFlag, False)
+        mirrorKey = 'mirror{name}'.format(name=stringutils.titleize(plugName))
+        isInverted = self.userProperties.get(mirrorKey, inverse)
 
         # Inverse value and update other node
         #
-        log.debug('Mirroring "%s" > "%s"' % (plug.info, otherPlug.info))
+        log.debug(f'Mirroring "{plug.info}" > "{otherPlug.info}"')
 
         if pull:
 
             # Mirror the other value to this node
             #
             value = otherNode.getAttr(otherPlug)
-            value *= -1.0 if mirrorEnabled else 1.0
+            value *= -1.0 if isInverted else 1.0
 
             self.setAttr(plug, value)
 
@@ -857,7 +858,7 @@ class DependencyMixin(mpynode.MPyNode):
             # Mirror this value to the other node
             #
             value = self.getAttr(plug)
-            value *= -1.0 if mirrorEnabled else 1.0
+            value *= -1.0 if isInverted else 1.0
 
             otherNode.setAttr(plugName, value)
 
