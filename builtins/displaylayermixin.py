@@ -162,4 +162,17 @@ class DisplayLayerMixin(dependencymixin.DependencyMixin):
         for node in nodes:
 
             self.removeNode(node)
+
+    def clearNodes(self):
+        """
+        Removes all nodes from this layer.
+
+        :rtype: None
+        """
+
+        nodes = self.nodes()
+
+        for node in reversed(nodes):
+
+            self.removeNode(node)
     # endregion
