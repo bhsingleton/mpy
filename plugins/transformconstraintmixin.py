@@ -52,22 +52,14 @@ class TransformConstraintMixin(constraintmixin.ConstraintMixin):
     }
 
     __inputs__ = {
-        'constraintRotatePivotX': 'rotatePivotX',
-        'constraintRotatePivotY': 'rotatePivotY',
-        'constraintRotatePivotZ': 'rotatePivotZ',
-        'constraintRotatePivotTranslateX': 'rotatePivotTranslateX',
-        'constraintRotatePivotTranslateY': 'rotatePivotTranslateY',
-        'constraintRotatePivotTranslateZ': 'rotatePivotTranslateZ',
         'constraintRotateOrder': 'rotateOrder',
         'constraintJointOrientX': 'jointOrientX',
         'constraintJointOrientY': 'jointOrientY',
         'constraintJointOrientZ': 'jointOrientZ',
-        'constraintScalePivotX': 'scalePivotX',
-        'constraintScalePivotY': 'scalePivotY',
-        'constraintScalePivotZ': 'scalePivotZ',
-        'constraintScalePivotTranslateX': 'scalePivotTranslateX',
-        'constraintScalePivotTranslateY': 'scalePivotTranslateY',
-        'constraintScalePivotTranslateZ': 'scalePivotTranslateZ',
+        'constraintSegmentScaleCompensate': 'segmentScaleCompensate',
+        'constraintInverseScaleX': 'inverseScaleX',
+        'constraintInverseScaleY': 'inverseScaleY',
+        'constraintInverseScaleZ': 'inverseScaleZ',
         'constraintParentInverseMatrix': 'parentInverseMatrix'
     }
 
