@@ -49,6 +49,7 @@ class JointMixin(transformmixin.TransformMixin):
 
         # Call parent method
         #
+        parent = om.MObject.kNullObj if (parent is None) else parent
         super(JointMixin, self).setParent(parent, absolute=absolute)
 
         # Check if inverse-scale is required
