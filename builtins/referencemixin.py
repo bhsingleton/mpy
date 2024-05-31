@@ -48,7 +48,7 @@ class ReferenceMixin(dependencymixin.DependencyMixin):
         Setter method used to change the lock state on this node.
 
         :type isLocked: bool
-        :rtype: bool
+        :rtype: None
         """
 
         om.MFnDependencyNode(self.object()).isLocked = isLocked  # Bypasses lock restrictions on `MFnReference` function set!
