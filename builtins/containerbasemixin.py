@@ -174,21 +174,22 @@ class ContainerBaseMixin(dependencymixin.DependencyMixin):
         :rtype: None
         """
 
-        # Lock container to prevent Maya from deleting it!
+        # Delete members from hyper layout
+        # Make sure to lock container to prevent Maya from deleting it!
         #
         self.lock()
 
-        # Delete members from hyper layout
-        #
         if self.hasHyperLayout():
 
             hyperLayout = self.getHyperLayout()
             hyperLayout.deleteMembers()
             hyperLayout.delete()
 
-        # Unlock container so we can edit it again
-        #
         self.unlock()
+
+        # Reset published node info
+        #
+        self.resetPublishedNodeInfo()
 
     def publishNode(self, node, index=None, alias=None):
         """
