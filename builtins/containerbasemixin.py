@@ -519,7 +519,11 @@ class ContainerBaseMixin(dependencymixin.DependencyMixin):
 
             return
 
-        # Remove all plug indices
+        # Reset plug aliases
+        #
+        self.clearAliases()
+
+        # Remove all plug elements
         #
         plug = self.findPlug('publishedNodeInfo')
         indices = plug.getExistingArrayAttributeIndices()
