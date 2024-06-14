@@ -38,13 +38,13 @@ class Operation(IntEnum):
     TRUNC = 21
 
 
-class LinearMathMixin(dependencymixin.DependencyMixin):
+class FloatMathMixin(dependencymixin.DependencyMixin):
     """
-    Overload of `DependencyMixin` that interfaces with linear-math nodes.
+    Overload of `DependencyMixin` that interfaces with float-math nodes.
     """
 
     # region Dunderscores
-    __plugin__ = 'linearMath'
+    __plugin__ = 'floatMath'
     # endregion
 
     # region Enums
@@ -61,5 +61,8 @@ class LinearMathMixin(dependencymixin.DependencyMixin):
     inAngleB = mpyattribute.MPyAttribute('inAngleB')
     inTimeA = mpyattribute.MPyAttribute('inTimeA')
     inTimeB = mpyattribute.MPyAttribute('inTimeB')
-    output = mpyattribute.MPyAttribute('output')
+    outFloat = mpyattribute.MPyAttribute('outFloat')
+    outDistance = mpyattribute.MPyAttribute('outDistance')
+    outAngle = mpyattribute.MPyAttribute('outAngle')
+    outTime = mpyattribute.MPyAttribute('outTime')
     # endregion
