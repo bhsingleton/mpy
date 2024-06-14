@@ -18,21 +18,8 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
     """
 
     # region Attributes
-    visibility = mpyattribute.MPyAttribute('visibility')
-    template = mpyattribute.MPyAttribute('template')
-    ghosting = mpyattribute.MPyAttribute('ghosting')
-    ghostColorPost = mpyattribute.MPyAttribute('ghostColorPost')
-    ghostColorPre = mpyattribute.MPyAttribute('ghostColorPre')
-    ghostCustomSteps = mpyattribute.MPyAttribute('ghostCustomSteps')
-    ghostDriver = mpyattribute.MPyAttribute('ghostDriver')
-    ghostFrames = mpyattribute.MPyAttribute('ghostFrames')
-    ghostingMode = mpyattribute.MPyAttribute('ghostingMode')
-    ghostOpacityRange = mpyattribute.MPyAttribute('ghostOpacityRange')
-    useObjectColor = mpyattribute.MPyAttribute('useObjectColor')
-    objectColor = mpyattribute.MPyAttribute('objectColor')
-    objectColorRGB = mpyattribute.MPyAttribute('objectColorRGB')
-    wireColorRGB = mpyattribute.MPyAttribute('wireColorRGB')
-    hiddenInOutliner = mpyattribute.MPyAttribute('hiddenInOutliner')
+    boundingBox = mpyattribute.MPyAttribute('boundingBox')
+    center = mpyattribute.MPyAttribute('center')
     drawOverride = mpyattribute.MPyAttribute('drawOverride')
     overrideDisplayType = mpyattribute.MPyAttribute('overrideDisplayType')
     overrideLevelOfDetail = mpyattribute.MPyAttribute('overrideLevelOfDetail')
@@ -46,6 +33,23 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
     overrideColor = mpyattribute.MPyAttribute('overrideColor')
     overrideColorRGB = mpyattribute.MPyAttribute('overrideColorRGB')
     overrideColorA = mpyattribute.MPyAttribute('overrideColorA')
+    ghosting = mpyattribute.MPyAttribute('ghosting')
+    ghostColorPost = mpyattribute.MPyAttribute('ghostColorPost')
+    ghostColorPre = mpyattribute.MPyAttribute('ghostColorPre')
+    ghostCustomSteps = mpyattribute.MPyAttribute('ghostCustomSteps')
+    ghostDriver = mpyattribute.MPyAttribute('ghostDriver')
+    ghostFrames = mpyattribute.MPyAttribute('ghostFrames')
+    ghostingMode = mpyattribute.MPyAttribute('ghostingMode')
+    ghostOpacityRange = mpyattribute.MPyAttribute('ghostOpacityRange')
+    template = mpyattribute.MPyAttribute('template')
+    lodVisibility = mpyattribute.MPyAttribute('lodVisibility')
+    selectionChildHighlighting = mpyattribute.MPyAttribute('selectionChildHighlighting')
+    useObjectColor = mpyattribute.MPyAttribute('useObjectColor')
+    objectColor = mpyattribute.MPyAttribute('objectColor')
+    objectColorRGB = mpyattribute.MPyAttribute('objectColorRGB')
+    visibility = mpyattribute.MPyAttribute('visibility')
+    wireColorRGB = mpyattribute.MPyAttribute('wireColorRGB')
+    hiddenInOutliner = mpyattribute.MPyAttribute('hiddenInOutliner')
     # endregion
 
     # region Dunderscores
@@ -87,6 +91,29 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
         """
 
         return self.nodeClass(), (self.fullPathName(),)
+    # endregion
+
+    # region Properties
+    @property
+    def isIntermediateObject(self):
+        """
+        Getter method that returns the intermediate object flag.
+
+        :rtype: bool
+        """
+
+        return self.functionSet().isIntermediateObject
+
+    @isIntermediateObject.setter
+    def isIntermediateObject(self, isIntermediateObject):
+        """
+        Setter method that updates the intermediate object flag.
+
+        :type isIntermediateObject: bool
+        :rtype: None
+        """
+
+        self.setAttr('intermediateObject', isIntermediateObject)  # For some reason the function set property is read-only???
     # endregion
 
     # region Methods
@@ -143,16 +170,6 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
         """
 
         return self.dagPath().isVisible()
-
-    @property
-    def isIntermediateObject(self):
-        """
-        Getter method that evaluates if this is an intermediate object.
-
-        :rtype: bool
-        """
-
-        return self.functionSet().isIntermediateObject
 
     def inclusiveMatrix(self):
         """
