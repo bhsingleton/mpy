@@ -223,6 +223,15 @@ class DependencyMixin(mpynode.MPyNode):
 
         return dagutils.renameNode(self.object(), newName)
 
+    def fullPathName(self):
+        """
+        Returns the full path to this node.
+
+        :rtype: str
+        """
+
+        return self.absoluteName()
+
     def namespace(self):
         """
         Returns the namespace this node belongs to.
@@ -299,16 +308,38 @@ class DependencyMixin(mpynode.MPyNode):
 
     def isSelected(self):
         """
-        Method used to check if this object is currently selected.
+        Evaluates if this object is currently selected.
 
         :rtype: bool
         """
 
         return om.MGlobal.getActiveSelectionList().hasItem(self.object())
 
+    def duplicate(self, name=''):
+        """
+        Returns a duplicate of this node.
+        FIXME: This method
+
+        :type name: str
+        :rtype: DependencyMixin
+        """
+
+        return self.scene(
+            mc.duplicate(
+                self.fullPathName(),
+                name=name,
+                fullPath=True,
+                inputConnections=False,
+                instanceLeaf=False,
+                parentOnly=True,
+                transformsOnly=False,
+                upstreamNodes=False
+            )[0]
+        )
+
     def lock(self):
         """
-        Method used to lock this node and prevent user changes.
+        Locks this node.
 
         :rtype: None
         """
@@ -317,7 +348,7 @@ class DependencyMixin(mpynode.MPyNode):
 
     def unlock(self):
         """
-        Method used to unlock this node and allow the user to edit the node.
+        Unlocks this node.
 
         :rtype: None
         """
@@ -915,7 +946,7 @@ class DependencyMixin(mpynode.MPyNode):
     def getAliases(self):
         """
         Returns a dictionary of aliases from this node.
-        The keys represent the aliases whereas the values represent the original name.
+        The keys represent the aliases whereas the values represent the original plug name.
 
         :rtype: Dict[str, str]
         """
@@ -950,6 +981,20 @@ class DependencyMixin(mpynode.MPyNode):
         # Remove any aliases from plug
         #
         return plugutils.removeAlias(plug)
+
+    def clearAliases(self):
+        """
+        Removes all aliases from this node.
+
+        :rtype: None
+        """
+
+        aliases = self.getAliases()
+
+        for (alias, plugName) in aliases.items():
+
+            plug = self.findPlug(plugName)
+            self.removeAlias(plug)
 
     def attribute(self, name):
         """
