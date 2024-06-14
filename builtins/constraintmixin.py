@@ -4,7 +4,7 @@ from maya import cmds as mc
 from maya.api import OpenMaya as om
 from abc import abstractmethod
 from dcc.python import stringutils
-from dcc.maya.libs import transformutils, plugutils
+from dcc.maya.libs import transformutils, plugutils, plugmutators
 from . import transformmixin
 from .. import mpyattribute
 
@@ -612,7 +612,8 @@ class ConstraintTarget(object):
         :rtype: float
         """
 
-        return self.plug('targetWeight').asFloat()
+        plug = self.plug('targetWeight')
+        return plugmutators.getValue(plug)
 
     def setWeight(self, weight):
         """
@@ -622,14 +623,23 @@ class ConstraintTarget(object):
         :rtype: None
         """
 
-        self.plug('targetWeight').source().setFloat(weight)
+        plug = self.plug('targetWeight')
+
+        if plug.isDestination:
+
+            source = plug.source()
+            plugmutators.setValue(source, weight)
+
+        else:
+
+            plugmutators.setValue(plug, weight)
 
     def targetObject(self):
         """
         Returns the target object driving this constraint channel.
-        If no source connection is found then none will be returned!
+        If no source connection is found then None will be returned!
 
-        :rtype: mpynode.MPyNode
+        :rtype: Union[mpynode.MPyNode, None]
         """
 
         plug = self.plug('targetParentMatrix')
@@ -651,7 +661,8 @@ class ConstraintTarget(object):
 
         if self.constraint.hasAttr('targetRotateOrder'):
 
-            return self.plug('targetRotateOrder').asInt()
+            plug = self.plug('targetRotateOrder')
+            return plugmutators.getValue(plug)
 
         else:
 
@@ -668,14 +679,8 @@ class ConstraintTarget(object):
         #
         if self.constraint.hasAttr('targetOffsetTranslate'):
         
-            translatePlug = self.plug('targetOffsetTranslate')
-            translateXPlug, translateYPlug, translateZPlug = translatePlug.child(0), translatePlug.child(1), translatePlug.child(2)
-    
-            return om.MVector(
-                translateXPlug.asMDistance().asCentimeters(),
-                translateYPlug.asMDistance().asCentimeters(),
-                translateZPlug.asMDistance().asCentimeters()
-            )
+            plug = self.plug('targetOffsetTranslate')
+            return om.MVector(plugmutators.getValue(plug))
         
         else:
             
@@ -688,21 +693,16 @@ class ConstraintTarget(object):
         :type translation: om.MVector
         :rtype: None
         """
-        
+
         # Check if attribute exists
         #
-        if not self.constraint.hasAttr('targetOffsetTranslate'):
-            
-            return
-        
-        # Update plug values
-        #
-        translatePlug = self.plug('targetOffsetTranslate')
-        translateXPlug, translateYPlug, translateZPlug = translatePlug.child(0), translatePlug.child(1), translatePlug.child(2)
+        if self.constraint.hasAttr('targetOffsetTranslate'):
 
-        translateXPlug.setMDistance(om.MDistance(translation.x, unit=om.MDistance.kCentimeters))
-        translateYPlug.setMDistance(om.MDistance(translation.y, unit=om.MDistance.kCentimeters))
-        translateZPlug.setMDistance(om.MDistance(translation.z, unit=om.MDistance.kCentimeters))
+            plugmutators.setValue(self.plug('targetOffsetTranslate'), translation)
+
+        else:
+
+            log.debug(f'Cannot locate offset-translate on {self.constraint} constraint!')
 
     def targetOffsetRotate(self):
         """
@@ -714,16 +714,12 @@ class ConstraintTarget(object):
         # Check if attribute exists
         #
         if self.constraint.hasAttr('targetOffsetRotate'):
-            
-            rotatePlug = self.plug('targetOffsetRotate')
-            rotateXPlug, rotateYPlug, rotateZPlug = rotatePlug.child(0), rotatePlug.child(1), rotatePlug.child(2)
-    
-            return om.MEulerRotation(
-                rotateXPlug.asMAngle().asRadians(),
-                rotateYPlug.asMAngle().asRadians(),
-                rotateZPlug.asMAngle().asRadians(),
-                order=self.targetRotateOrder()
-            )
+
+            plug = self.plug('targetOffsetRotate')
+            angles = plugmutators.getValue(plug)
+            order = self.targetRotateOrder()
+
+            return om.MEulerRotation(tuple(map(math.radians, angles)), order=order)
         
         else:
             
@@ -740,7 +736,8 @@ class ConstraintTarget(object):
         # Check if attribute exists
         #
         if not self.constraint.hasAttr('targetOffsetRotate'):
-            
+
+            log.debug(f'Cannot locate offset-rotate on {self.constraint} constraint!')
             return
 
         # Check if rotation requires reordering
@@ -751,14 +748,9 @@ class ConstraintTarget(object):
 
             rotation = rotation.reorder(rotateOrder)
 
-        # Update plug values
+        # Update plug value
         #
-        rotatePlug = self.plug('targetOffsetRotate')
-        rotateXPlug, rotateYPlug, rotateZPlug = rotatePlug.child(0), rotatePlug.child(1), rotatePlug.child(2)
-
-        rotateXPlug.setMAngle(om.MAngle(rotation.x, unit=om.MAngle.kRadians))
-        rotateYPlug.setMAngle(om.MAngle(rotation.y, unit=om.MAngle.kRadians))
-        rotateZPlug.setMAngle(om.MAngle(rotation.z, unit=om.MAngle.kRadians))
+        plugmutators.setValue(self.plug('targetOffsetRotate'), rotation, convertUnits=False)
 
     def targetOffsetScale(self):
         """
@@ -771,15 +763,9 @@ class ConstraintTarget(object):
         # Check if attribute exists
         #
         if self.constraint.hasAttr('targetOffsetScale'):
-                
-            scalePlug = self.plug('targetOffsetScale')
-            scaleXPlug, scaleYPlug, scaleZPlug = scalePlug.child(0), scalePlug.child(1), scalePlug.child(2)
-    
-            return om.MVector(
-                scaleXPlug.asDouble(),
-                scaleYPlug.asDouble(),
-                scaleZPlug.asDouble()
-            )
+
+            plug = self.plug('targetOffsetScale')
+            return om.MVector(plugmutators.getValue(plug))
         
         else:
             
@@ -795,18 +781,13 @@ class ConstraintTarget(object):
 
         # Check if attribute exists
         #
-        if not self.constraint.hasAttr('targetOffsetScale'):
-            
-            return
+        if self.constraint.hasAttr('targetOffsetScale'):
 
-        # Update plug values
-        #
-        scalePlug = self.plug('targetOffsetScale')
-        scaleXPlug, scaleYPlug, scaleZPlug = scalePlug.child(0), scalePlug.child(1), scalePlug.child(2)
+            plugmutators.setValue(self.plug('targetOffsetScale'), scale)
 
-        scaleXPlug.setDouble(scale[0])
-        scaleYPlug.setDouble(scale[1])
-        scaleZPlug.setDouble(scale[2])
+        else:
+
+            log.debug(f'Cannot locate offset-scale on {self.constraint} constraint!')
 
     def resetTargetOffsets(self):
         """
@@ -815,7 +796,17 @@ class ConstraintTarget(object):
         :rtype: None
         """
 
-        self.setTargetOffsetTranslate(om.MVector.kZeroVector)
-        self.setTargetOffsetRotate(om.MEulerRotation.kIdentity)
-        self.setTargetOffsetScale(om.MVector.kOneVector)
+        # Evaluate offset type
+        # Some constraints, like `pointConstraint` use a global offset vs `parentConstraint` that uses individual component offsets!
+        #
+        if self.constraint.hasAttr('offset'):
+
+            identity = (1.0, 1.0, 1.0) if self.constraint.hasFn(om.MFn.kScaleConstraint) else (0.0, 0.0, 0.0)
+            plugmutators.setValue(self.constraint['offset'], identity)
+
+        else:
+
+            self.setTargetOffsetTranslate(om.MVector.kZeroVector)
+            self.setTargetOffsetRotate(om.MEulerRotation.kIdentity)
+            self.setTargetOffsetScale(om.MVector.kOneVector)
     # endregion
