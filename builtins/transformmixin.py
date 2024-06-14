@@ -923,6 +923,31 @@ class TransformMixin(dagmixin.DagMixin):
 
         return spaceSwitch
 
+    def addCurve(self, controlPoints, degree=1, form=om.MFnNurbsCurve.kOpen):
+        """
+        Adds a nurbs curve from the supplied control points.
+
+        :type controlPoints: List[om.MVector]
+        :type degree: int
+        :type form: om.MFnNurbsCurve.Form
+        :rtype: om.MObject
+        """
+
+        curve = shapeutils.createCurveFromPoints(
+            controlPoints=controlPoints,
+            degree=degree,
+            form=form,
+            parent=self.object()
+        )
+
+        if not curve.isNull():
+
+            return self.scene(curve)
+
+        else:
+
+            return None
+
     def addShape(self, shape, **kwargs):
         """
         Adds the specified shape to this transform node.
@@ -937,7 +962,7 @@ class TransformMixin(dagmixin.DagMixin):
         """
 
         filePath = self.scene.getAbsoluteShapePath(shape)
-        shapes = mshapeparser.loadShapeTemplate(filePath, parent=self.object(), **kwargs)
+        shapes = mshapeparser.load(filePath, parent=self.object(), **kwargs)
 
         return list(map(self.scene.__call__, shapes))
 
@@ -1138,22 +1163,6 @@ class TransformMixin(dagmixin.DagMixin):
                 log.info(f'Renaming {originalName} > {newName}')
                 shape.setName(newName)
 
-    def removeShapes(self):
-        """
-        Removes all shapes underneath this transform.
-        This method is NOT undoable!
-
-        :rtype: None
-        """
-
-        # Iterate through shapes
-        #
-        shapes = self.shapes()
-
-        for shape in shapes:
-
-            shape.delete()
-
     def colorizeShapes(self, **kwargs):
         """
         Colorizes all the shape nodes below this transform.
@@ -1169,4 +1178,50 @@ class TransformMixin(dagmixin.DagMixin):
         for shape in self.iterShapes():
 
             shapeutils.colorizeShape(shape.object(), **kwargs)
+
+    def saveShapes(self, filePath):
+        """
+        Saves the shapes from this transform node to the specified file path.
+
+        :type filePath: str
+        :rtype: None
+        """
+
+        mshapeparser.dump(self.object(), filePath)
+
+    def dumpShapes(self):
+        """
+        Dumps the shapes from this transform node into a JSON serializable string.
+
+        :rtype: str
+        """
+
+        return mshapeparser.dumps(self.object())
+
+    def loadShapes(self, string, **kwargs):
+        """
+        Loads the shapes from the supplied JSON string onto this transform node.
+
+        :type string: str
+        :rtype: List[mpy.builtins.shapemixin.ShapeMixin]
+        """
+
+        shapes = mshapeparser.loads(string, parent=self.object(), **kwargs)
+        return list(map(self.scene.__call__, shapes))
+
+    def removeShapes(self):
+        """
+        Removes all shapes underneath this transform.
+        This method is NOT undoable!
+
+        :rtype: None
+        """
+
+        # Iterate through shapes
+        #
+        shapes = self.shapes()
+
+        for shape in shapes:
+
+            shape.delete()
     # endregion
