@@ -18,8 +18,6 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
     """
 
     # region Attributes
-    boundingBox = mpyattribute.MPyAttribute('boundingBox')
-    center = mpyattribute.MPyAttribute('center')
     drawOverride = mpyattribute.MPyAttribute('drawOverride')
     overrideDisplayType = mpyattribute.MPyAttribute('overrideDisplayType')
     overrideLevelOfDetail = mpyattribute.MPyAttribute('overrideLevelOfDetail')
