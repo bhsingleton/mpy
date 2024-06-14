@@ -237,6 +237,7 @@ class ConstraintMixin(transformmixin.TransformMixin):
             longName=attributeName,
             attributeType='double',
             min=0.0,
+            max=1.0,
             default=1.0,
             keyable=True,
             cachedInternally=True,
