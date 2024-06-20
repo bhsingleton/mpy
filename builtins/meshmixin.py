@@ -7,6 +7,7 @@ from six import string_types
 from six.moves import collections_abc
 from dcc.maya.libs import dagutils
 from . import shapemixin
+from .. import mpyattribute
 
 import logging
 logging.basicConfig()
@@ -1560,6 +1561,32 @@ class MeshMixin(shapemixin.ShapeMixin):
     """
     Overload of `ShapeMixin` that interfaces with mesh nodes.
     """
+
+    # region Attributes
+    displayBorders = mpyattribute.MPyAttribute('displayBorders')
+    displayCenter = mpyattribute.MPyAttribute('displayCenter')
+    displayEdges = mpyattribute.MPyAttribute('displayEdges')
+    displayFacesWithGroupId = mpyattribute.MPyAttribute('displayFacesWithGroupId')
+    displayInvisibleFaces = mpyattribute.MPyAttribute('displayInvisibleFaces')
+    displayMapBorders = mpyattribute.MPyAttribute('displayMapBorders ')
+    displayNormal = mpyattribute.MPyAttribute('displayNormal')
+    normalSize = mpyattribute.MPyAttribute('normalSize')
+    normalType = mpyattribute.MPyAttribute('normalType')
+    displayItemNumbers = mpyattribute.MPyAttribute('displayItemNumbers')
+    dispResolution = mpyattribute.MPyAttribute('dispResolution')
+    displayTangent = mpyattribute.MPyAttribute('displayTangent')
+    displayTriangles = mpyattribute.MPyAttribute('displayTriangles')
+    displayUVs = mpyattribute.MPyAttribute('displayUVs')
+    displayVertices = mpyattribute.MPyAttribute('displayVertices')
+    displayNonPlanar = mpyattribute.MPyAttribute('displayNonPlanar')
+    displayRedColorChannel = mpyattribute.MPyAttribute('displayRedColorChannel')
+    displayBlueColorChannel = mpyattribute.MPyAttribute('displayBlueColorChannel')
+    displayGreenColorChannel = mpyattribute.MPyAttribute('displayGreenColorChannel')
+    displayAlphaAsGreyScale = mpyattribute.MPyAttribute('displayAlphaAsGreyScale')
+    displayColorAsGreyScale = mpyattribute.MPyAttribute('displayColorAsGreyScale')
+    displaySmoothMesh = mpyattribute.MPyAttribute('displaySmoothMesh')
+    displaySubdComps = mpyattribute.MPyAttribute('displaySubdComps')
+    # endregion
 
     # region Dunderscores
     __api_type__ = om.MFn.kMesh
