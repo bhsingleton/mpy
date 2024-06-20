@@ -923,14 +923,14 @@ class TransformMixin(dagmixin.DagMixin):
 
         return spaceSwitch
 
-    def addCurve(self, controlPoints, degree=1, form=om.MFnNurbsCurve.kOpen):
+    def addCurve(self, controlPoints, degree=1, form=om.MFnNurbsCurve.kOpen, **kwargs):
         """
         Adds a nurbs curve from the supplied control points.
 
         :type controlPoints: List[om.MVector]
-        :type degree: int
+        :type degree: om.MFnNurbsCurve.Form
         :type form: om.MFnNurbsCurve.Form
-        :rtype: om.MObject
+        :rtype: mpy.builtins.nurbscurvemixin.NurbsCurveMixin
         """
 
         curve = shapeutils.createCurveFromPoints(
@@ -942,7 +942,10 @@ class TransformMixin(dagmixin.DagMixin):
 
         if not curve.isNull():
 
-            return self.scene(curve)
+            curve = self.scene(curve)
+            shapeutils.colorizeShape(curve.object(), **kwargs)
+
+            return curve
 
         else:
 
