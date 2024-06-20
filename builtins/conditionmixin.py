@@ -24,7 +24,7 @@ class Operation(IntEnum):
 
 class ConditionMixin(dependencymixin.DependencyMixin):
     """
-    Overload of `ConditionMixin` that interfaces with condition nodes.
+    Overload of `DependencyMixin` that interfaces with condition nodes.
     """
 
     # region Dunderscores
