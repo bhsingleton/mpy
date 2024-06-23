@@ -59,7 +59,7 @@ class AnimLayerMixin(dependencymixin.DependencyMixin):
         :rtype: List[AnimLayerMixin]
         """
 
-        return list(map(self.scene, animutils.getAnimLayerChildren(self.object())))
+        return list(map(self.scene.__call__, animutils.getAnimLayerChildren(self.object())))
 
     def members(self):
         """
@@ -70,45 +70,14 @@ class AnimLayerMixin(dependencymixin.DependencyMixin):
 
         return animutils.getAnimLayerMembers(self.object())
 
-    def getAssociatedAnimCurve(self, member):
+    def getAssociatedAnimCurve(self, member, create=False):
         """
         Returns the anim-curve associated with the supplied member.
 
         :type member: om.MPlug
+        :type create: bool
         :rtype: mpy.builtins.animcurvemixin.AnimCurveMixin
         """
 
-        # Find blend node associated with this layer
-        #
-        layer = self.object()
-        blends = animutils.getMemberBlends(member)
-
-        inputPlug = None
-
-        if self.isTopLevelParent():
-
-            inputPlug = plugutils.findPlug(blends[0], 'inputA')
-
-        else:
-
-            attribute = attributeutils.findAttribute(layer, 'blendNodes')
-            animLayers = [plugutils.findConnectedMessage(blend, attribute=attribute).node() for blend in blends]
-
-            index = animLayers.index(layer)
-            inputPlug = plugutils.findPlug(blends[index], 'inputB')
-
-        # Check if this is a compound plug
-        # If so, then get the corresponding indexed child plug
-        #
-        if inputPlug.isCompound:
-
-            inputChildren = list(plugutils.iterChildren(inputPlug))
-            plugChildren = list(plugutils.iterChildren(member.parent()))
-            index = plugChildren.index(member)
-
-            return inputChildren[index]
-
-        else:
-
-            return inputPlug
+        return self.scene(animutils.findAnimCurve(member, animLayer=self.object(), create=create))
     # endregion
