@@ -182,6 +182,12 @@ class MPyNodeExtension(mpynode.MPyNode, metaclass=mabcmeta.MABCMeta):
         :rtype: None
         """
 
+        # Check if node is referenced
+        #
+        if self.isFromReferencedFile:
+
+            return  # We don't want any unnecessary reference edits!
+
         # Remove deprecated attributes
         #
         self.removeDeprecatedAttributes()
