@@ -121,18 +121,19 @@ class ShapeMixin(dagmixin.DagMixin):
             element.child(1).setFloat(point[1])
             element.child(2).setFloat(point[2])
 
-    def addDeformer(self, typeName):
+    def addDeformer(self, typeName, **kwargs):
         """
         Returns a new deformer derived from the supplied type name.
         By default, this deformer is inserted at the end of the chain.
 
         :type typeName: str
+        :key name: str
         :rtype: mpynode.MPyNode
         """
 
         try:
 
-            results = mc.deformer(self.fullPathName(), type=typeName)
+            results = mc.deformer(self.fullPathName(), type=typeName, **kwargs)
             return self.scene.getNodeByName(results[-1])
 
         except RuntimeError as exception:
