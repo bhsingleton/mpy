@@ -90,11 +90,12 @@ class MaxformMixin(transformmixin.TransformMixin):
 
             return None
 
-    def detectMirroring(self):
+    def detectMirroring(self, normal=om.MVector.kXaxisVector):
         """
         Detects the mirror settings for this transform.
         Unlike the parent method, this overload takes the pre-rotation into consideration.
 
+        :type normal: om.MVector
         :rtype: bool
         """
 
@@ -103,7 +104,7 @@ class MaxformMixin(transformmixin.TransformMixin):
         #
         matrix = self.parentMatrix()
         xAxis, yAxis, zAxis, pos = transformutils.breakMatrix(matrix, normalize=True)
-        mirrorXAxis, mirrorYAxis, mirrorZAxis = list(map(transformutils.mirrorVector, (xAxis, yAxis, zAxis)))
+        mirrorXAxis, mirrorYAxis, mirrorZAxis = [transformutils.mirrorVector(axis, normal=normal) for axis in (xAxis, yAxis, zAxis)]
 
         otherTransform = self.getOppositeNode()
         otherMatrix = otherTransform.parentMatrix()
@@ -119,7 +120,7 @@ class MaxformMixin(transformmixin.TransformMixin):
         preEulerRotation = self.preEulerRotation()
         matrix = preEulerRotation.asMatrix() * self.parentMatrix()
         xAxis, yAxis, zAxis, pos = transformutils.breakMatrix(matrix, normalize=True)
-        mirrorXAxis, mirrorYAxis, mirrorZAxis = list(map(transformutils.mirrorVector, (xAxis, yAxis, zAxis)))
+        mirrorXAxis, mirrorYAxis, mirrorZAxis = [transformutils.mirrorVector(axis, normal=normal) for axis in (xAxis, yAxis, zAxis)]
 
         otherPreEulerRotation = otherTransform.preEulerRotation()
         otherMatrix = otherPreEulerRotation.asMatrix() * otherTransform.parentMatrix()
