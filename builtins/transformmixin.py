@@ -6,7 +6,7 @@ from dcc.python import stringutils
 from dcc.generators.inclusiverange import inclusiveRange
 from dcc.maya.libs import plugutils, transformutils, shapeutils, animutils
 from dcc.maya.json import mshapeparser
-from dcc.maya.decorators.animate import animate
+from dcc.maya.decorators import animate
 from . import dagmixin
 from .. import mpyattribute, mpycontext
 
@@ -368,7 +368,7 @@ class TransformMixin(dagmixin.DagMixin):
 
                 continue
 
-    @animate
+    @animate.Animate(state=True)
     def alignTransformTo(self, transform, **kwargs):
         """
         Aligns this transform to the other transform over a period of time.
