@@ -73,7 +73,7 @@ class MPyScene(proxyfactory.ProxyFactory):
     # endregion
 
     # region Properties
-    @ property
+    @property
     def name(self):
         """
         Getter method that returns the current scene's name.
@@ -1070,4 +1070,22 @@ class MPyScene(proxyfactory.ProxyFactory):
 
             nodeName = '{namespace}RN'.format(namespace=namespace)
             return mpynode.MPyNode(nodeName)  # TODO: This needs improving!
+
+    def markDirty(self):
+        """
+        Marks the scene as dirty which will prompt the user for a save upon close.
+
+        :rtype: None
+        """
+
+        sceneutils.markDirty()
+
+    def markClean(self):
+        """
+        Marks the scene as clean which will not prompt the user for a save upon close.
+
+        :rtype: None
+        """
+
+        sceneutils.markClean()
     # endregion
