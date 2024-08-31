@@ -115,7 +115,7 @@ class HyperLayoutMixin(dependencymixin.DependencyMixin):
         # Get message plugs
         #
         index = self.getNextAvailableMemberIndex()
-        destination = self.findPlug('hyperPosition[%s].dependNode' % index)
+        destination = self.findPlug(f'hyperPosition[{index}].dependNode')
 
         fnDependNode = om.MFnDependencyNode(dependNode)
         source = fnDependNode.findPlug('message', True)
@@ -123,6 +123,7 @@ class HyperLayoutMixin(dependencymixin.DependencyMixin):
         # Connect plugs
         #
         self.connectPlugs(source, destination)
+
         return True
 
     def addMembers(self, dependNodes):
@@ -158,11 +159,12 @@ class HyperLayoutMixin(dependencymixin.DependencyMixin):
         # Get message plugs
         #
         source = fnDependNode.findPlug('message')
-        destination = self.findPlug('hyperPosition[%s].dependNode' % index)
+        destination = self.findPlug(f'hyperPosition[{index}].dependNode')
 
         # Disconnect plugs
         #
         self.disconnectPlugs(source, destination)
+
         return True
 
     def removeMembers(self, dependNodes):
@@ -188,13 +190,17 @@ class HyperLayoutMixin(dependencymixin.DependencyMixin):
         #
         members = list(self.iterMembers())
 
-        for member in members:
+        for member in reversed(members):
 
             # Check if member is still alive
             #
             if member.isAlive():
 
                 member.delete()
+
+            else:
+
+                continue
 
     def hyperPositions(self):
         """
