@@ -436,7 +436,7 @@ class DependencyMixin(mpynode.MPyNode):
         :rtype: Iterator[om.MObject]
         """
 
-        attributes = mc.listAttr(self.name(includeNamespace=True), **kwargs)
+        attributes = mc.listAttr(self.fullPathName(), **kwargs)
 
         if not stringutils.isNullOrEmpty(attributes):
 
