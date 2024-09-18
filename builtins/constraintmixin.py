@@ -5,6 +5,7 @@ from maya.api import OpenMaya as om
 from abc import abstractmethod
 from dcc.python import stringutils
 from dcc.maya.libs import transformutils, plugutils, plugmutators
+from dcc.maya.decorators import animate
 from . import transformmixin
 from .. import mpyattribute
 
@@ -42,6 +43,7 @@ class ConstraintMixin(transformmixin.TransformMixin):
 
         return self.parent()
 
+    @animate.Animate(state=False)
     def setConstraintObject(self, constraintObject, **kwargs):
         """
         Updates the constraint object for this instance.
@@ -191,6 +193,7 @@ class ConstraintMixin(transformmixin.TransformMixin):
         plug = self.findPlug('target')
         return plugutils.getNextAvailableElement(plug)
 
+    @animate.Animate(state=False)
     def addTarget(self, target, weight=1.0, maintainOffset=False, **kwargs):
         """
         Adds a new target to this constraint.
@@ -314,13 +317,17 @@ class ConstraintMixin(transformmixin.TransformMixin):
         element = target.plug()
 
         self.breakConnections(element, source=True, destination=True, recursive=True)
-        self.removePlugElements(targetPlug, [index])
 
         # Remove associated attribute
         #
         if not driver.isNull:
 
+            self.breakConnections(driver, source=True, destination=True)
             self.removeAttr(driver.attribute())
+
+        # Remove target element
+        #
+        self.removePlugElements(targetPlug, [index])
 
         # Check if offset should be maintained
         #
@@ -380,6 +387,7 @@ class ConstraintMixin(transformmixin.TransformMixin):
         #
         return scaleMatrix * rotateMatrix * translateMatrix
 
+    @animate.Animate(state=False)
     def setRestMatrix(self, restMatrix):
         """
         Updates the rest matrix for this constraint.
