@@ -1,3 +1,5 @@
+import math
+
 from maya.api import OpenMaya as om
 from dcc.maya.libs import transformutils
 from .. import mpyattribute
@@ -83,5 +85,19 @@ class PointOnCurveConstraintMixin(constraintmixin.ConstraintMixin):
         :rtype: None
         """
 
-        raise NotImplementedError()
+        # Reset offset
+        #
+        self.offsetTranslate = [0.0, 0.0, 0.0]
+        self.offsetRotate = [0.0, 0.0, 0.0]
+
+        # Update offset
+        #
+        constraintMatrix = self.getAttr('constraintMatrix')
+        restMatrix = self.restMatrix()
+
+        offsetMatrix = restMatrix * constraintMatrix.inverse()
+        offsetTranslate, offsetRotate, offsetScale = transformutils.decomposeTransformMatrix(offsetMatrix)
+
+        self.offsetTranslate = offsetTranslate
+        self.offsetRotate = list(map(math.degrees, offsetRotate))
     # endregion
