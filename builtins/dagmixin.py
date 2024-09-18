@@ -492,17 +492,20 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
 
         return list(self.iterDescendants(apiType=apiType, includeSelf=includeSelf))
 
-    def iterShapes(self, apiType=om.MFn.kShape):
+    def iterShapes(self, apiType=om.MFn.kShape, intermediateObjects=False):
         """
         Returns a generator that yields shapes from this node.
 
         :type apiType: int
+        :type intermediateObjects: bool
         :rtype: Iterator[mpy.builtins.shapemixin.ShapeMixin]
         """
 
         for shape in self.iterChildren(apiType=apiType):
 
-            if not shape.isIntermediateObject:
+            isIntermediateObject = bool(shape.isIntermediateObject)
+
+            if (not intermediateObjects and not isIntermediateObject) or (intermediateObjects and isIntermediateObject):
 
                 yield shape
 
@@ -588,10 +591,11 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
         """
         Returns a list of intermediate objects from this node.
 
+        :type apiType: int
         :rtype: List[mpy.builtins.shapemixin.ShapeMixin]
         """
 
-        return [shape for shape in self.iterShapes(apiType=apiType) if shape.isIntermediateObject]
+        return list(self.iterShapes(apiType=apiType, intermediateObjects=True))
 
     def matrix(self, asTransformationMatrix=False, time=None):
         """
