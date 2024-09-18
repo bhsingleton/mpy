@@ -280,7 +280,7 @@ class ReferenceMixin(dependencymixin.DependencyMixin):
 
         :type successfulEdits: bool
         :type failedEdits: bool
-        :rtype: list[str]
+        :rtype: List[str]
         """
 
         return mc.referenceQuery(
