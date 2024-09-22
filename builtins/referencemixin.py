@@ -290,6 +290,20 @@ class ReferenceMixin(dependencymixin.DependencyMixin):
             failedEdits=failedEdits
         )
 
+    def removeEdits(self, *plugs, editCommand='setAttr', failedEdits=True, successfulEdits=True):
+        """
+        Removes any reference edits from the specified plugs.
+
+        :type editCommand: str
+        :type failedEdits: bool
+        :type successfulEdits: bool
+        :rtype: None
+        """
+
+        for plug in plugs:
+
+            mc.referenceEdit(plug.info, editCommand=editCommand, failedEdits=failedEdits, successfulEdits=successfulEdits, removeEdits=True)
+
     def clearEdits(self):
         """
         Removes all edits from this reference.
