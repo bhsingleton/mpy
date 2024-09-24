@@ -918,6 +918,7 @@ class TransformMixin(dagmixin.DagMixin):
         name = kwargs.get('name', f'{self.name()}_spaceSwitch1')
 
         spaceSwitch = self.scene.createNode('spaceSwitch', name=name)
+        spaceSwitch.weighted = kwargs.get('weighted', False)
         spaceSwitch.setDriven(self, **kwargs)
         spaceSwitch.addSpaces(spaces, **kwargs)
 
