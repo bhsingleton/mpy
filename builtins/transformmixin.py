@@ -906,6 +906,7 @@ class TransformMixin(dagmixin.DagMixin):
 
         :type spaces: List[transformmixin.TransformMixin]
         :key name: str
+        :key weighted: bool
         :key maintainOffset: bool
         :key skipTranslate: bool
         :key skipRotate: bool
@@ -920,7 +921,7 @@ class TransformMixin(dagmixin.DagMixin):
         spaceSwitch = self.scene.createNode('spaceSwitch', name=name)
         spaceSwitch.weighted = kwargs.get('weighted', False)
         spaceSwitch.setDriven(self, **kwargs)
-        spaceSwitch.addSpaces(spaces, **kwargs)
+        spaceSwitch.addTargets(spaces, **kwargs)
 
         return spaceSwitch
 

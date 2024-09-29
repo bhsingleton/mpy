@@ -2,7 +2,7 @@ import math
 
 from maya.api import OpenMaya as om
 from dcc.python import stringutils
-from dcc.maya.libs import transformutils, plugutils
+from dcc.maya.libs import transformutils, plugutils, plugmutators
 from .. import mpyattribute
 from ..builtins import dependencymixin
 
@@ -122,11 +122,45 @@ class SpaceSwitchMixin(dependencymixin.DependencyMixin):
 
                     self.connectPlugs(source, destination)
 
-    def addSpace(self, space, **kwargs):
+    def targetCount(self):
+        """
+        Evaluates the number of active target elements.
+
+        :rtype: int
+        """
+
+        return self.findPlug('target').evaluateNumElements()
+
+    def targets(self):
+        """
+        Returns all the available constraint targets.
+
+        :rtype: List[SpaceTarget]
+        """
+
+        return list(self.iterTargets())
+
+    def iterTargets(self):
+        """
+        Returns a generator that yields all the available constraint targets.
+
+        :rtype: Iterator[SpaceTarget]
+        """
+
+        # Iterate through target indices
+        #
+        for physicalIndex in range(self.targetCount()):
+
+            plug = self.findPlug(f'target').elementByPhysicalIndex(physicalIndex)
+            logicalIndex = plug.logicalIndex()
+
+            yield SpaceTarget(self, index=logicalIndex)
+
+    def addTarget(self, target, **kwargs):
         """
         Adds the supplied spaces to this switch.
 
-        :type space: mpy.builtins.transformmixin.TransformMixin
+        :type target: mpy.builtins.transformmixin.TransformMixin
         :key maintainOffset: bool
         :rtype: int
         """
@@ -146,16 +180,16 @@ class SpaceSwitchMixin(dependencymixin.DependencyMixin):
 
         maintainOffset = kwargs.get('maintainOffset', True)
 
-        if space is not None:
+        if target is not None:
 
             # Connect space to switch
             #
-            self.setAttr(f'target[{index}].targetName', space.name())
-            self.connectPlugs(space[f'worldMatrix[{space.instanceNumber()}]'], f'target[{index}].targetMatrix')
+            self.setAttr(f'target[{index}].targetName', target.name())
+            self.connectPlugs(target[f'worldMatrix[{target.instanceNumber()}]'], f'target[{index}].targetMatrix')
 
             if maintainOffset:
 
-                offsetMatrix = restWorldMatrix * space.worldInverseMatrix()
+                offsetMatrix = restWorldMatrix * target.worldInverseMatrix()
                 offsetTranslate, offsetRotate, offsetScale = transformutils.decomposeTransformMatrix(offsetMatrix)
 
                 self.setAttr(f'target[{index}].targetOffsetTranslate', offsetTranslate)
@@ -182,20 +216,136 @@ class SpaceSwitchMixin(dependencymixin.DependencyMixin):
 
         return index
 
-    def addSpaces(self, spaces, **kwargs):
+    def addTargets(self, targets, **kwargs):
         """
         Adds the supplied spaces to this switch.
 
-        :type spaces: List[mpy.builtins.transformmixin.TransformMixin]
+        :type targets: List[mpy.builtins.transformmixin.TransformMixin]
         :rtype: List[int]
         """
 
-        numSpaces = len(spaces)
-        indices = [None] * numSpaces
+        numTargets = len(targets)
+        indices = [None] * numTargets
 
-        for (i, space) in enumerate(spaces):
+        for (i, target) in enumerate(targets):
 
-            indices[i] = self.addSpace(space, **kwargs)
+            indices[i] = self.addTarget(target, **kwargs)
 
         return indices
+    # endregion
+
+
+class SpaceTarget(object):
+    """
+    Base class used to interface with constraint targets.
+    """
+
+    # region Dunderscores
+    __slots__ = ('_spaceSwitch', '_index')
+
+    def __init__(self, spaceSwitch, **kwargs):
+        """
+        Private method called after a new instance has been created.
+
+        :type spaceSwitch: SpaceSwitchMixin
+        :key index: int
+        :rtype: None
+        """
+
+        # Call parent method
+        #
+        super(SpaceTarget, self).__init__()
+
+        # Declare class variables
+        #
+        self._spaceSwitch = spaceSwitch.weakReference()
+        self._index = kwargs.get('index', 0)
+    # endregion
+
+    # region Properties
+    @property
+    def spaceSwitch(self):
+        """
+        Getter method used to retrieve the associated space-switch for this target.
+
+        :rtype: SpaceSwitchMixin
+        """
+
+        return self._spaceSwitch()
+
+    @property
+    def index(self):
+        """
+        Getter method used to retrieve the index for this constraint target.
+
+        :rtype: int
+        """
+
+        return self._index
+    # endregion
+
+    # region Methods
+    def plug(self, *args):
+        """
+        Returns the plug element associated with this constraint target.
+
+        :type args: Union[str, List[str]]
+        :rtype: om.MPlug
+        """
+
+        numArgs = len(args)
+
+        if numArgs == 0:
+
+            return self.spaceSwitch.findPlug('target[{index}]'.format(index=self.index))
+
+        elif numArgs == 1:
+
+            return self.plug().child(self.spaceSwitch.attribute(args[0]))
+
+        else:
+
+            raise TypeError(f'plug() expects 1 argument ({numArgs} given)!')
+
+    def name(self):
+        """
+        Returns the name for this space target.
+
+        :rtype: str
+        """
+
+        plug = self.plug('targetName')
+        return plugmutators.getValue(plug)
+
+    def setName(self, name):
+        """
+        Updates the name for this space target.
+
+        :type name: str
+        :rtype: None
+        """
+
+        plug = self.plug('targetName')
+        plugmutators.setValue(plug, name)
+
+    def weight(self):
+        """
+        Returns the weight for this space target.
+
+        :rtype: Tuple[float, float, float]
+        """
+
+        plug = self.plug('targetWeight')
+        return plugmutators.getValue(plug)
+
+    def setWeight(self, weight):
+        """
+        Updates the weight for this space target.
+
+        :type weight: Tuple[float, float, float]
+        :rtype: None
+        """
+
+        plug = self.plug('targetWeight')
+        plugmutators.setValue(plug, weight)
     # endregion
