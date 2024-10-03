@@ -74,8 +74,7 @@ class TransformMixin(dagmixin.DagMixin):
         #
         if absolute:
 
-            matrix = worldMatrix * self.exclusiveMatrixInverse()
-            self.setMatrix(matrix, skipScale=True)
+            self.setWorldMatrix(worldMatrix, skipScale=True)
 
     def translation(self, space=om.MSpace.kTransform, time=None):
         """
