@@ -674,17 +674,17 @@ class DependencyMixin(mpynode.MPyNode):
 
             if plug.isCompound:
 
-                for child in plugutils.iterChildren(plug):
-
-                    child.isKeyable = False
-                    child.isChannelBox = False
-                    child.isLocked = lock
+                children = list(plugutils.iterChildren(plug))
+                self.hideAttr(*children, lock=lock)
 
             else:
 
                 plug.isKeyable = False
                 plug.isChannelBox = False
-                plug.isLocked = lock
+
+                if lock and not plug.isLocked:
+
+                    plug.isLocked = True
 
     def showAttr(self, *plugs, keyable=False, unlock=False):
         """
@@ -702,17 +702,17 @@ class DependencyMixin(mpynode.MPyNode):
 
             if plug.isCompound:
 
-                for child in plugutils.iterChildren(plug):
-
-                    child.isKeyable = keyable
-                    child.isChannelBox = True
-                    child.isLocked = not unlock
+                children = list(plugutils.iterChildren(plug))
+                self.showAttr(*children, keyable=keyable, unlock=unlock)
 
             else:
 
-                plug.isKeyable = keyable
                 plug.isChannelBox = True
-                plug.isLocked = not unlock
+                plug.isKeyable = keyable
+
+                if unlock and plug.isLocked:
+
+                    plug.isLocked = False
 
     def lockAttr(self, *plugs):
         """
@@ -728,15 +728,13 @@ class DependencyMixin(mpynode.MPyNode):
 
             if plug.isCompound:
 
-                for child in plugutils.iterChildren(plug):
-
-                    child.isLocked = True
+                children = list(plugutils.iterChildren(plug))
+                self.lockAttr(*children)
 
             elif plug.isArray and not plug.isElement:
 
-                for element in plugutils.iterElements(plug):
-
-                    element.isLocked = True
+                elements = list(plugutils.iterElements(plug))
+                self.lockAttr(*elements)
 
             else:
 
@@ -756,15 +754,13 @@ class DependencyMixin(mpynode.MPyNode):
 
             if plug.isCompound:
 
-                for child in plugutils.iterChildren(plug):
-
-                    child.isLocked = False
+                children = list(plugutils.iterChildren(plug))
+                self.unlockAttr(*children)
 
             elif plug.isArray and not plug.isElement:
 
-                for element in plugutils.iterElements(plug):
-
-                    element.isLocked = False
+                elements = list(plugutils.iterElements(plug))
+                self.unlockAttr(*elements)
 
             else:
 
