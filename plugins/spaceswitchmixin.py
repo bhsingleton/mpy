@@ -169,8 +169,9 @@ class SpaceSwitchMixin(dependencymixin.DependencyMixin):
         #
         driven = self.driven()
         restMatrix = om.MMatrix(self.restMatrix)
+        parentMatrix = driven.parentMatrix() if (driven is not None) else om.MMatrix.kIdentity
 
-        restWorldMatrix = restMatrix * driven.parentMatrix()
+        restWorldMatrix = restMatrix * parentMatrix
 
         # Get next available space index
         #
