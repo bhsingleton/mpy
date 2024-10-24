@@ -411,8 +411,8 @@ class AnimCurveMixin(dependencymixin.DependencyMixin):
         # Check if animation range is redundant
         # If so, go ahead and delete the animation curve
         #
-        startTime, endTime = self.scene.animationRange if stringutils.isNullOrEmpty(animationRange) else animationRange
         firstFrame, lastFrame = inputRange[0], inputRange[-1]
+        startTime, endTime = (firstFrame, lastFrame) if stringutils.isNullOrEmpty(animationRange) else animationRange
 
         requiresDeleting = (startTime <= firstFrame and endTime >= lastFrame) and delete
 
