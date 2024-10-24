@@ -944,6 +944,7 @@ class TransformMixin(dagmixin.DagMixin):
         if not curve.isNull():
 
             curve = self.scene(curve)
+            curve.setName(f'{self.name()}Shape')
             shapeutils.colorizeShape(curve.object(), **kwargs)
 
             return curve
@@ -967,6 +968,7 @@ class TransformMixin(dagmixin.DagMixin):
 
         filePath = self.scene.getAbsoluteShapePath(shape)
         shapes = mshapeparser.load(filePath, parent=self.object(), **kwargs)
+        self.renameShapes()
 
         return list(map(self.scene.__call__, shapes))
 
@@ -1137,35 +1139,7 @@ class TransformMixin(dagmixin.DagMixin):
         :rtype: None
         """
 
-        # Evaluate number of shapes
-        #
-        name = self.name()
-
-        shapes = self.shapes()
-        numShapes = len(shapes)
-
-        if numShapes == 0:
-
-            return
-
-        elif numShapes == 1:
-
-            shape = shapes[0]
-            originalName = shape.name()
-            newName = f'{name}Shape'
-
-            log.info(f'Renaming {originalName} > {newName}')
-            shape.setName(newName)
-
-        else:
-
-            for (i, shape) in enumerate(shapes, start=1):
-
-                originalName = shape.name()
-                newName = f'{name}Shape{i}'
-
-                log.info(f'Renaming {originalName} > {newName}')
-                shape.setName(newName)
+        shapeutils.renameShapes(self.object())
 
     def colorizeShapes(self, **kwargs):
         """
