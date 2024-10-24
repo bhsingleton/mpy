@@ -193,24 +193,16 @@ class DependencyMixin(mpynode.MPyNode):
     # endregion
 
     # region Methods
-    def name(self, includeNamespace=False):
+    def name(self, includeNamespace=False, includePath=False):
         """
         Returns the name of this node.
 
         :type includeNamespace: bool
+        :type includePath: bool
         :rtype: str
         """
 
-        absoluteName = self.functionSet().name()
-        name = dagutils.stripAll(absoluteName)
-
-        if includeNamespace:
-
-            return '{namespace}:{name}'.format(namespace=self.namespace(), name=name)
-
-        else:
-
-            return name
+        return dagutils.getNodeName(self.object(), includeNamespace=includeNamespace, includePath=includePath)
 
     def setName(self, newName):
         """
