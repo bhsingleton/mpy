@@ -980,9 +980,16 @@ class TransformMixin(dagmixin.DagMixin):
         :rtype: mpy.plugins.pointhelpermixin.PointHelperMixin
         """
 
-        curveData = shapeutils.createStar(1.0, 0.5, **kwargs)
+        # Create nurbs-curve data
+        #
+        outerRadius = kwargs.pop('outerRadius', 1.0)
+        innerRadius = kwargs.pop('innerRadius', 0.5)
+
+        curveData = shapeutils.createStar(outerRadius, innerRadius, **kwargs)
         controlPoints = om.MFnNurbsCurve(curveData).cvPositions()
 
+        # Create point helper and assign CV positions
+        #
         pointHelper = self.addPointHelper('custom')
         pointHelper.size = size
         pointHelper.setAttr('controlPoints', controlPoints)
