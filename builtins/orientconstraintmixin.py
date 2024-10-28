@@ -2,6 +2,7 @@ import math
 
 from maya.api import OpenMaya as om
 from dcc.maya.libs import transformutils
+from enum import IntEnum
 from . import constraintmixin
 from .. import mpyattribute
 
@@ -9,6 +10,18 @@ import logging
 logging.basicConfig()
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
+
+
+class InterpType(IntEnum):
+    """
+    Enum class of available interpolation types.
+    """
+
+    NO_FLIP = 0
+    AVERAGE = 1
+    SHORTEST = 2
+    LONGEST = 3
+    CACHE = 4
 
 
 class OrientConstraintMixin(constraintmixin.ConstraintMixin):
@@ -49,8 +62,12 @@ class OrientConstraintMixin(constraintmixin.ConstraintMixin):
     }
     # endregion
 
+    # region Enums
+    InterpType = InterpType
+    # endregion
+
     # region Attributes
-    interpType = mpyattribute.MPyAttribute('interpType')  # No flip, average, shortest, longest, cache
+    interpType = mpyattribute.MPyAttribute('interpType')
     offset = mpyattribute.MPyAttribute('offset')
     offsetX = mpyattribute.MPyAttribute('offsetX')
     offsetY = mpyattribute.MPyAttribute('offsetY')
@@ -62,6 +79,27 @@ class OrientConstraintMixin(constraintmixin.ConstraintMixin):
     # endregion
 
     # region Methods
+    def addTargets(self, targets, **kwargs):
+        """
+        Adds a list of new targets to this constraint.
+
+        :type targets: List[transformmixin.TransformMixin]
+        :key maintainOffset: bool
+        :rtype: int
+        """
+
+        # Call parent method
+        #
+        super(OrientConstraintMixin, self).addTargets(targets, **kwargs)
+
+        # Evaluate target count
+        #
+        numTargets = len(targets)
+
+        if numTargets > 1:
+
+            self.interpType = kwargs.get('interpType', self.InterpType.SHORTEST)
+
     def maintainOffset(self):
         """
         Ensures the constraint object's transform matches the rest matrix.
