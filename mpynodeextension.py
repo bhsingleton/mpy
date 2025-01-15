@@ -115,10 +115,22 @@ class MPyNodeExtension(mpynode.MPyNode, metaclass=mabcmeta.MABCMeta):
 
                     continue
 
-                # Create child-attribute definition
+                # Create attribute definition
                 #
                 definition = {'longName': value.name, 'shortName': value.name, 'category': base.__name__}
                 definition.update(value.constructors)
+
+                # Check if any attributes require nesting
+                #
+                children = definition.pop('children', [])
+                hasChildren = len(children) > 0
+
+                if hasChildren:
+
+                    indices = [i for (i, definition) in enumerate(definitions) if definition['longName'] in children]
+                    children = [definitions.pop(i) for i in reversed(indices)]
+
+                    definition['children'] = tuple(reversed(children))  # This will prevent the JSON decoder from crashing!
 
                 definitions.append(definition)
 
