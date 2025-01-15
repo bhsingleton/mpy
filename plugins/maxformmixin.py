@@ -1,8 +1,6 @@
-import math
-
 from maya.api import OpenMaya as om
 from dcc.maya.libs import transformutils
-from .. import mpyattribute
+from .. import mpyattribute, mpycontext
 from ..builtins import transformmixin
 
 import logging
@@ -28,6 +26,29 @@ class MaxformMixin(transformmixin.TransformMixin):
     # endregion
 
     # region Methods
+    def parentMatrix(self, time=None):
+        """
+        Returns the parent matrix for this transform.
+
+        :type time: Union[int, None]
+        :rtype: om.MMatrix
+        """
+
+        # Check if parent exists
+        #
+        hasParent = self.hasParent()
+
+        if not hasParent:
+
+            return om.MMatrix.kIdentity
+
+        # Get world-matrix of parent
+        # TODO: Investigate why `parentMatrix` plug values are incorrect in different contexts!
+        #
+        with mpycontext.MPyContext(time=time):
+
+            return transformutils.getWorldMatrix(self.parent().dagPath())
+
     def preEulerRotation(self):
         """
         Returns the transform's pre-rotation component.
