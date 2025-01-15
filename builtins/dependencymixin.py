@@ -1183,7 +1183,7 @@ class DependencyMixin(mpynode.MPyNode):
 
                 # Connect child plugs
                 #
-                for i in range(sourceCount):
+                for i in reversed(range(sourceCount)):
 
                     self.disconnectPlugs(source.child(i), destination.child(i))
 
