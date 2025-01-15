@@ -57,7 +57,7 @@ class PointHelperMixin(locatormixin.LocatorMixin):
 
         # Evaluate supplied target
         #
-        siblings = [sibling for sibling in self.parent().iterChildren() if sibling is not self]
+        siblings = self.parent().siblings()
         numSiblings = len(siblings)
         numArgs = len(args)
 
@@ -93,4 +93,32 @@ class PointHelperMixin(locatormixin.LocatorMixin):
         self.localPosition = localPosition
         self.localRotate = tuple(map(math.degrees, localRotation))
         self.localScaleX = scale
+
+    def resizeToFitContents(self, size=0.5):
+        """
+        Local scales the point helper to fit all child nodes.
+
+        :type size: float
+        :rtype: None
+        """
+
+        # Calculate bounding box
+        #
+        boundingBox = om.MBoundingBox()
+
+        for descendant in self.parent().iterDescendants(apiType=om.MFn.kTransform):
+
+            shapeBox = descendant.shapeBox()
+            shapeBox.transformUsing(descendant.worldMatrix())
+
+            boundingBox.expand(shapeBox)
+
+        boundingBox.transformUsing(self.worldInverseMatrix())
+
+        # Assign bounding transform
+        #
+        self.size = size
+        self.localPosition = boundingBox.center
+        self.localRotate = (0.0, 0.0, 0.0)
+        self.localScale = (boundingBox.width, boundingBox.height, boundingBox.depth)
     # endregion
