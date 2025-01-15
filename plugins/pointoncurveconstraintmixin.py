@@ -2,6 +2,7 @@ import math
 
 from maya.api import OpenMaya as om
 from dcc.maya.libs import transformutils
+from enum import IntEnum
 from .. import mpyattribute
 from ..builtins import constraintmixin
 
@@ -9,6 +10,18 @@ import logging
 logging.basicConfig()
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
+
+
+class WorldUpType(IntEnum):
+    """
+    Enum class of all available world-up types.
+    """
+
+    SCENE = 0
+    OBJECT = 1
+    OBJECT_ROTATION = 2
+    VECTOR = 3
+    NONE = 4
 
 
 class PointOnCurveConstraintMixin(constraintmixin.ConstraintMixin):
@@ -39,6 +52,10 @@ class PointOnCurveConstraintMixin(constraintmixin.ConstraintMixin):
         'constraintRotateY': 'rotateY',
         'constraintRotateZ': 'rotateZ'
     }
+    # endregion
+
+    # region Enums
+    WorldUpType = WorldUpType
     # endregion
 
     # region Attributes
@@ -78,6 +95,70 @@ class PointOnCurveConstraintMixin(constraintmixin.ConstraintMixin):
     # endregion
 
     # region Methods
+    def setConstraintObject(self, constraintObject, **kwargs):
+        """
+        Updates the constraint object for this instance.
+
+        :type constraintObject: mpy.builtins.transformmixin.TransformMixin
+        :key aimVector: Tuple[float, float, float]
+        :key upVector: Tuple[float, float, float]
+        :key worldUpType: int
+        :key worldUpVector: Tuple[float, float, float]
+        :key worldUpObject: Union[mpy.builtins.transformmixin.TransformMixin, None]
+        :rtype: None
+        """
+
+        # Call parent method
+        #
+        super(PointOnCurveConstraintMixin, self).setConstraintObject(constraintObject, **kwargs)
+
+        # Update aim properties
+        #
+        self.parameter = kwargs.get('parameter', 0.0)
+        self.useFraction = kwargs.get('useFraction', False)
+        self.loop = kwargs.get('loop', False)
+        self.twist = kwargs.get('twist', 0.0)
+        self.forwardVector = kwargs.get('forwardVector', (1.0, 0.0, 0.0))
+        self.upVector = kwargs.get('upVector', (0.0, 1.0, 0.0))
+        self.worldUpType = kwargs.get('worldUpType', 0)  # Vector
+        self.worldUpVector = kwargs.get('worldUpVector', (0.0, 1.0, 0.0))
+
+        # Check if a world-up object was supplied
+        #
+        worldUpObject = kwargs.get('worldUpObject', None)
+
+        if worldUpObject is not None:
+
+            self.setWorldUpObject(worldUpObject)
+
+    def worldUpObject(self):
+        """
+        Returns the world-up object for this constraint.
+
+        :rtype: mpynode.builtins.transformmixin.TransformMixin
+        """
+
+        plug = self.findPlug('worldUpMatrix')
+        source = plug.source()
+
+        if not source.isNull():
+
+            return self.scene(source.node())
+
+        else:
+
+            return None
+
+    def setWorldUpObject(self, node):
+        """
+        Updates the world-up object for this constraint.
+
+        :type node: mpynode.builtins.transformmixin.TransformMixin
+        :rtype: None
+        """
+
+        node.connectPlugs(f'worldMatrix[{node.instanceNumber()}]', self.findPlug('worldUpMatrix'), force=True)
+
     def maintainOffset(self):
         """
         Ensures the constraint object's transform matches the rest matrix.
