@@ -63,7 +63,12 @@ class SpaceSwitchMixin(dependencymixin.DependencyMixin):
         #
         self.setAttr('restMatrix', driven.matrix(asTransformationMatrix=True))
         self.connectPlugs(driven['rotateOrder'], 'rotateOrder')
-        self.connectPlugs(driven[f'parentInverseMatrix[{driven.instanceNumber()}]'], 'parentInverseMatrix')
+
+        skipParentInverseMatrix = kwargs.get('skipParentInverseMatrix', False)
+
+        if not skipParentInverseMatrix:
+
+            self.connectPlugs(driven[f'parentInverseMatrix[{driven.instanceNumber()}]'], 'parentInverseMatrix')
 
         # Connect translate attributes
         #
