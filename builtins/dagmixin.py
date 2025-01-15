@@ -465,6 +465,40 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
 
         return list(self.iterChildren(apiType=apiType))
 
+    def iterSiblings(self, apiType=om.MFn.kDagNode):
+        """
+        Returns a generator that yields siblings relative to this node.
+
+        :type apiType: int
+        :rtype: Iterator[DagMixin]
+        """
+
+        if not self.hasParent():
+
+            return iter([])
+
+        parent = self.parent()
+
+        for child in self.iterChildren(apiType=apiType):
+
+            if child is not self:
+
+                yield child
+
+            else:
+
+                continue
+
+    def siblings(self, apiType=om.MFn.kDagNode):
+        """
+        Returns a list of siblings relative to this node.
+
+        :type apiType: int
+        :rtype: List[DagMixin]
+        """
+
+        return list(self.iterSiblings(apiType=apiType))
+
     def iterDescendants(self, apiType=om.MFn.kDagNode, includeSelf=False):
         """
         Returns a generator that yields the descendants from this node.
@@ -487,7 +521,7 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
 
         :type apiType: int
         :type includeSelf: bool
-        :rtype: list[DagMixin]
+        :rtype: List[DagMixin]
         """
 
         return list(self.iterDescendants(apiType=apiType, includeSelf=includeSelf))
