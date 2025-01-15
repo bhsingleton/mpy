@@ -33,6 +33,7 @@ class Operation(IntEnum):
     DOT = 16
     CROSS = 17
     PROJECT = 18
+    LERP = 19
 
 
 class VectorMathMixin(dependencymixin.DependencyMixin):
@@ -51,6 +52,7 @@ class VectorMathMixin(dependencymixin.DependencyMixin):
     # region Attributes
     operation = mpyattribute.MPyAttribute('operation')
     normalize = mpyattribute.MPyAttribute('normalize')
+    weight = mpyattribute.MPyAttribute('weight')
     inFloatA = mpyattribute.MPyAttribute('inFloatA')
     inFloatB = mpyattribute.MPyAttribute('inFloatB')
     inDistanceA = mpyattribute.MPyAttribute('inDistanceA')
