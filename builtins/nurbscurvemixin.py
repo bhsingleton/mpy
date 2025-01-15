@@ -1,5 +1,6 @@
 from maya import cmds as mc
 from maya.api import OpenMaya as om
+from dcc.generators.inclusiverange import inclusiveRange
 from . import shapemixin
 from .. import mpyattribute
 
@@ -53,4 +54,23 @@ class NurbsCurveMixin(shapemixin.ShapeMixin):
         functionSet = self.functionSet()  # type: om.MFnNurbsCurve
         functionSet.setCVPositions(points, space=space)
         functionSet.updateCurve()
+
+    def curveBox(self):
+        """
+        Returns the bounding-box for the curve excluding control-points!
+
+        :rtype: om.MBoundingBox
+        """
+
+        functionSet = self.functionSet()
+        numSpans = int(functionSet.numSpans)
+
+        boundingBox = om.MBoundingBox()
+
+        for i in inclusiveRange(numSpans):
+
+            point = functionSet.getPointAtParam(i, space=om.MSpace.kWorld)
+            boundingBox.expand(point)
+
+        return boundingBox
     # endregion
