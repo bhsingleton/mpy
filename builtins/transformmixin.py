@@ -316,6 +316,26 @@ class TransformMixin(dagmixin.DagMixin):
         self.resetEulerRotation()
         self.resetScale()
 
+    def offsetParentMatrix(self, asTransformationMatrix=False):
+        """
+        Returns the offset parent matrix for this transform.
+
+        :type asTransformationMatrix: bool
+        :rtype: Union[om.MMatrix, om.MTransformationMatrix]
+        """
+
+        return transformutils.getOffsetParentMatrix(self.dagPath(), asTransformationMatrix=asTransformationMatrix)
+
+    def setOffsetParentMatrix(self, offsetParentMatrix):
+        """
+        Updates the offset parent matrix for this transform.
+
+        :type offsetParentMatrix: om.MMatrix
+        :rtype: None
+        """
+
+        transformutils.setOffsetParentMatrix(self.dagPath(), offsetParentMatrix)
+
     def setWorldMatrix(self, worldMatrix, **kwargs):
         """
         Updates the world transformation matrix for this transform.
@@ -511,22 +531,18 @@ class TransformMixin(dagmixin.DagMixin):
 
             self.resetAttr(plug)
 
-    def freezeTransform(self, includeTranslate=True, includeRotate=True, includeScale=False):
+    def freezeTransform(self, **kwargs):
         """
         Pushes the transform's matrix into the parent offset matrix.
 
-        :type includeTranslate: bool
-        :type includeRotate: bool
-        :type includeScale: bool
+        :key includeTranslate: bool
+        :key includeRotate: bool
+        :key includeScale: bool
+        :key bakeScale: bool
         :rtype: None
         """
 
-        transformutils.freezeTransform(
-            self.dagPath(),
-            includeTranslate=includeTranslate,
-            includeRotate=includeRotate,
-            includeScale=includeScale
-        )
+        transformutils.freezeTransform(self.dagPath(), **kwargs)
 
     def unfreezeTransform(self):
         """
