@@ -30,9 +30,10 @@ class ShapeMixin(dagmixin.DagMixin):
         :rtype: bool
         """
 
-        isNormal = not self.template
+        dagPath = self.dagPath()
+        isNormal = dagPath.isVisible() and not dagPath.isTemplated()
 
-        drawOverrideInfo = self.dagPath().getDrawOverrideInfo()
+        drawOverrideInfo = dagPath.getDrawOverrideInfo()
         isOverrideNormal = drawOverrideInfo.displayType == om.MDAGDrawOverrideInfo.kDisplayTypeNormal
 
         return isNormal and isOverrideNormal
