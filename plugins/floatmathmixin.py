@@ -36,6 +36,7 @@ class Operation(IntEnum):
     CEIL = 19
     ROUND = 20
     TRUNC = 21
+    LERP = 22
 
 
 class FloatMathMixin(dependencymixin.DependencyMixin):
@@ -53,6 +54,7 @@ class FloatMathMixin(dependencymixin.DependencyMixin):
 
     # region Attributes
     operation = mpyattribute.MPyAttribute('operation')
+    weight = mpyattribute.MPyAttribute('weight')
     inFloatA = mpyattribute.MPyAttribute('inFloatA')
     inFloatB = mpyattribute.MPyAttribute('inFloatB')
     inDistanceA = mpyattribute.MPyAttribute('inDistanceA')
