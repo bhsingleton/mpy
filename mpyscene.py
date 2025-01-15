@@ -477,6 +477,44 @@ class MPyScene(proxyfactory.ProxyFactory):
         self.__classes__[apiType] = cls
         return cls
 
+    def new(self):
+        """
+        Opens a new scene file.
+
+        :rtype: None
+        """
+
+        sceneutils.newScene()
+
+    def save(self):
+        """
+        Saves any changes to the current scene file.
+
+        :rtype: None
+        """
+
+        sceneutils.saveScene()
+
+    def saveAs(self, filePath):
+        """
+        Saves the current scene to the specified path.
+
+        :type filePath: str
+        :rtype: None
+        """
+
+        sceneutils.saveSceneAs(filePath)
+
+    def open(self, filePath):
+        """
+        Opens the supplied scene file.
+
+        :type filePath: str
+        :rtype: bool
+        """
+
+        return sceneutils.openScene(filePath)
+
     def doesNodeExist(self, name):
         """
         Evaluates if a node with the supplied name exists.
