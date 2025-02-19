@@ -39,7 +39,7 @@ class MPyScene(proxyfactory.ProxyFactory):
 
         # Declare private variables
         #
-        self.__plugins__ = dict(self.iterPackages(plugins, classAttr='__plugin__'))
+        self.__plugins__ = dict(self.iterClassesFromPackage(plugins, classAttr='__plugin__'))
         self.__extensions__ = {}
         self.__properties__ = fileproperties.FileProperties()
 
