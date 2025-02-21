@@ -3,9 +3,9 @@ import sys
 from maya import cmds as mc
 from maya.api import OpenMaya as om
 from collections import deque
-from six import string_types
-from six.moves import collections_abc
 from dcc.maya.libs import dagutils
+from dcc.vendor.six import string_types
+from dcc.vendor.six.moves import collections_abc
 from . import shapemixin
 from .. import mpyattribute
 

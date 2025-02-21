@@ -1,9 +1,8 @@
 import os
 
 from maya.api import OpenMaya as om
-from Qt import QtGui
-from six import string_types
-
+from dcc.vendor.Qt import QtGui
+from dcc.vendor.six import string_types
 from . import dependencymixin
 from .. import mpyattribute
 

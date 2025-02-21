@@ -1,7 +1,7 @@
 import os
 import sys
 
-from six import string_types
+from dcc.vendor.six import string_types
 
 import logging
 logging.basicConfig()

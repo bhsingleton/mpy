@@ -1,7 +1,7 @@
 from abc import ABCMeta
-from six import integer_types
 from maya.api import OpenMaya as om
 from dcc.maya.libs import dagutils
+from dcc.vendor.six import integer_types
 
 import logging
 logging.basicConfig()

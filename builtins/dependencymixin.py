@@ -2,12 +2,12 @@ import os
 
 from maya import cmds as mc
 from maya.api import OpenMaya as om
-from six import string_types
-from Qt import QtGui
 from dcc.python import stringutils
 from dcc.naming import namingutils
 from dcc.maya.libs import dagutils, attributeutils, plugutils, plugmutators, animutils
 from dcc.maya.collections import userproperties
+from dcc.vendor.six import string_types
+from dcc.vendor.Qt import QtGui
 from .. import mpyattribute, mpynode, mpycontext
 
 import logging

@@ -2,9 +2,9 @@ import inspect
 import weakref
 
 from maya.api import OpenMaya as om
-from six import string_types
 from dcc.maya.libs import dagutils
 from dcc.decorators.classproperty import classproperty
+from dcc.vendor.six import string_types
 from . import mabcmeta
 
 import logging

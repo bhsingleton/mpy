@@ -1,8 +1,8 @@
 from maya import cmds as mc
 from maya.api import OpenMaya as om
 from collections import deque
-from six import integer_types, string_types
 from dcc.maya.libs import dagutils, transformutils, layerutils
+from dcc.vendor.six import integer_types, string_types
 from . import containerbasemixin
 from .. import mpyattribute, mpycontext
 

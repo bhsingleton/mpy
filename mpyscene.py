@@ -4,12 +4,12 @@ import inspect
 
 from maya import cmds as mc
 from maya.api import OpenMaya as om
-from six import string_types
 from dcc.abstract import proxyfactory
 from dcc.python import stringutils, importutils
 from dcc.naming import namingutils
 from dcc.maya.libs import dagutils, sceneutils
 from dcc.maya.collections import fileproperties
+from dcc.vendor.six import string_types
 from . import mpynode, builtins, plugins
 
 import logging

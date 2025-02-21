@@ -9,9 +9,9 @@ import os
 
 from maya import cmds as mc
 from maya.api import OpenMaya as om
-from six import string_types, integer_types
 from dcc.python import stringutils
 from dcc.maya.libs import skinutils
+from dcc.vendor.six import string_types, integer_types
 from . import deformermixin
 from .. import mpyattribute
 
