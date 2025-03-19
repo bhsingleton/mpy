@@ -76,6 +76,26 @@ class TransformMixin(dagmixin.DagMixin):
 
             self.setWorldMatrix(worldMatrix, skipScale=True)
 
+    def isSelectable(self):
+        """
+        Evaluates if this transform is selectable.
+
+        :rtype: bool
+        """
+
+        shapes = self.shapes()
+        shapeCount = len(shapes)
+
+        hasShapes = shapeCount > 0
+
+        if hasShapes:
+
+            return any([shape.isVisible() and shape.isSelectable() for shape in shapes])
+
+        else:
+
+            return False
+
     def translation(self, space=om.MSpace.kTransform, time=None):
         """
         Returns the transform's translation component.

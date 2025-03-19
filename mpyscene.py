@@ -728,6 +728,36 @@ class MPyScene(proxyfactory.ProxyFactory):
 
         return list(self.iterNodesByPattern(*patterns, apiType=apiType, exactType=exactType))
 
+    def iterAnimatableNodes(self):
+        """
+        Returns a generator that yields animatable nodes.
+        This consists of transform nodes with selectable shapes!
+
+        :rtype: Iterator[mpynode.MPyNode]
+        """
+
+        # Iterate through transform nodes
+        #
+        for node in self.iterNodesByApiType(om.MFn.kTransform):
+
+            # Check if node is referenced
+            #
+            if not node.isFromReferencedFile:
+
+                continue
+
+            # Check if node is selected
+            #
+            isSelectable = node.isSelectable()
+
+            if isSelectable:
+
+                yield node
+
+            else:
+
+                continue
+
     def iterReferenceNodes(self, skipShared=True):
         """
         Returns a generator that yields reference nodes.
