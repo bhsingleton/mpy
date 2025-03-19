@@ -85,4 +85,32 @@ class JointMixin(transformmixin.TransformMixin):
         """
 
         transformutils.resetJointOrient(self.dagPath())
+
+    def preferEulerRotation(self, **kwargs):
+        """
+        Copies the current euler rotation as the preferred rotation.
+
+        :key skipPreferredAngleX: bool
+        :key skipPreferredAngleY: bool
+        :key skipPreferredAngleZ: bool
+        :rtype: None
+        """
+
+        skipPreferredAngleX = kwargs.get('skipPreferredAngleX', False)
+
+        if not skipPreferredAngleX:
+
+            self.preferredAngleX = self.getAttr('rotateX')
+
+        skipPreferredAngleY = kwargs.get('skipPreferredAngleY', False)
+
+        if not skipPreferredAngleY:
+
+            self.preferredAngleY = self.getAttr('rotateY')
+
+        skipPreferredAngleZ = kwargs.get('skipPreferredAngleZ', False)
+
+        if not skipPreferredAngleZ:
+
+            self.preferredAngleZ = self.getAttr('rotateZ')
     # endregion
