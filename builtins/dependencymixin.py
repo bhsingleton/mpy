@@ -1042,11 +1042,12 @@ class DependencyMixin(mpynode.MPyNode):
 
             raise TypeError('findPlug() expects either a str or MObject (%s given)!' % type(name).__name__)
 
-    def findAnimCurve(self, name, create=False):
+    def findAnimCurve(self, name, animLayer=None, create=False):
         """
         Returns an anim curve associated with the supplied plug path.
 
         :type name: Union[str, om.MObject, om.MPlug]
+        :type animLayer: Union[om.MObject, None]
         :type create: bool
         :rtype: mpy.builtins.animcurvemixin.AnimCurveMixin
         """
@@ -1057,11 +1058,45 @@ class DependencyMixin(mpynode.MPyNode):
 
         if plugutils.isAnimatable(plug):
 
-            return self.scene(animutils.findAnimCurve(plug, create=create))
+            return self.scene(animutils.findAnimCurve(plug, animLayer=animLayer, create=create))
 
         else:
 
             return None
+
+    def copyAnimCurve(self, name, otherNode, otherName=None):
+        """
+        Copies the requested anim curve to the other node.
+
+        :type name: Union[str, om.MObject, om.MPlug]
+        :type otherNode: Union[om.MObject, om.MDagPath, DepedencyMixin]
+        :rtype: bool
+        """
+
+        # Check if attribute exists on both nodes
+        #
+        otherNode = self.scene(otherNode)
+
+        if not (self.hasAttr(name) and otherNode.hasAttr(name)):
+
+            return False
+
+        # Check if anim curve exists
+        #
+        animCurve = self.findAnimCurve(name, create=False)
+
+        if animCurve is None:
+
+            return False
+
+        # Copy keys to other anim curve
+        #
+        otherName = name if stringutils.isNullOrEmpty(otherName) else otherName
+        otherAnimCurve = otherNode.findAnimCurve(otherName, create=True)
+        otherAnimCurve.replaceKeys(animCurve.getKeys())
+
+        return True
+
 
     def iterPlugs(self, **kwargs):
         """
