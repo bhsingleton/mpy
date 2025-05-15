@@ -120,25 +120,27 @@ class SkinMixin(deformermixin.DeformerMixin):
     # endregion
 
     # region Methods
-    def iterInfluences(self):
+    def iterInfluences(self, skipNullInfluences=True):
         """
         Returns a generator that yields the influence objects from this skin cluster.
 
+        :type skipNullInfluences: bool
         :rtype: Iterator[int, om.MObject]
         """
 
-        for (influenceId, influenceObj) in skinutils.iterInfluences(self.object()):
+        for (influenceId, influenceObject) in skinutils.iterInfluences(self.object(), skipNullInfluences=skipNullInfluences):
 
-            yield influenceId, self.scene(influenceObj)
+            yield influenceId, self.scene(influenceObject)
 
-    def influences(self):
+    def influences(self, skipNullInfluences=True):
         """
         Returns a dictionary of index-influence pairs from this skin cluster.
 
+        :type skipNullInfluences: bool
         :rtype: Dict[int, om.MObject]
         """
 
-        return dict(self.iterInfluences())
+        return dict(self.iterInfluences(skipNullInfluences=skipNullInfluences))
 
     def addInfluence(self, influence, index=None):
         """
@@ -269,4 +271,22 @@ class SkinMixin(deformermixin.DeformerMixin):
         """
 
         skinutils.setWeightList(self.object(), vertexWeights)
+
+    def clean(self):
+        """
+        Removes any influences that no longer exist.
+
+        :rtype: None
+        """
+
+        for (influenceId, influenceObject) in reversed(list(self.iterInfluences(skipNullInfluences=False))):
+
+            if influenceObject is None:
+
+                log.info(f'Removing null influence @ {self.name()}.matrix[{influenceId}]')
+                self.removeInfluence(influenceId)
+
+            else:
+
+                continue
     # endregion
