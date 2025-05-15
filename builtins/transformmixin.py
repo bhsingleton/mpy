@@ -1090,7 +1090,7 @@ class TransformMixin(dagmixin.DagMixin):
         name = '{name}Shape'.format(name=self.name())
         pointHelper = self.scene.createNode('pointHelper', name=name, parent=self)
 
-        # Check if any shapes were supplied
+        # Check if any drawables were requested
         #
         numArgs = len(args)
 
@@ -1112,15 +1112,27 @@ class TransformMixin(dagmixin.DagMixin):
 
             log.debug('Using default point helper shapes...')
 
-        # Set shape size
+        # Check if any texts were supplied
+        #
+        texts = kwargs.get('texts', [])
+        numTexts = len(texts)
+
+        choice = kwargs.get('choice', 0)
+
+        if numTexts > 0:
+
+            pointHelper.setAttr('text', texts)
+            pointHelper.setAttr('choice', choice)
+        
+        # Check if a size was supplied
         #
         size = kwargs.get('size', None)
 
-        if size is not None:
+        if isinstance(size, (int, float)):
 
             pointHelper.setAttr('size', size)
 
-        # Check if local position was supplied
+        # Check if a local position was supplied
         #
         localPosition = kwargs.get('localPosition', None)
 
@@ -1130,7 +1142,7 @@ class TransformMixin(dagmixin.DagMixin):
             pointHelper.setAttr('localPositionY', localPosition[1])
             pointHelper.setAttr('localPositionZ', localPosition[2])
 
-        # Check if local rotation was supplied
+        # Check if a local rotation was supplied
         #
         localRotate = kwargs.get('localRotate', None)
 
@@ -1140,7 +1152,7 @@ class TransformMixin(dagmixin.DagMixin):
             pointHelper.setAttr('localRotateY', localRotate[1])
             pointHelper.setAttr('localRotateZ', localRotate[2])
 
-        # Check if local scale was supplied
+        # Check if a local scale was supplied
         #
         localScale = kwargs.get('localScale', None)
 
