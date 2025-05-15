@@ -1,11 +1,12 @@
 import math
+import re
 
 from maya import cmds as mc
 from maya.api import OpenMaya as om
-from abc import abstractmethod
 from dcc.python import stringutils
 from dcc.maya.libs import transformutils, plugutils, plugmutators
 from dcc.maya.decorators import animate
+from abc import abstractmethod
 from . import transformmixin
 from .. import mpyattribute
 
@@ -22,6 +23,7 @@ class ConstraintMixin(transformmixin.TransformMixin):
 
     # region Dunderscores
     __api_type__ = (om.MFn.kConstraint, om.MFn.kPluginConstraintNode)
+    __weight_pattern__ = re.compile(r'^([a-zA-Z0-9_]+)W([0-9]+)$')
     __targets__ = {}  # destination-source pairs
     __inputs__ = {}  # destination-source pairs
     __outputs__ = {}  # source-destination pairs
@@ -55,7 +57,9 @@ class ConstraintMixin(transformmixin.TransformMixin):
 
         # Redundancy check
         #
-        if constraintObject == self.constraintObject():
+        force = kwargs.get('force', False)
+
+        if constraintObject == self.constraintObject() and not force:
 
             return
 
@@ -140,6 +144,33 @@ class ConstraintMixin(transformmixin.TransformMixin):
             #
             self.connectPlugs(source, destination)
 
+    def targetCount(self):
+        """
+        Evaluates the number of active target elements.
+
+        :rtype: int
+        """
+
+        return self.findPlug('target').evaluateNumElements()
+
+    def iterTargets(self):
+        """
+        Returns a generator that yields all the available constraint targets.
+
+        :rtype: Iterator[ConstraintTarget]
+        """
+
+        # Iterate through target indices
+        #
+        plug = self.findPlug('target')
+
+        for physicalIndex in range(self.targetCount()):
+
+            element = plug.elementByPhysicalIndex(physicalIndex)
+            logicalIndex = element.logicalIndex()
+
+            yield ConstraintTarget(self, index=logicalIndex)
+
     def targets(self):
         """
         Returns all the available constraint targets.
@@ -158,30 +189,33 @@ class ConstraintMixin(transformmixin.TransformMixin):
 
         return [target.targetObject() for target in self.iterTargets()]
 
-    def iterTargets(self):
+    def hasTarget(self, target):
         """
-        Returns a generator that yields all the available constraint targets.
+        Evaluates if this constraint contains the supplied target.
 
-        :rtype: Iterator[ConstraintTarget]
+        :type target: Union[str, om.MObject, om.MDagPath, transformmixin.TransformMixin]
+        :rtype: bool
         """
 
-        # Iterate through target indices
-        #
-        for physicalIndex in range(self.targetCount()):
+        return self.scene(target) in self.targetObjects()
 
-            plug = self.findPlug(f'target').elementByPhysicalIndex(physicalIndex)
-            logicalIndex = plug.logicalIndex()
-
-            yield ConstraintTarget(self, index=logicalIndex)
-
-    def targetCount(self):
+    def targetIndex(self, target):
         """
-        Evaluates the number of active target elements.
+        Returns the index of the supplied target.
 
+        :type target: Union[str, om.MObject, om.MDagPath, transformmixin.TransformMixin]
         :rtype: int
         """
 
-        return self.findPlug('target').evaluateNumElements()
+        target = self.scene(target)
+
+        try:
+
+            return self.targetObjects().index(target)
+
+        except ValueError:
+
+            return None
 
     def nextAvailableTargetIndex(self):
         """
@@ -190,8 +224,7 @@ class ConstraintMixin(transformmixin.TransformMixin):
         :rtype: int
         """
 
-        plug = self.findPlug('target')
-        return plugutils.getNextAvailableElement(plug)
+        return plugutils.getNextAvailableElement(self.findPlug('target'))
 
     @animate.Animate(state=False)
     def addTarget(self, target, weight=1.0, maintainOffset=False, **kwargs):
@@ -204,11 +237,17 @@ class ConstraintMixin(transformmixin.TransformMixin):
         :rtype: int
         """
 
-        # Iterate through required target attributes
+        # Check if target already exists
         #
         target = self.scene(target)
-        index = self.nextAvailableTargetIndex()
 
+        if self.hasTarget(target):
+
+            return self.targetIndex(target)
+
+        # Iterate through required target attributes
+        #
+        index = kwargs.get('index', self.nextAvailableTargetIndex())
         connections = kwargs.get('connections', self.__targets__)
 
         for (destinationName, sourceName) in connections.items():
@@ -230,30 +269,35 @@ class ConstraintMixin(transformmixin.TransformMixin):
 
             # Connect plugs
             #
-            self.connectPlugs(source, destination)
+            self.connectPlugs(source, destination, force=True)
 
-        # Add target weight attribute
+        # Check if weight attribute is required
         #
-        attributeName = '{nodeName}W{index}'.format(nodeName=target.name(), index=index)
+        targetName = target.name()
+        attributeName = '{targetName}W{index}'.format(targetName=targetName, index=index)
 
-        attribute = self.addAttr(
-            longName=attributeName,
-            attributeType='double',
-            min=0.0,
-            max=1.0,
-            default=1.0,
-            keyable=True,
-            cachedInternally=True,
-            disconnectBehaviour=0
-        )
+        if not self.hasAttr(attributeName):
 
-        # Connect target weight attributes
-        #
-        source = self.findPlug(attribute)
-        self.setAttr(source, weight)
+            # Add target weight attribute
+            #
+            attribute = self.addAttr(
+                longName=attributeName,
+                attributeType='double',
+                min=0.0,
+                max=1.0,
+                default=1.0,
+                keyable=True,
+                cachedInternally=True,
+                disconnectBehaviour=0
+            )
 
-        destination = self.findPlug(f'target[{index}].targetWeight')
-        self.connectPlugs(source, destination)
+            # Connect target weight attributes
+            #
+            source = self.findPlug(attribute)
+            self.setAttr(source, weight)
+
+            destination = self.findPlug(f'target[{index}].targetWeight')
+            self.connectPlugs(source, destination, force=True)
 
         # Check if offset should be maintained
         #
@@ -267,7 +311,7 @@ class ConstraintMixin(transformmixin.TransformMixin):
         """
         Adds a list of new targets to this constraint.
 
-        :type targets: List[transformmixin.TransformMixin]
+        :type targets: Union[List[transformmixin.TransformMixin], List[Tuple[transformmixin.TransformMixin, float]]]
         :key maintainOffset: bool
         :rtype: int
         """
@@ -277,7 +321,14 @@ class ConstraintMixin(transformmixin.TransformMixin):
 
         for (i, target) in enumerate(targets):
 
-            indices[i] = self.addTarget(target, **kwargs)
+            if isinstance(target, tuple):
+
+                target, weight = target
+                indices[i] = self.addTarget(target, weight=weight, **kwargs)
+
+            else:
+
+                indices[i] = self.addTarget(target, **kwargs)
 
         return indices
 
@@ -342,9 +393,9 @@ class ConstraintMixin(transformmixin.TransformMixin):
         :rtype: None
         """
 
-        for i in reversed(range(self.targetCount())):
+        for target in reversed(list(self.iterTargets())):
 
-            self.removeTarget(i)
+            self.removeTarget(target.index)
 
     def restMatrix(self):
         """
@@ -462,6 +513,73 @@ class ConstraintMixin(transformmixin.TransformMixin):
         """
 
         return self.worldRestMatrix().inverse()
+
+    def clean(self, maintainOffset=False):
+        """
+        Removes any invalid targets from this constraint.
+
+        :type maintainOffset: bool
+        :rtype: None
+        """
+
+        for target in reversed(list(self.iterTargets())):
+
+            isValid = target.isValid()
+
+            if not isValid:
+
+                self.removeTarget(target.index, maintainOffset=maintainOffset)
+
+            else:
+
+                continue
+
+    def repair(self, maintainOffset=False):
+        """
+        Tries to repair the targets that were connected to this constraint.
+        This method searches for weight attributes and checks if any nodes with those names still exist.
+
+        :type maintainOffset: bool
+        :rtype: None
+        """
+
+        # Iterate through custom attributes
+        #
+        for attribute in self.iterAttr(userDefined=True):
+
+            # Check if this is a weight-related attribute
+            #
+            fnAttribute = om.MFnAttribute(attribute)
+
+            matches = self.__weight_pattern__.findall(fnAttribute.name)
+            isMatch = len(matches) == 1
+
+            if not isMatch:
+
+                continue
+
+            # Check if associated target still exists
+            #
+            match = matches[0]
+            targetName, targetIndex = match[0], int(match[1])
+
+            if not self.scene.doesNodeExist(targetName):
+
+                log.warning(f'Unable to locate target: {targetName} @ index: {targetIndex}')
+                continue
+
+            # Reconnect target to constraint
+            #
+            target = self.scene(targetName)
+
+            log.info(f'Reconnecting target: {target} @ index: {targetIndex}')
+            self.addTarget(target, index=targetIndex, maintainOffset=False)
+
+        # Check if offset should be maintained
+        #
+        if maintainOffset:
+
+            self.maintainOffset()
     # endregion
 
 
@@ -545,6 +663,15 @@ class ConstraintTarget(object):
         """
 
         return self.plug('targetWeight').source()
+
+    def isValid(self):
+        """
+        Evaluates if the associated target node still exists.
+
+        :rtype: bool
+        """
+
+        return self.targetObject() is not None
 
     def name(self):
         """
