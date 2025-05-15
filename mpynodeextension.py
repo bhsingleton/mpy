@@ -2,6 +2,7 @@ import inspect
 
 from maya.api import OpenMaya as om
 from dcc.maya.libs import attributeutils, plugutils
+from itertools import chain
 from . import mpynode, mpyattribute
 from .abstract import mabcmeta
 
@@ -143,9 +144,17 @@ class MPyNodeExtension(mpynode.MPyNode, metaclass=mabcmeta.MABCMeta):
         :rtype: List[om.MObject]
         """
 
-        fnAttribute = om.MFnAttribute()
-        accepted = [attributeSpec['longName'] for attributeSpec in self.getUserAttributeDefinition()]
+        # Collect accepted user attributes
+        #
+        attributeDefinition = self.getUserAttributeDefinition()
 
+        accepted = []
+        accepted.extend([spec['longName'] for spec in attributeDefinition])
+        accepted.extend(list(chain(*[[subspec['longName'] for subspec in spec.get('children', [])] for spec in attributeDefinition])))
+
+        # Filter out deprecated attributes
+        #
+        fnAttribute = om.MFnAttribute()
         deprecated = []
 
         for attribute in self.listAttr(userDefined=True):
