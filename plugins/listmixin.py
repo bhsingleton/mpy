@@ -170,6 +170,15 @@ class ListElement(object):
     # endregion
 
     # region Methods
+    def isActive(self):
+        """
+        Evaluates if this list element is currently active.
+
+        :rtype: bool
+        """
+        
+        return self.list.active == self.index
+
     def name(self):
         """
         Returns the name for this list element.
@@ -257,7 +266,15 @@ class ListElement(object):
         plug = self.list[f'list[{self.index}].{self.__attributes__[self.list.typeName]}']
         childCount = plug.numChildren()
 
-        return [plug.child(i).source() for i in range(childCount)]
+        childPlugs = [plug.child(i).source() for i in range(childCount)]
+
+        if self.isActive():
+
+            return [childPlug.source() for childPlug in childPlugs]
+
+        else:
+
+            return childPlugs
 
     def setSource(self, source):
         """
