@@ -55,10 +55,11 @@ class NurbsCurveMixin(shapemixin.ShapeMixin):
         functionSet.setCVPositions(points, space=space)
         functionSet.updateCurve()
 
-    def curveBox(self):
+    def curveBox(self, worldSpace=False):
         """
         Returns the bounding-box for the curve excluding control-points!
 
+        :type worldSpace: bool
         :rtype: om.MBoundingBox
         """
 
@@ -67,10 +68,14 @@ class NurbsCurveMixin(shapemixin.ShapeMixin):
 
         boundingBox = om.MBoundingBox()
 
-        for i in inclusiveRange(numSpans):
+        for i in inclusiveRange(0, numSpans, 0.25):
 
-            point = functionSet.getPointAtParam(i, space=om.MSpace.kWorld)
+            point = functionSet.getPointAtParam(i, space=om.MSpace.kObject)
             boundingBox.expand(point)
+
+        if worldSpace:
+
+            boundingBox.transformUsing(self.worldMatrix())
 
         return boundingBox
     # endregion
