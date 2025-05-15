@@ -389,6 +389,20 @@ class AnimCurveMixin(dependencymixin.DependencyMixin):
             #
             self.setTangentsLocked(i, True)
 
+    def reverseKeys(self):
+        """
+        Reverses the values on this anim-curve.
+
+        :rtype: None
+        """
+
+        # Iterate through keys
+        #
+        for i in range(self.numKeys):
+
+            value = self.value(i)
+            self.setValue(i, 1.0 - value)
+
     def clearKeys(self, animationRange=None, delete=True):
         """
         Removes all keyframes from this curve.
