@@ -10,7 +10,7 @@ log.setLevel(logging.INFO)
 
 class IKSoftenerMixin(dependencymixin.DependencyMixin):
     """
-    Overload of `DependencyMixin` that interfaces with ik softeners.
+    Overload of `DependencyMixin` that interfaces with IK softeners.
     """
 
     # region Attributes
