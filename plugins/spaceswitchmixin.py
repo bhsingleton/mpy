@@ -170,14 +170,6 @@ class SpaceSwitchMixin(dependencymixin.DependencyMixin):
         :rtype: int
         """
 
-        # Get world rest-matrix
-        #
-        driven = self.driven()
-        restMatrix = om.MMatrix(self.restMatrix)
-        parentMatrix = driven.parentMatrix() if (driven is not None) else om.MMatrix.kIdentity
-
-        restWorldMatrix = restMatrix * parentMatrix
-
         # Get next available space index
         #
         plug = self.findPlug('target')
@@ -195,12 +187,7 @@ class SpaceSwitchMixin(dependencymixin.DependencyMixin):
 
             if maintainOffset:
 
-                offsetMatrix = restWorldMatrix * target.worldInverseMatrix()
-                offsetTranslate, offsetRotate, offsetScale = transformutils.decomposeTransformMatrix(offsetMatrix)
-
-                self.setAttr(f'target[{index}].targetOffsetTranslate', offsetTranslate)
-                self.setAttr(f'target[{index}].targetOffsetRotate', list(map(math.degrees, offsetRotate)))
-                self.setAttr(f'target[{index}].targetOffsetScale', offsetScale)
+                self.maintainOffset(index)
 
         else:
 
@@ -213,12 +200,7 @@ class SpaceSwitchMixin(dependencymixin.DependencyMixin):
 
             if maintainOffset:
 
-                offsetMatrix = restWorldMatrix * worldMatrix.inverse()
-                offsetTranslate, offsetRotate, offsetScale = transformutils.decomposeTransformMatrix(offsetMatrix)
-
-                self.setAttr(f'target[{index}].targetOffsetTranslate', offsetTranslate)
-                self.setAttr(f'target[{index}].targetOffsetRotate', list(map(math.degrees, offsetRotate)))
-                self.setAttr(f'target[{index}].targetOffsetScale', offsetScale)
+                self.maintainOffset(index)
 
         return index
 
@@ -238,6 +220,40 @@ class SpaceSwitchMixin(dependencymixin.DependencyMixin):
             indices[i] = self.addTarget(target, **kwargs)
 
         return indices
+
+    def maintainOffset(self, *indices):
+        """
+        Updates the offsets for the specified target indices.
+        If not indices are supplied then all target indices are used instead!
+
+        :type indices: Union[int, List[int]]
+        :rtype: None
+        """
+
+        # Check if any indices were supplied
+        # If not, then collect all active target indices
+        #
+        if stringutils.isNullOrEmpty(indices):
+
+            indices = [target.index for target in self.iterTargets()]
+
+        # Iterate through indices
+        #
+        driven = self.driven()
+        parentMatrix = driven.parentMatrix() if (driven is not None) else om.MMatrix.kIdentity
+
+        restMatrix = om.MMatrix(self.restMatrix)
+        restWorldMatrix = restMatrix * parentMatrix
+
+        for index in indices:
+
+            targetMatrix = self.getAttr(f'target[{index}].targetMatrix')
+            offsetMatrix = restWorldMatrix * targetMatrix.inverse()
+            offsetTranslate, offsetRotate, offsetScale = transformutils.decomposeTransformMatrix(offsetMatrix)
+
+            self.setAttr(f'target[{index}].targetOffsetTranslate', offsetTranslate)
+            self.setAttr(f'target[{index}].targetOffsetRotate', offsetRotate, convertUnits=False)
+            self.setAttr(f'target[{index}].targetOffsetScale', offsetScale)
     # endregion
 
 
