@@ -1,6 +1,6 @@
 from maya import OpenMaya as legacy
 from maya.api import OpenMaya as om
-from dcc.maya.libs import plugmutators
+from dcc.maya.libs import plugutils, plugmutators
 
 from . import mpynode
 
@@ -126,7 +126,7 @@ class MPyAttribute(object):
 
         # Reset plug value
         #
-        if callable(self.fset):
+        if callable(self.fdel):
 
             self.fdel(instance)
 
@@ -144,7 +144,7 @@ class MPyAttribute(object):
         #
         if isinstance(instance, mpynode.MPyNode):
 
-            return om.MPlug(instance.object(), instance.attribute(self.name))
+            return plugutils.findPlug(instance.object(), self.name)
 
         else:
 
