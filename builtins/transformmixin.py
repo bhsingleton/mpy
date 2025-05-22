@@ -474,11 +474,16 @@ class TransformMixin(dagmixin.DagMixin):
             # Get matrices at times
             #
             startTime, endTime = animationRange
+            originalTime = self.scene.time
+
             matrices = {}
 
             for time in inclusiveRange(startTime, endTime, step):
 
-                matrices[time] = self.worldMatrix(time=time) if worldSpace else self.matrix(time=time)
+                self.scene.time = time
+                matrices[time] = self.worldMatrix() if worldSpace else self.matrix()
+
+            self.scene.time = originalTime
 
             return matrices
 
@@ -503,11 +508,15 @@ class TransformMixin(dagmixin.DagMixin):
 
             # Get matrices at times
             #
+            originalTime = self.scene.time
             matrices = {}
 
-            for time in sorted(times):
+            for time in sorted(sortedTimes):
 
-                matrices[time] = self.worldMatrix(time=time) if worldSpace else self.matrix(time=time)
+                self.scene.time = time
+                matrices[time] = self.worldMatrix() if worldSpace else self.matrix()
+
+            self.scene.time = originalTime
 
             return matrices
 
