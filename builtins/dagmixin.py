@@ -347,7 +347,7 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
 
             return
 
-        # Execute dag modifier
+        # Evaluate parent type
         #
         if parent is None:
 
