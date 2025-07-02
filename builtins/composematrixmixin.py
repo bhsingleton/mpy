@@ -57,10 +57,9 @@ class ComposeMatrixMixin(dependencymixin.DependencyMixin):
         """
 
         translation, eulerRotation, scale = transformutils.decomposeTransformMatrix(matrix, rotateOrder=rotateOrder)
-
-        self.inputTranslate = translation
-        self.useEulerRotation = True
-        self.inputRotateOrder = rotateOrder
-        self.inputRotate = eulerRotation
-        self.inputScale = scale
+        self.setAttr('inputTranslate', translation)
+        self.setAttr('useEulerRotation', True)
+        self.setAttr('inputRotateOrder', rotateOrder)
+        self.setAttr('inputRotate', eulerRotation, convertUnits=False)
+        self.setAttr('inputScale', scale)
     # endregion
