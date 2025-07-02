@@ -1,6 +1,7 @@
 import os
 
 from maya.api import OpenMaya as om
+from dcc.python import stringutils
 from dcc.vendor.Qt import QtGui
 from dcc.vendor.six import string_types
 from . import dependencymixin
@@ -293,10 +294,16 @@ class ContainerBaseMixin(dependencymixin.DependencyMixin):
         :rtype: mpy.mpynode.MPyNode
         """
 
-        # Get published node info
+        # Check if published node info exists
         #
         publishedNodeInfo = self.getPublishedNodeInfo(index)
 
+        if not isinstance(publishedNodeInfo, PublishedNodeInfo):
+
+            return None
+
+        # Check if published node exists
+        #
         if publishedNodeInfo.hasPublishedNode():
 
             return self.scene(publishedNodeInfo.publishedNode())
@@ -459,18 +466,26 @@ class ContainerBaseMixin(dependencymixin.DependencyMixin):
         Returns the published node info interface for the specified index.
 
         :type index: Union[int, str]
-        :rtype: PublishedNodeInfo
+        :rtype: Union[PublishedNodeInfo, None]
         """
 
         # Check index type
         #
         if isinstance(index, string_types):
 
-            index = self.findPlug(self.getAliases()[index]).logicalIndex()
+            aliases = self.getAliases()
+            plugName = aliases.get(index, None)
+            index = self.findPlug(plugName).logicalIndex() if not stringutils.isNullOrEmpty(plugName) else None
 
         # Return published node info
         #
-        return PublishedNodeInfo(self, index=index)
+        if isinstance(index, int):
+
+            return PublishedNodeInfo(self, index=index)
+
+        else:
+
+            return None
 
     def iterPublishedNodeInfo(self, skipEmptyElements=False):
         """
@@ -641,7 +656,7 @@ class PublishedNodeInfo(object):
         :rtype: om.MPlug
         """
 
-        return self.container.findPlug('publishedNodeInfo[%s]' % self.index)
+        return self.container.findPlug(f'publishedNodeInfo[{self.index}]')
 
     def publishedNodeInfoChildPlug(self, child):
         """
