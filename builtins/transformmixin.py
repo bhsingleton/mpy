@@ -65,6 +65,7 @@ class TransformMixin(dagmixin.DagMixin):
         if absolute:
 
             worldMatrix = self.worldMatrix()
+            log.info(f'Caching absolute matrix: {worldMatrix}')
 
         # Call parent method
         #
@@ -367,7 +368,7 @@ class TransformMixin(dagmixin.DagMixin):
         :rtype: None
         """
 
-        parentInverseMatrix = self.parentInverseMatrix()
+        parentInverseMatrix = self.parent().worldInverseMatrix() if self.hasParent() else self.parentInverseMatrix()
         matrix = worldMatrix * parentInverseMatrix
 
         self.setMatrix(matrix, **kwargs)
@@ -474,16 +475,11 @@ class TransformMixin(dagmixin.DagMixin):
             # Get matrices at times
             #
             startTime, endTime = animationRange
-            originalTime = self.scene.time
-
             matrices = {}
 
             for time in inclusiveRange(startTime, endTime, step):
 
-                self.scene.time = time
-                matrices[time] = self.worldMatrix() if worldSpace else self.matrix()
-
-            self.scene.time = originalTime
+                matrices[time] = self.worldMatrix(time=time) if worldSpace else self.matrix(time=time)
 
             return matrices
 
@@ -508,15 +504,11 @@ class TransformMixin(dagmixin.DagMixin):
 
             # Get matrices at times
             #
-            originalTime = self.scene.time
             matrices = {}
 
-            for time in sorted(sortedTimes):
+            for time in sorted(times):
 
-                self.scene.time = time
-                matrices[time] = self.worldMatrix() if worldSpace else self.matrix()
-
-            self.scene.time = originalTime
+                matrices[time] = self.worldMatrix(time=time) if worldSpace else self.matrix(time=time)
 
             return matrices
 
@@ -771,18 +763,19 @@ class TransformMixin(dagmixin.DagMixin):
         self.hideAttr('visibility')
         self.showAttr('rotateOrder')
 
-    def iterConstraints(self, typeName='constraint'):
+    def iterConstraints(self, typeName='constraint', exactType=False):
         """
         Returns a generator that yields constraints from this transform.
 
         :type typeName: str
+        :type exactType: bool
         :rtype: Iterator[mpy.builtins.constraintmixin.ConstraintMixin]
         """
 
         # Iterate through connections
         #
         plugs = self.getConnections()
-        typeNames = mc.nodeType(typeName, isTypeName=True, derived=True)
+        typeNames = [typeName] if exactType else mc.nodeType(typeName, isTypeName=True, derived=True)
 
         constraints = {}
 
@@ -812,15 +805,16 @@ class TransformMixin(dagmixin.DagMixin):
                 constraints[hashCode] = True
                 yield source
 
-    def constraints(self, typeName='constraint'):
+    def constraints(self, typeName='constraint', exactType=False):
         """
         Retrieves a list of constraints that are driving this transform.
 
         :type typeName: str
+        :type exactType: bool
         :rtype: List[mpy.builtins.constraintmixin.ConstraintMixin]
         """
 
-        return list(self.iterConstraints(typeName=typeName))
+        return list(self.iterConstraints(typeName=typeName, exactType=exactType))
 
     def constraintCount(self):
         """
@@ -867,16 +861,17 @@ class TransformMixin(dagmixin.DagMixin):
 
         return constraint
 
-    def findConstraint(self, typeName):
+    def findConstraint(self, typeName, exactType=False):
         """
         Returns the constraint with the specified type name.
         If no constraint exists then none is returned!
 
         :type typeName: str
+        :type exactType: bool
         :rtype: mpy.builtins.constraintmixin.ConstraintMixin
         """
 
-        found = self.constraints(typeName=typeName)
+        found = self.constraints(typeName=typeName, exactType=exactType)
         numFound = len(found)
 
         if numFound == 0:
