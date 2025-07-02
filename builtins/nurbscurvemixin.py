@@ -1,5 +1,6 @@
 from maya import cmds as mc
 from maya.api import OpenMaya as om
+from dcc.maya.libs import transformutils
 from dcc.generators.inclusiverange import inclusiveRange
 from . import shapemixin
 from .. import mpyattribute
@@ -54,6 +55,66 @@ class NurbsCurveMixin(shapemixin.ShapeMixin):
         functionSet = self.functionSet()  # type: om.MFnNurbsCurve
         functionSet.setCVPositions(points, space=space)
         functionSet.updateCurve()
+
+    def translateControlPoints(self, translation):
+        """
+        Translates the control points by the specified amount.
+
+        :type scale: Union[om.MVector, Tuple[float, float, float]]
+        :rtype: None
+        """
+
+        controlPoints = self.controlPoints()
+        numControlPoints = len(controlPoints)
+
+        translateMatrix = transformutils.createTranslateMatrix(scale)
+        edits = om.MPointArray(numControlPoints, om.MPoint.kOrigin)
+
+        for (i, controlPoint) in enumerate(controlPoints):
+
+            edits[i] = om.MPoint(controlPoint) * translateMatrix
+
+        self.setControlPoints(edits)
+
+    def rotateControlPoints(self, eulerRotation):
+        """
+        Rotates the control points by the specified amount.
+
+        :type eulerRotation: Union[om.MEulerRotation, Tuple[float, float, float]]
+        :rtype: None
+        """
+
+        controlPoints = self.controlPoints()
+        numControlPoints = len(controlPoints)
+
+        rotationMatrix = transformutils.createRotationMatrix(eulerRotation)
+        edits = om.MPointArray(numControlPoints, om.MPoint.kOrigin)
+
+        for (i, controlPoint) in enumerate(controlPoints):
+
+            edits[i] = om.MPoint(controlPoint) * rotationMatrix
+
+        self.setControlPoints(edits)
+
+    def scaleControlPoints(self, scale):
+        """
+        Scales the control points by the specified amount.
+
+        :type scale: Union[om.MVector, Tuple[float, float, float]]
+        :rtype: None
+        """
+
+        controlPoints = self.controlPoints()
+        numControlPoints = len(controlPoints)
+
+        scaleMatrix = transformutils.createScaleMatrix(scale)
+        edits = om.MPointArray(numControlPoints, om.MPoint.kOrigin)
+
+        for (i, controlPoint) in enumerate(controlPoints):
+
+            edits[i] = om.MPoint(controlPoint) * scaleMatrix
+
+        self.setControlPoints(edits)
 
     def curveBox(self, worldSpace=False):
         """
