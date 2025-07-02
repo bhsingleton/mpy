@@ -49,14 +49,26 @@ class JointMixin(transformmixin.TransformMixin):
 
         # Call parent method
         #
-        parent = om.MObject.kNullObj if (parent is None) else parent
         super(JointMixin, self).setParent(parent, absolute=absolute)
 
         # Check if inverse-scale is required
         #
-        if parent.hasFn(om.MFn.kJoint):
+        parent = self.parent()
 
-            self.connectPlugs(parent['scale'], 'inverseScale', force=True)
+        if parent is not None:
+
+            if parent.hasFn(om.MFn.kJoint):
+
+                self.connectPlugs(parent['scale'], 'inverseScale', force=True)
+
+            else:
+
+                log.debug(f'Skipping "{parent.name()}.scale" > "{self.name()}.inverseScale" connection.')
+
+        else:
+
+            self.breakConnections('inverseScale', source=True)
+            self.resetAttr('inverseScale')
 
     def preEulerRotation(self):
         """
