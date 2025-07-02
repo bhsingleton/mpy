@@ -185,10 +185,6 @@ class SpaceSwitchMixin(dependencymixin.DependencyMixin):
             self.setAttr(f'target[{index}].targetName', target.name())
             self.connectPlugs(target[f'worldMatrix[{target.instanceNumber()}]'], f'target[{index}].targetMatrix')
 
-            if maintainOffset:
-
-                self.maintainOffset(index)
-
         else:
 
             # Add world space to switch
@@ -198,9 +194,11 @@ class SpaceSwitchMixin(dependencymixin.DependencyMixin):
             self.setAttr(f'target[{index}].targetName', 'World')
             self.setAttr(f'target[{index}].targetMatrix', worldMatrix)
 
-            if maintainOffset:
+        # Check if offset should be maintained
+        #
+        if maintainOffset:
 
-                self.maintainOffset(index)
+            self.maintainOffset(index)
 
         return index
 
@@ -220,6 +218,57 @@ class SpaceSwitchMixin(dependencymixin.DependencyMixin):
             indices[i] = self.addTarget(target, **kwargs)
 
         return indices
+
+    def replaceTarget(self, index, target, **kwargs):
+        """
+        Replaces the target at the specified index.
+
+        :type index: int
+        :type target: mpy.builtins.transformmixin.TransformMixin
+        :rtype: None
+        """
+
+        # Evaluate target type
+        #
+        if target.hasFn(om.MFn.kTransform):
+
+            self.connectPlugs(target[f'worldMatrix[{target.instanceNumber()}]'], f'target[{index}].targetMatrix', force=True)
+
+        elif target.hasFn(om.MFn.kComposeMatrix, om.MFn.kBlendMatrix, om.MFn.kPickMatrix, om.MFn.kAimMatrix):
+
+            self.connectPlugs(target['outputMatrix'], f'target[{index}].targetMatrix', force=True)
+
+        elif target.hasFn(om.MFn.kMatrixMult):
+
+            self.connectPlugs(target['matrixSum'], f'target[{index}].targetMatrix', force=True)
+
+        elif target.hasFn(om.MFn.kPluginDependNode) and target.typeName == 'blendTransform':
+
+            self.connectPlugs(target['outMatrix'], f'target[{index}].targetMatrix', force=True)
+
+        else:
+
+            raise TypeError(f'replaceTarget() expects a transform ({target.apiTypeStr} given)!')
+
+        # Override target name
+        #
+        self.setAttr(f'target[{index}].targetName', target.name())
+
+        # Check if offset should be maintained
+        #
+        maintainOffset = kwargs.get('maintainOffset', True)
+
+        if maintainOffset:
+
+            self.maintainOffset(index)
+
+        # Check if offset should be reset
+        #
+        resetOffset = kwargs.get('resetOffset', False)
+
+        if resetOffset:
+
+            self.resetOffset(index)
 
     def maintainOffset(self, *indices):
         """
@@ -254,6 +303,60 @@ class SpaceSwitchMixin(dependencymixin.DependencyMixin):
             self.setAttr(f'target[{index}].targetOffsetTranslate', offsetTranslate)
             self.setAttr(f'target[{index}].targetOffsetRotate', offsetRotate, convertUnits=False)
             self.setAttr(f'target[{index}].targetOffsetScale', offsetScale)
+
+    def resetOffset(self, *indices):
+        """
+        Updates the offsets for the specified target indices.
+        If not indices are supplied then all target indices are used instead!
+
+        :type indices: Union[int, List[int]]
+        :rtype: None
+        """
+
+        # Check if any indices were supplied
+        # If not, then collect all active target indices
+        #
+        if stringutils.isNullOrEmpty(indices):
+
+            indices = [target.index for target in self.iterTargets()]
+
+        # Iterate through indices
+        #
+        for index in indices:
+
+            self.resetAttr(f'target[{index}].targetOffsetTranslate')
+            self.resetAttr(f'target[{index}].targetOffsetRotate')
+            self.resetAttr(f'target[{index}].targetOffsetScale')
+
+    def repair(self):
+        """
+        Tries to repair all targets on this space switch by re-connecting them.
+
+        :rtype: None
+        """
+
+        name = self.name()
+
+        for target in self.iterTargets():
+
+            targetName = target.name()
+            targetIndex = int(target.index)
+
+            if not self.scene.doesNodeExist(targetName):
+
+                log.warning(f'Unable to locate "{targetName}" target @ "{name}.target[{targetIndex}]"!')
+                continue
+
+            targetNode = self.scene(targetName)
+
+            if targetNode.hasFn(om.MFn.kTransform):
+
+                targetNode.connectPlugs(f'worldMatrix[{targetNode.instanceNumber()}]', self[f'target[{targetIndex}].targetMatrix'], force=True)
+
+            else:
+
+                log.warning(f'Unable to reconnect "{targetName}" target @ "{name}.target[{targetIndex}]"!')
+                continue
     # endregion
 
 
