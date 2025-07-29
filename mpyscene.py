@@ -533,7 +533,18 @@ class MPyScene(proxyfactory.ProxyFactory):
         :rtype: bool
         """
 
-        return not self.doesNodeExist(name)
+        # Check if name it being utilized
+        #
+        baseName = dagutils.stripDagPath(name)
+        occurrences = mc.ls(baseName)
+
+        if not stringutils.isNullOrEmpty(occurrences):
+
+            return len(occurrences) == 1
+
+        else:
+
+            return True
 
     def makeNameUnique(self, name):
         """
