@@ -100,18 +100,26 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
         :rtype: bool
         """
 
-        return self.functionSet().isIntermediateObject
+        try:
+
+            return self.getAttr('intermediateObject', False)
+
+        except RuntimeError as exception:
+
+            log.warning(exception)
+            return False
 
     @isIntermediateObject.setter
     def isIntermediateObject(self, isIntermediateObject):
         """
         Setter method that updates the intermediate object flag.
+        Sadly the associated function-set property is read-only...
 
         :type isIntermediateObject: bool
         :rtype: None
         """
 
-        self.setAttr('intermediateObject', isIntermediateObject)  # For some reason the function set property is read-only???
+        self.setAttr('intermediateObject', isIntermediateObject)
     # endregion
 
     # region Methods
