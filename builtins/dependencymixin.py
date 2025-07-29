@@ -412,7 +412,7 @@ class DependencyMixin(mpynode.MPyNode):
 
         # Check if opposite node exists
         #
-        if mc.objExists(absoluteName):
+        if self.scene.doesNodeExist(absoluteName) and self.scene.isNameUnique(absoluteName):
 
             return self.scene(absoluteName)
 
