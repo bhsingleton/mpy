@@ -477,6 +477,15 @@ class MPyScene(proxyfactory.ProxyFactory):
         self.__classes__[apiType] = cls
         return cls
 
+    def isNew(self):
+        """
+        Evaluates if the scene is new.
+
+        :rtype: bool
+        """
+
+        return sceneutils.isNewScene()
+
     def new(self):
         """
         Opens a new scene file.
@@ -517,13 +526,20 @@ class MPyScene(proxyfactory.ProxyFactory):
 
     def doesNodeExist(self, name):
         """
-        Evaluates if a node with the supplied name exists.
+        Evaluates if a node with the supplied name or UUID exists.
 
         :type name: str
         :rtype: bool
         """
 
-        return mc.objExists(name)
+        if dagutils.isValidUUID(name):
+
+            uuid = name.asString() if isinstance(name, om.MUuid) else name
+            return not stringutils.isNullOrEmpty(mc.ls(uuid))
+
+        else:
+
+            return mc.objExists(name)
 
     def isNameUnique(self, name):
         """
