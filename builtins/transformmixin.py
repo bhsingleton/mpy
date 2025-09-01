@@ -65,7 +65,6 @@ class TransformMixin(dagmixin.DagMixin):
         if absolute:
 
             worldMatrix = self.worldMatrix()
-            log.info(f'Caching absolute matrix: {worldMatrix}')
 
         # Call parent method
         #
