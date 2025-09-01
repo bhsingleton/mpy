@@ -310,7 +310,7 @@ class DependencyMixin(mpynode.MPyNode):
     def duplicate(self, name=''):
         """
         Returns a duplicate of this node.
-        FIXME: This method
+        FIXME: There's something wrong with this method and I forgot what it was?!?
 
         :type name: str
         :rtype: DependencyMixin
