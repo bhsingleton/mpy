@@ -239,6 +239,7 @@ class ReferenceMixin(dependencymixin.DependencyMixin):
 
         if not self.isLoaded():
 
+            self.scene.clearSelection()
             mc.file(self.filePath(), loadReference=self.name(includeNamespace=True), loadReferenceDepth='asPrefs')
 
         else:
