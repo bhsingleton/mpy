@@ -1097,17 +1097,17 @@ class DependencyMixin(mpynode.MPyNode):
 
         return True
 
-
     def iterPlugs(self, **kwargs):
         """
         Returns a generator that yields plugs from this node.
 
-        :key readable: bool
-        :key writable: bool
-        :key nonDefault: bool
-        :key channelBox: bool
-        :key affectsWorldSpace: bool
-        :key skipUserAttributes: bool
+        :type readable: bool
+        :type writable: bool
+        :type nonDefault: bool
+        :type channelBox: bool
+        :type affectsWorldSpace: bool
+        :type skipStaticAttributes: bool
+        :type skipUserAttributes: bool
         :rtype: Iterator[om.MPlug]
         """
 
