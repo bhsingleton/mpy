@@ -544,10 +544,26 @@ class TransformMixin(dagmixin.DagMixin):
         """
         Resets all the channel-box plugs back to their default value.
 
+        :type skipUserAttributes: bool
         :rtype: None
         """
 
         for plug in self.iterPlugs(channelBox=True, skipUserAttributes=skipUserAttributes):
+
+            self.resetAttr(plug)
+
+    def resetUserAttributes(self):
+        """
+        Resets all user attributes back to their default value.
+
+        :rtype: None
+        """
+
+        for plug in self.iterPlugs(channelBox=True):
+
+            if not plug.isDynamic:
+
+                continue
 
             self.resetAttr(plug)
 
@@ -847,8 +863,11 @@ class TransformMixin(dagmixin.DagMixin):
         # Check if constraint already exists
         #
         constraint = self.findConstraint(typeName)
+        hasConstraint = constraint is not None
 
-        if constraint is not None:
+        force = kwargs.get('force', False)
+
+        if hasConstraint and not force:
 
             return constraint
 
