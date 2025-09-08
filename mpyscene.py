@@ -528,14 +528,15 @@ class MPyScene(proxyfactory.ProxyFactory):
         """
         Evaluates if a node with the supplied name or UUID exists.
 
-        :type name: str
+        :type name: Union[str, om.MUuid]
         :rtype: bool
         """
 
+        name = name.asString() if isinstance(name, om.MUuid) else name
+
         if dagutils.isValidUUID(name):
 
-            uuid = name.asString() if isinstance(name, om.MUuid) else name
-            return not stringutils.isNullOrEmpty(mc.ls(uuid))
+            return not stringutils.isNullOrEmpty(mc.ls(name))
 
         else:
 
@@ -543,13 +544,13 @@ class MPyScene(proxyfactory.ProxyFactory):
 
     def isNameUnique(self, name):
         """
-        Evaluates if the supplied name is unique.
+        Evaluates if the supplied name is currently unique.
 
         :type name: str
         :rtype: bool
         """
 
-        # Check if name it being utilized
+        # Evaluate number of known occurences
         #
         baseName = dagutils.stripDagPath(name)
         occurrences = mc.ls(baseName)
@@ -561,6 +562,21 @@ class MPyScene(proxyfactory.ProxyFactory):
         else:
 
             return True
+
+    def isNameAvailable(self, name):
+        """
+        Evaluates if the supplied name is available for use.
+
+        :type name: str
+        :rtype: bool
+        """
+
+        # Evaluate number of known occurences
+        #
+        baseName = dagutils.stripDagPath(name)
+        occurrences = mc.ls(baseName)
+
+        return stringutils.isNullOrEmpty(occurrences)
 
     def makeNameUnique(self, name):
         """
@@ -575,7 +591,7 @@ class MPyScene(proxyfactory.ProxyFactory):
 
         digit = 1
 
-        while not self.isNameUnique(newName):
+        while not self.isNameAvailable(newName):
 
             newName = f'{strippedName}{digit}'
             digit += 1
@@ -929,6 +945,15 @@ class MPyScene(proxyfactory.ProxyFactory):
         else:
 
             raise TypeError(f'setSelection() expects a selection list ({type(selection).__name__} given)!')
+
+    def clearSelection(self):
+        """
+        Clears the active selection.
+
+        :rtype: None
+        """
+
+        self.setSelection([], replace=True)
 
     def iterComponentSelection(self, apiType=om.MFn.kShape):
         """
