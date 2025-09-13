@@ -1,5 +1,3 @@
-import math
-
 from maya import cmds as mc
 from maya.api import OpenMaya as om
 from dcc.python import stringutils
@@ -712,6 +710,8 @@ class TransformMixin(dagmixin.DagMixin):
         Tags this transform node as a controller.
         If this transform is already tagged then that controller will be returned.
 
+        :type parent: Union[mpynode.MPyNode, om.MObject, None]
+        :type children: List[Union[mpynode.MPyNode, om.MObject, None]]
         :rtype: mpy.builtins.controllermixin.ControllerMixin
         """
 
@@ -726,9 +726,9 @@ class TransformMixin(dagmixin.DagMixin):
 
         # Check if a parent was supplied
         #
-        parent = kwargs.get('parent', None)
+        parent = self.scene(kwargs.get('parent', None))
 
-        if parent is not None:
+        if isinstance(parent, dagmixin.DagMixin):
 
             parentTag = parent.controllerTag(create=True)
             parentTag.connectPlugs('message', controllerTag['parent'], force=True)
@@ -739,6 +739,12 @@ class TransformMixin(dagmixin.DagMixin):
         children = kwargs.get('children', [])
 
         for (i, child) in enumerate(children):
+
+            child = self.scene(child)
+
+            if not isinstance(child, dagmixin.DagMixin):
+
+                continue
 
             childTag = child.controllerTag(create=True)
             controllerTag.connectPlugs(childTag['parent'], f'children[{i}]', force=True)
