@@ -406,9 +406,10 @@ class DependencyMixin(mpynode.MPyNode):
         # If not, then mirror the name of this node
         #
         name = self.userProperties.get('mirrorNode', self.name())
+        namespace = self.namespace()
         mirrorName = namingutils.mirrorName(name)
 
-        absoluteName = f'{self.namespace()}:{mirrorName}'
+        absoluteName = f'{namespace}:{mirrorName}'
 
         # Check if opposite node exists
         #
