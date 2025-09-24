@@ -621,10 +621,31 @@ class TransformMixin(dagmixin.DagMixin):
             'mirrorRotateZ': not mirrorTranslateZ,
         }
 
-        log.info('Detecting "%s" > "%s" mirror settings: %s' % (self.name(), otherTransform.name(), settings))
+        log.info(f'Detecting "{self.name()}" > "{otherTransform.name()}" mirror settings: {settings}')
         self.userProperties.update(settings)
 
         return True
+
+    def ensureMirroring(self, normal=om.MVector.kXaxisVector):
+        """
+        Ensures that this node has mirror settings.
+
+        :type normal: om.MVector
+        :rtype: bool
+        """
+
+        hasTranslationMirroring = all(f'mirrorTranslate{axis}' in self.userProperties for axis in ('X', 'Y', 'Z'))
+        hasRotationMirroring = all(f'mirrorRotate{axis}' in self.userProperties for axis in ('X', 'Y', 'Z'))
+
+        hasMirroring = hasTranslationMirroring and hasRotationMirroring
+
+        if hasMirroring:
+
+            return True
+
+        else:
+
+            return self.detectMirroring(normal=normal)
 
     def mirrorTransform(self, pull=False, skipUserAttributes=False, includeKeys=False, animationRange=None, insertAt=None):
         """
@@ -726,10 +747,11 @@ class TransformMixin(dagmixin.DagMixin):
 
         # Check if a parent was supplied
         #
-        parent = self.scene(kwargs.get('parent', None))
+        parent = kwargs.get('parent', None)
 
-        if isinstance(parent, dagmixin.DagMixin):
+        if parent is not None:
 
+            parent = self.scene(parent)
             parentTag = parent.controllerTag(create=True)
             parentTag.connectPlugs('message', controllerTag['parent'], force=True)
             parentTag.connectPlugs('prepopulate', controllerTag['prepopulate'], force=True)

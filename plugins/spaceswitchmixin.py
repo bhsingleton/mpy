@@ -170,24 +170,27 @@ class SpaceSwitchMixin(dependencymixin.DependencyMixin):
         :rtype: int
         """
 
-        # Get next available space index
+        # Check if an index was supplied
         #
         plug = self.findPlug('target')
-        attribute = self.attribute('targetMatrix')
-        index = self.getNextAvailableConnection(plug, child=attribute)
+        index = kwargs.get('index', None)
 
-        maintainOffset = kwargs.get('maintainOffset', True)
+        if not isinstance(index, int):
 
+            index = self.getNextAvailableConnection(plug, child=self.attribute('targetMatrix'))
+
+        # Update target connections
+        #
         if target is not None:
 
-            # Connect space to switch
+            # Connect target to space switch
             #
             self.setAttr(f'target[{index}].targetName', target.name())
             self.connectPlugs(target[f'worldMatrix[{target.instanceNumber()}]'], f'target[{index}].targetMatrix')
 
         else:
 
-            # Add world space to switch
+            # Add world target to space switch
             #
             worldMatrix = om.MMatrix.kIdentity
 
@@ -196,6 +199,8 @@ class SpaceSwitchMixin(dependencymixin.DependencyMixin):
 
         # Check if offset should be maintained
         #
+        maintainOffset = kwargs.get('maintainOffset', True)
+
         if maintainOffset:
 
             self.maintainOffset(index)
@@ -269,6 +274,73 @@ class SpaceSwitchMixin(dependencymixin.DependencyMixin):
         if resetOffset:
 
             self.resetOffset(index)
+
+    def mirrorTarget(self, index, normal=om.MVector.kXaxisVector):
+        """
+        Mirrors the target offsets at the specified target index.
+
+        :type index: int
+        :type normal: om.MVector
+        :rtype: bool
+        """
+
+        # Get driven node along with rest matrix
+        #
+        driven = self.driven()
+        driven.ensureMirroring(normal=normal)
+
+        restMatrix = om.MMatrix(self.restMatrix)
+        worldRestMatrix = restMatrix * driven.parentMatrix()
+        mirrorRestMatrix = transformutils.mirrorMatrix(worldRestMatrix, normal=normal)
+
+        # Get associated target node
+        #
+        spaceTarget = SpaceTarget(self, index=index)
+
+        targetName = spaceTarget.name()
+        target = self.scene(targetName)
+        target.ensureMirroring(normal=normal)
+
+        targetMatrix = target.worldMatrix()
+
+        # Mirror target matrix
+        #
+        isMirrored = all(target.userProperties[f'mirrorTranslate{axis}'] for axis in ('X', 'Y', 'Z'))
+        rotateMatrix = transformutils.createRotationMatrix((0.0, 0.0, 180.0)) if isMirrored else om.MMatrix.kIdentity
+
+        mirrorTargetMatrix = rotateMatrix * transformutils.mirrorMatrix(targetMatrix, normal=normal)
+
+        # Check if opposite target exists
+        #
+        oppositeTarget = target.getOppositeNode()
+        oppositeName = oppositeTarget.name()
+
+        spaceTargets = self.targets()
+        oppositeTargets = [spaceTarget for spaceTarget in spaceTargets if spaceTarget.name() == oppositeName]
+        exists = len(oppositeTargets) == 1
+
+        if exists:
+
+            # Calculate target offset matrix
+            #
+            targetOffsetMatrix = mirrorRestMatrix * mirrorTargetMatrix.inverse()
+            targetOffsetTranslate, targetOffsetRotate, targetOffsetScale = transformutils.decomposeTransformMatrix(targetOffsetMatrix)
+
+            # Update target offsets
+            #
+            oppositeSpaceTarget = oppositeTargets[0]
+            index = spaceTargets.index(oppositeSpaceTarget)
+
+            log.info(f'Mirroring target offsets: "{targetName}" > "{oppositeName}" @ index {index}!')
+            self.setAttr(f'target[{index}].targetOffsetTranslate', targetOffsetTranslate)
+            self.setAttr(f'target[{index}].targetOffsetRotate', targetOffsetRotate, convertUnits=False)
+
+            return True
+
+        else:
+
+            log.warning(f'Unable to mirror "{targetName}" target offsets!')
+            return False
 
     def maintainOffset(self, *indices):
         """
