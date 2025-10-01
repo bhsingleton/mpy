@@ -165,10 +165,20 @@ class MObjectWrapper(object, metaclass=mabcmeta.MABCMeta):
 
         return cls.__module__
 
+    @classproperty
+    def nullWeakReference(self):
+        """
+        Getter method that returns a null weak reference.
+
+        :rtype: weakref.ref
+        """
+
+        return lambda: None
+
     @property
     def apiTypeStr(self):
         """
-        Getter method that returns the api type as a human readable string.
+        Getter method that returns the api type as a human-readable string.
 
         :rtype: str
         """
