@@ -532,15 +532,37 @@ class MPyScene(proxyfactory.ProxyFactory):
         :rtype: bool
         """
 
-        name = name.asString() if isinstance(name, om.MUuid) else name
+        # Evaluate supplied type
+        #
+        if isinstance(name, string_types):
 
-        if dagutils.isValidUUID(name):
+            # Evaluate name format
+            #
+            if dagutils.isValidUUID(name):
 
-            return not stringutils.isNullOrEmpty(mc.ls(name))
+                return self.doesNodeExist(om.MUuid(name))
+
+            else:
+
+                return mc.objExists(name)
+
+        elif isinstance(name, om.MUuid):
+
+            # Check if UUID is valid
+            #
+            isValid = name.valid()
+
+            if isValid:
+
+                return not stringutils.isNullOrEmpty(mc.ls(name))
+
+            else:
+
+                return False
 
         else:
 
-            return mc.objExists(name)
+            return False
 
     def isNameUnique(self, name):
         """
