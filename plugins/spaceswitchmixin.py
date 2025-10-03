@@ -414,10 +414,19 @@ class SpaceSwitchMixin(dependencymixin.DependencyMixin):
             targetName = target.name()
             targetIndex = int(target.index)
 
-            if not self.scene.doesNodeExist(targetName):
+            if targetName == 'World':
+
+                log.debug(f'Skipping "World" target @ "{name}.target[{targetIndex}]"!')
+                continue
+
+            elif not self.scene.doesNodeExist(targetName):
 
                 log.warning(f'Unable to locate "{targetName}" target @ "{name}.target[{targetIndex}]"!')
                 continue
+
+            else:
+
+                pass
 
             targetNode = self.scene(targetName)
 
