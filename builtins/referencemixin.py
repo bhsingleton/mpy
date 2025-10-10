@@ -213,13 +213,69 @@ class ReferenceMixin(dependencymixin.DependencyMixin):
 
     def associatedNamespace(self, shortName=False):
         """
-        Returns the namespace the referenced nodes derive from.
+        Returns the namespace for the referenced nodes.
 
         :type shortName: bool
         :rtype: str
         """
 
-        return self.functionSet().associatedNamespace(shortName)
+        if self.isLoaded():
+
+            return self.functionSet().associatedNamespace(shortName)
+
+        else:
+
+            return self.name().rstrip('RN')
+
+    def setAssociatedNamespace(self, namespace):
+        """
+        Updates the namespace for the referenced nodes.
+
+        :type namespace: str
+        :rtype: bool
+        """
+
+        # Check if referenced is loaded
+        #
+        if not self.isLoaded:
+
+            return False
+
+        # Redundancy check
+        #
+        newNamespace = namespace.rstrip('RN')
+        currentNamespace = self.associatedNamespace()
+
+        isRedundant = (currentNamespace == newNamespace)
+        isEmpty = stringutils.isNullOrEmpty(newNamespace)
+
+        if isRedundant or isEmpty:
+
+            return False
+
+        # Check if namespace change is valid
+        #
+        currentExists = om.MNamespace.namespaceExists(currentNamespace)
+        newAvailable = not om.MNamespace.namespaceExists(newNamespace)
+
+        if currentExists and newAvailable:
+
+            # Rename namespace
+            #
+            om.MNamespace.renameNamespace(currentNamespace, newNamespace)
+
+            # Rename reference node
+            #
+            self.unlock()
+            self.setName(f'{newNamespace}RN')
+            self.lock()
+
+            return True
+
+        else:
+
+            log.warning(f'Unable to rename namespace "{currentNamespace}" > "{newNamespace}"')
+            return False
 
     def parentReference(self):
         """
@@ -230,17 +286,18 @@ class ReferenceMixin(dependencymixin.DependencyMixin):
 
         return self.scene(self.functionSet().parentReference())
 
-    def load(self):
+    def load(self, loadReferenceDepth='asPrefs'):
         """
         Loads this reference into the current scene file.
 
+        :type loadReferenceDepth: str
         :rtype: None
         """
 
         if not self.isLoaded():
 
             self.scene.clearSelection()
-            mc.file(self.filePath(), loadReference=self.name(includeNamespace=True), loadReferenceDepth='asPrefs')
+            mc.file(self.filePath(), loadReference=self.name(includeNamespace=True), loadReferenceDepth=loadReferenceDepth)
 
         else:
 
@@ -255,6 +312,7 @@ class ReferenceMixin(dependencymixin.DependencyMixin):
 
         if self.isLoaded():
 
+            self.scene.clearSelection()
             mc.file(self.filePath(), unloadReference=self.name(includeNamespace=True))
 
         else:
@@ -264,8 +322,9 @@ class ReferenceMixin(dependencymixin.DependencyMixin):
     def reload(self):
         """
         Reloads this reference.
-        Kinda surprising there's no API hook for this?
+        TODO: Investigate if there is an API method for this?
 
+        :type clearEdits: bool
         :rtype: None
         """
 
@@ -330,4 +389,13 @@ class ReferenceMixin(dependencymixin.DependencyMixin):
         if isLoaded:
 
             self.load()
+
+    def delete(self):
+        """
+        Removes this reference from the scene file.
+
+        :rtype: None
+        """
+
+        mc.file(self.filePath(), referenceNode=self.name(), removeReference=True)
     # endregion
