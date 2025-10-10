@@ -207,6 +207,51 @@ class SkinMixin(deformermixin.DeformerMixin):
 
         return ancestors[-1]
 
+    def cacheInfluences(self):
+        """
+        Caches all influence ID-name pairs within the user properties.
+
+        :rtype: None
+        """
+
+        self.userProperties['influences'] = {influenceId: influence.name() for (influenceId, influence) in self.iterInfluences(skipNullInfluences=True)}
+
+    def repairInfluences(self):
+        """
+        Restores any broken connections using the cached influences from the user properties.
+
+        :rtype: None
+        """
+
+        # Iterate through influences
+        #
+        influences = self.userProperties.get('influences', {})
+        numInfluences = len(influences)
+
+        success = [None] * numInfluences
+
+        for (i, (influenceId, influenceName)) in enumerate(influences.items()):
+
+            influence = self.scene.getNodeByName(influenceName)
+
+            if influence is not None:
+
+                log.info(f'Repairing "{influenceName}" influence @ index {influenceId}')
+                self.addInfluence(influence.object(), index=int(influenceId))
+
+                success[i] = True
+
+            else:
+
+                log.warning(f'Unable to repair "{influenceName}" influence @ index {influenceId}!')
+                success[i] = False
+
+        # Evaluate success
+        #
+        if all(success):
+
+            del self.userProperties['influences']
+
     def preBindMatrix(self, influenceId):
         """
         Returns the pre-bind matrix for the specified influence ID.
