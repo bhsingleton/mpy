@@ -101,7 +101,7 @@ class DependencyMixin(mpynode.MPyNode):
     @property
     def typeName(self):
         """
-        Getter method used to retrieve the type name for this node.
+        Getter method that returns the type name for this node.
 
         :rtype: str
         """
@@ -111,7 +111,7 @@ class DependencyMixin(mpynode.MPyNode):
     @property
     def isLocked(self):
         """
-        Property method used to determine if this node is locked.
+        Getter method that returns the locked state.
 
         :rtype: bool
         """
@@ -121,7 +121,7 @@ class DependencyMixin(mpynode.MPyNode):
     @isLocked.setter
     def isLocked(self, isLocked):
         """
-        Setter method used to change the lock state on this node.
+        Setter method that updates the locked state.
 
         :type isLocked: bool
         :rtype: bool
@@ -132,7 +132,7 @@ class DependencyMixin(mpynode.MPyNode):
     @property
     def isFromPlugin(self):
         """
-        Getter method used to determine if this node is derived from a plugin file.
+        Getter method that returns a flag that determines if this node is derived from a plugin.
 
         :rtype: bool
         """
@@ -142,7 +142,7 @@ class DependencyMixin(mpynode.MPyNode):
     @property
     def isFromReferencedFile(self):
         """
-        Getter method used to determine if this node is derived from a referenced file.
+        Getter method that returns the a flag that determines if this node is derived from a reference.
 
         :rtype: bool
         """
