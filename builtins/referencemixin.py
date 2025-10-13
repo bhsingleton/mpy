@@ -225,7 +225,7 @@ class ReferenceMixin(dependencymixin.DependencyMixin):
 
         else:
 
-            return self.name().rstrip('RN')
+            return self.name().rstrip('RN')  # Without the reference being loaded this is our only fallback...
 
     def setAssociatedNamespace(self, namespace):
         """
@@ -237,16 +237,24 @@ class ReferenceMixin(dependencymixin.DependencyMixin):
 
         # Check if referenced is loaded
         #
-        if not self.isLoaded:
+        if not self.isLoaded():
 
+            log.warning('References must be loaded in order to be renamed!')
+            return False
+
+        # Check if this is a top-level reference
+        #
+        if not self.isTopLevelReference():
+
+            log.warning('References must be top-level in order to be renamed!')
             return False
 
         # Redundancy check
         #
-        newNamespace = namespace.rstrip('RN')
-        currentNamespace = self.associatedNamespace()
+        newNamespace = namespace.replace('RN', '')
+        oldNamespace = self.associatedNamespace()
 
-        isRedundant = (currentNamespace == newNamespace)
+        isRedundant = (oldNamespace == newNamespace)
         isEmpty = stringutils.isNullOrEmpty(newNamespace)
 
         if isRedundant or isEmpty:
@@ -255,14 +263,19 @@ class ReferenceMixin(dependencymixin.DependencyMixin):
 
         # Check if namespace change is valid
         #
-        currentExists = om.MNamespace.namespaceExists(currentNamespace)
-        newAvailable = not om.MNamespace.namespaceExists(newNamespace)
+        namespaceExists = om.MNamespace.namespaceExists(oldNamespace)
+        namespaceAvailable = not om.MNamespace.namespaceExists(newNamespace)
 
-        if currentExists and newAvailable:
+        if namespaceExists and namespaceAvailable:
 
             # Rename namespace
             #
-            om.MNamespace.renameNamespace(currentNamespace, newNamespace)
+            mc.file(
+                self.filePath(resolvedName=False),
+                edit=True,
+                referenceNode=self.name(includeNamespace=True),
+                namespace=newNamespace
+            )
 
             # Rename reference node
             #
@@ -274,14 +287,23 @@ class ReferenceMixin(dependencymixin.DependencyMixin):
 
         else:
 
-            log.warning(f'Unable to rename namespace "{currentNamespace}" > "{newNamespace}"')
+            log.warning(f'Unable to rename namespace "{oldNamespace}" > "{newNamespace}"')
             return False
+
+    def isTopLevelReference(self):
+        """
+        Evaluates if this is a top-level reference.
+
+        :rtype: bool
+        """
+
+        return self.functionSet().parentReference().isNull()
 
     def parentReference(self):
         """
         Returns the parent of this reference.
 
-        :rtype: Reference
+        :rtype: Union[ReferenceMixin, None]
         """
 
         return self.scene(self.functionSet().parentReference())
@@ -296,8 +318,11 @@ class ReferenceMixin(dependencymixin.DependencyMixin):
 
         if not self.isLoaded():
 
-            self.scene.clearSelection()
-            mc.file(self.filePath(), loadReference=self.name(includeNamespace=True), loadReferenceDepth=loadReferenceDepth)
+            mc.file(
+                self.filePath(resolvedName=False),
+                loadReference=self.name(includeNamespace=True),
+                loadReferenceDepth=loadReferenceDepth
+            )
 
         else:
 
@@ -312,8 +337,10 @@ class ReferenceMixin(dependencymixin.DependencyMixin):
 
         if self.isLoaded():
 
-            self.scene.clearSelection()
-            mc.file(self.filePath(), unloadReference=self.name(includeNamespace=True))
+            mc.file(
+                self.filePath(resolvedName=False),
+                unloadReference=self.name(includeNamespace=True)
+            )
 
         else:
 
@@ -324,7 +351,6 @@ class ReferenceMixin(dependencymixin.DependencyMixin):
         Reloads this reference.
         TODO: Investigate if there is an API method for this?
 
-        :type clearEdits: bool
         :rtype: None
         """
 
