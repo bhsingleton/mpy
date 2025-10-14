@@ -1197,13 +1197,13 @@ class MPyScene(proxyfactory.ProxyFactory):
 
         if not os.path.exists(absolutePath):
 
-            raise TypeError('createReference() cannot locate file: %s' % filePath)
+            raise TypeError(f'createReference() cannot locate file: {filePath}')
 
         # Create new reference
         #
         nodes = mc.file(filePath, reference=True, namespace=namespace, returnNewNodes=True)
         numNodes = len(nodes)
-
+        
         if numNodes > 0:
 
             return mpynode.MPyNode(nodes[0]).getAssociatedReferenceNode()
@@ -1211,7 +1211,7 @@ class MPyScene(proxyfactory.ProxyFactory):
         else:
 
             nodeName = '{namespace}RN'.format(namespace=namespace)
-            return mpynode.MPyNode(nodeName)  # TODO: This needs improving!
+            return mpynode.MPyNode(f':{nodeName}')  # TODO: This needs improving!
 
     def markDirty(self):
         """

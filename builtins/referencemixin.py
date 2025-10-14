@@ -85,7 +85,13 @@ class ReferenceMixin(dependencymixin.DependencyMixin):
         :rtype: Reference
         """
 
-        return self
+        if self.isFromReferencedFile:
+
+            return super(ReferenceMixin, self).getAssociatedReferenceNode()
+
+        else:
+
+            return self
 
     def containsNodeExactly(self, dependNode):
         """
