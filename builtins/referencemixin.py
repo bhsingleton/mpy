@@ -168,7 +168,7 @@ class ReferenceMixin(dependencymixin.DependencyMixin):
 
     def filePath(self, resolvedName=True, includePath=True, includeCopyNumber=False):
         """
-        Returns the file path  associated with this reference.
+        Returns the file path associated with this reference.
         FIXME: Under the hood Maya is negating the `includePath` variable?
 
         :param resolvedName: Determines if the original user supplied value should be returned.
@@ -324,11 +324,7 @@ class ReferenceMixin(dependencymixin.DependencyMixin):
 
         if not self.isLoaded():
 
-            mc.file(
-                self.filePath(resolvedName=False),
-                loadReference=self.name(includeNamespace=True),
-                loadReferenceDepth=loadReferenceDepth
-            )
+            mc.file(loadReference=self.name(includeNamespace=True), loadReferenceDepth=loadReferenceDepth)
 
         else:
 
@@ -343,10 +339,7 @@ class ReferenceMixin(dependencymixin.DependencyMixin):
 
         if self.isLoaded():
 
-            mc.file(
-                self.filePath(resolvedName=False),
-                unloadReference=self.name(includeNamespace=True)
-            )
+            mc.file(unloadReference=self.name(includeNamespace=True))
 
         else:
 
@@ -429,5 +422,11 @@ class ReferenceMixin(dependencymixin.DependencyMixin):
         :rtype: None
         """
 
-        mc.file(self.filePath(), referenceNode=self.name(), removeReference=True)
+        if not self.isFromReferencedFile:
+
+            mc.file(referenceNode=self.name(includeNamespace=True), removeReference=True)
+
+        else:
+
+            log.warning('Only top-level references can be deleted!')
     # endregion
