@@ -473,6 +473,18 @@ class DagMixin(containerbasemixin.ContainerBaseMixin):
 
         return list(self.iterChildren(apiType=apiType))
 
+    def rehomeChildren(self, parent):
+        """
+        Moves the children from this node to the specified parent.
+
+        :type parent: Union[DagMixin, None]
+        :rtype: None
+        """
+
+        for child in self.children():
+
+            child.setParent(parent)
+
     def iterSiblings(self, apiType=om.MFn.kDagNode):
         """
         Returns a generator that yields siblings relative to this node.
