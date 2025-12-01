@@ -248,7 +248,7 @@ class SkinMixin(deformermixin.DeformerMixin):
 
         # Evaluate success
         #
-        if all(success):
+        if all(success) and len(success) > 0:
 
             del self.userProperties['influences']
 
