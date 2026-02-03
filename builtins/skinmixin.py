@@ -225,6 +225,8 @@ class SkinMixin(deformermixin.DeformerMixin):
 
         # Iterate through influences
         #
+        skinClusterName = self.name()
+
         influences = self.userProperties.get('influences', {})
         numInfluences = len(influences)
 
@@ -232,18 +234,27 @@ class SkinMixin(deformermixin.DeformerMixin):
 
         for (i, (influenceId, influenceName)) in enumerate(influences.items()):
 
+            # Check if influence is valid
+            #
+            if stringutils.isNullOrEmpty(influenceName):
+
+                log.debug(f'Skipping null influence @ "{skinClusterName}.matrix[{influenceId}]"')
+                success[i] = True
+
+            # Check if influence still exists
+            #
             influence = self.scene.getNodeByName(influenceName)
 
             if influence is not None:
 
-                log.info(f'Repairing "{influenceName}" influence @ index {influenceId}')
+                log.info(f'Repairing "{influenceName}" influence @ "{skinClusterName}.matrix[{influenceId}]"')
                 self.addInfluence(influence.object(), index=int(influenceId))
 
                 success[i] = True
 
             else:
 
-                log.warning(f'Unable to repair "{influenceName}" influence @ index {influenceId}!')
+                log.warning(f'Unable to repair "{influenceName}" influence @ "{skinClusterName}.matrix[{influenceId}]"!')
                 success[i] = False
 
         # Evaluate success
